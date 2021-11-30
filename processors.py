@@ -145,32 +145,17 @@ class Panelist:
         '''
         d = self.get_dd_mm_yyyy()
 
+
         rounds = {'base': ['2015-03-01', '2015-06-30'], # baseline
-                  1: ['2015-08-01', '2015-10-31'],
-                  2: ['2015-11-01', '2015-12-31'],
-                  3: ['2016-01-01', '2016-02-29'],
-                  4: ['2016-03-01', '2016-04-30'],
-                  5: ['2016-05-01', '2016-06-30'],
-                  6: ['2016-07-01', '2016-08-31'],
-                  7: ['2016-09-01', '2016-10-31'],
-                  8: ['2016-11-01', '2016-12-31'],
-                  9: ['2017-01-01', '2017-02-28'],
-                  10: ['2017-03-01', '2017-04-30'],
-                  11: ['2017-05-01', '2017-06-30'],
-                  12: ['2017-07-01', '2017-08-31'],
-                  13: ['2017-09-01', '2017-10-31'],
-                  14: ['2017-11-01', '2017-12-31'],
-                  15: ['2018-01-01', '2018-02-28'],
-                  16: ['2018-03-01', '2018-04-30'],
-                  17: ['2018-05-01', '2018-06-30'],
-                  18: ['2018-07-01', '2018-08-31'],
-                  19: ['2018-09-01', '2018-10-31'],
-                  20: ['2018-11-01', '2018-12-31'],
-                  21: ['2019-01-01', '2019-02-28'],
-                  22: ['2019-03-01', '2019-04-30'],
-                  23: ['2019-05-01', '2019-06-30'],
-                  24: ['2019-07-01', '2019-08-31'],
-                  'end': ['2019-09-01','2020-02-29']} # endline
+                  'P1': ['2015-07-01', '2015-12-31'],
+                  'P2': ['2016-01-01', '2016-06-30'],
+                  'P3': ['2016-07-01', '2016-12-31'],
+                  'P4': ['2017-01-01', '2017-06-30'],
+                  'P5': ['2017-07-01', '2017-12-31'],
+                  'P6': ['2018-01-01', '2018-06-30'],
+                  'P7': ['2018-07-01', '2018-12-31'],
+                  'P8': ['2019-01-01', '2019-06-30'],
+                  'end': ['2019-07-01', '2020-02-29']} # endline
 
         idx = d.columns.get_loc('dov')
         d.insert(loc=idx, column='panel', value= '')
@@ -186,12 +171,10 @@ class Panelist:
                       else:
                           continue
 
-        round_categories = ['base', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15',
-                            '16', '17', '18', '19', '20', '21', '22', '23', '24', 'end']
+        panel_categories = ['base', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'end']
 
-        d.loc[:, 'panel'] = d.loc[:, 'panel'].astype(str)
-        d.loc[:, 'panel'] = pd.Categorical(d.loc[:, 'panel'], categories=round_categories)
-        d = d.sort_values(by=['wcode', 'panel']).reset_index().drop(['index'], axis=1)
+        d.loc[:, 'panel'] = pd.Categorical(d.loc[:, 'panel'], categories=panel_categories)
+        d = d.sort_values(by=['wcode', 'panel']).reset_index().drop(['index', 'day', 'month', 'year'], axis=1)
 
         return d
 
@@ -212,7 +195,7 @@ class Flooder:
         r1 = self.get_json()
         # create output data frame
         df = pd.DataFrame(
-            columns=['dov', 'Panel', 'cluster_co', 'Shape_Area', 'Cluster_Diff', 'Region_Diff', 'Maximum',
+            columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'Cluster_Diff', 'Region_Diff', 'Maximum',
                      'Minimum', 'Mean', 'Stdev', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'])
         images = len(r1['features'])
         for i in range(images):  # for every image in geojson
@@ -223,7 +206,7 @@ class Flooder:
                 prop = image[c]['properties']
                 # Get regional stats
                 prop['dov'] = r1['features'][i]['properties']['Date']
-                prop['Panel'] = r1['features'][i]['properties']['Panel']
+                prop['panel'] = r1['features'][i]['properties']['Panel']
                 prop['Region_Diff'] = r1['features'][i]['properties']['Region_Diff']
                 prop['Maximum'] = r1['features'][i]['properties']['Maximum']
                 prop['Minimum'] = r1['features'][i]['properties']['Minimum']
@@ -234,13 +217,6 @@ class Flooder:
         df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'], axis=1)
 
         return df
-
-
-
-#%%
-
-
-
 
 
 #%%
