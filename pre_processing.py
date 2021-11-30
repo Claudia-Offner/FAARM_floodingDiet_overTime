@@ -1,5 +1,5 @@
 import pandas as pd
-from processors import Organiser, Panelist, Flooder
+from pre_processors import Organiser, Panelist, Flooder
 import warnings
 import os
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -173,8 +173,8 @@ df['panel'] = df1
 
 # Merge data - NOTE some wcodes in EPDS_WDDS have multiple instances for one panel
 x = pd.merge(df, FLOOD, how='left', on=['c_code', 'panel'])
-x = pd.merge(x, EPDS_WDDS, how='left', on=['wcode', 'panel'])
-x = pd.merge(x, HFIAS, how='left', on=['wcode', 'panel'])
+x = pd.merge(x, EPDS_WDDS, how='left', on=['wcode', 'wcode', 'panel'])
+x = pd.merge(x, HFIAS, how='left', on=['wcode', 'wcode', 'panel'])
 result = pd.merge(x, DEM, how='left', on=['wcode', 'c_code', 'panel'])
 
 #%%
