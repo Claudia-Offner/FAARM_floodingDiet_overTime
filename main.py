@@ -1,6 +1,7 @@
 import pandas as pd
 from processors import Organiser, Panelist, Flooder
 import warnings
+import os
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def dem_end_to_base(baseline, endline, end_HH):
@@ -25,13 +26,11 @@ def dem_end_to_base(baseline, endline, end_HH):
 
 def get_flood(file_names):
 
-    flood_df = pd.DataFrame(columns=['cluster_co', 'Diff', 'Shape_Area', 'Shape_Leng', 'round'])
+    flood_df = pd.DataFrame(columns=['dov', 'Panel', 'cluster_co', 'Shape_Area', 'Cluster_Diff', 'Region_Diff',
+                                     'Maximum', 'Minimum', 'Mean', 'Stdev'])
 
     for i in file_names:
-        name = i[:2]
         result = Flooder(i).json_to_df()
-        result = result.groupby(['cluster_co']).mean().reset_index()
-        result['round'] = str(name).lower()
         flood_df = flood_df.append(result, ignore_index=True)
 
     return flood_df
@@ -81,12 +80,15 @@ HFIAS = Panelist(hfias).get_panels()
 #%%
 # GET GEE FLOODING DATA
 # Load satellite image data from JSON file to dataframe, clean images and export to csv
-os.chdir('C:/Users/offne/Documents/FAARM Preliminary/FAARM_flood')
+os.chdir('C:/Users/offne/Documents/FAARM/Data/GEE/Flooding/')
 
-surv = ['R1.geojson', 'R2.geojson', 'R3.geojson', 'R4.geojson', 'R5.geojson',
-        'R6.geojson', 'R7.geojson', 'R8.geojson', 'R9.geojson']
+surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
+        'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
 
-flood = get_flood(surv)
+FLOOD = get_flood(surv)
+
+os.chdir('C:/Users/offne/Documents/FAARM/')
+
 
 #%%
 # GET DEMOGRAPHIC DATA

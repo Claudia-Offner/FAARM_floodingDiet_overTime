@@ -1,13 +1,11 @@
 #%%
 import pandas as pd
 import numpy as np
-import datetime
 import json
 import re
-import os
 
 def get_simple_keys(data):
-    # Check JSON Keys #
+    # Check JSON Keys
     result = []
     for key in data.keys():
         if type(data[key]) != dict:
@@ -212,26 +210,28 @@ class Flooder:
 
     def json_to_df(self):
         r1 = self.get_json()
-
-        df = pd.DataFrame(columns=['dov', 'Diff', 'OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng', 'cluster_co'])
+        # create output data frame
+        df = pd.DataFrame(
+            columns=['dov', 'Panel', 'cluster_co', 'Shape_Area', 'Cluster_Diff', 'Region_Diff', 'Maximum',
+                     'Minimum', 'Mean', 'Stdev', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'])
         images = len(r1['features'])
-        for i in range(images):  # number of images
-            date = r1['features'][i]['properties']['date']['value']
-            date = datetime.datetime.fromtimestamp(date / 1e3)
-            image = r1['features'][i]['properties']['Cluster']
+        for i in range(images):  # for every image in geojson
+            image = r1['features'][i]['properties']['Clusters']
             clusters = len(image)
-            for c in range(clusters):  # number of clusters
+            for c in range(clusters):  # for every cluster in Clusters
+                # Get cluster stats
                 prop = image[c]['properties']
-                prop['dov'] = date
-                # prop['image_id'] = i
+                # Get regional stats
+                prop['dov'] = r1['features'][i]['properties']['Date']
+                prop['Panel'] = r1['features'][i]['properties']['Panel']
+                prop['Region_Diff'] = r1['features'][i]['properties']['Region_Diff']
+                prop['Maximum'] = r1['features'][i]['properties']['Maximum']
+                prop['Minimum'] = r1['features'][i]['properties']['Minimum']
+                prop['Mean'] = r1['features'][i]['properties']['Mean']
+                prop['Stdev'] = r1['features'][i]['properties']['Stdev']
                 df = df.append(prop, ignore_index=True)
-        # group by date (same yy-mm-dd)
-        df['year'] = pd.DatetimeIndex(df['dov']).year.astype(str)
-        df['month'] = pd.DatetimeIndex(df['dov']).month.astype(str)
-        df['day'] = pd.DatetimeIndex(df['dov']).day.astype(str)
-        df['date'] = df['year'] + '-' + df['month'] + '-' + df['day']
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        df = df.drop(['year', 'month', 'day', 'OBJECTID', 'OBJECTID_1'], axis=1)
+
+        df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'], axis=1)
 
         return df
 
@@ -239,34 +239,12 @@ class Flooder:
 
 #%%
 
-# Extract JSON to dataframe
-
-def get_flood(file_names):
-
-    flood_df = pd.DataFrame(columns=['cluster_co', 'Diff', 'Shape_Area', 'Shape_Leng', 'round'])
-
-    for i in file_names:
-        name = i[:2]
-        result = Flooder(i).json_to_df()
-        result = result.groupby(['cluster_co']).mean().reset_index()
-        result['round'] = str(name).lower()
-        flood_df = flood_df.append(result, ignore_index=True)
-
-    return flood_df
 
 
-os.chdir('C:/Users/offne/Documents/FAARM Preliminary/FAARM_flood')
-
-surv = ['R1.geojson', 'R2.geojson', 'R3.geojson', 'R4.geojson', 'R5.geojson',
-        'R6.geojson', 'R7.geojson', 'R8.geojson', 'R9.geojson']
-
-# surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
-#         'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
-flood = get_flood(surv)
 
 
 #%%
-os.chdir('C:/Users/offne/Documents/FAARM/')
-
-ag = pd.read_csv('Data/Bi/HH_Ag_Prod_Div.csv', low_memory=False)
+# os.chdir('C:/Users/offne/Documents/FAARM/')
+#
+# ag = pd.read_csv('Data/Bi/HH_Ag_Prod_Div.csv', low_memory=False)
 
