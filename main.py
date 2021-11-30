@@ -24,14 +24,17 @@ def dem_end_to_base(baseline, endline, end_HH):
 
     return endline
 
+
 def get_flood(file_names):
 
-    flood_df = pd.DataFrame(columns=['dov', 'Panel', 'cluster_co', 'Shape_Area', 'Cluster_Diff', 'Region_Diff',
+    flood_df = pd.DataFrame(columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'Cluster_Diff', 'Region_Diff',
                                      'Maximum', 'Minimum', 'Mean', 'Stdev'])
 
     for i in file_names:
         result = Flooder(i).json_to_df()
         flood_df = flood_df.append(result, ignore_index=True)
+
+    flood_df['panel'] = flood_df['panel'].str.replace('P9', 'end')
 
     return flood_df
 
@@ -51,9 +54,17 @@ epds_wdds_sub = epds_wdds.loc[:, ('wcode', 'c_code', 'new_women', 'dov',
                               'md_1', 'md_2', 'md_3', 'md_4', 'md_5', 'md_6', 'md_7', 'md_8', 'md_9', 'md_10', 'md_score', 'md_scale', 'rd',
                               'dd10r_starch', 'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv', 'dd10r_score_m', 'dd10r_min_m', 'dd10r_score', 'dd10r_min',
                               'preg', 'enum_dcocode', 'actually_preg', 'months', 'monthsdt', 'monthsest', 'y_child', 'preg_week', 'pregmuac', 'pregmuac_cat', 'prior_preg', 'months_preg', 'ldov_check', 'still_preg', 'contpreg_mon', 'dayspreg', 'pull_dovi', 'pull_preg_stat', 'pull_months', 'epds', 'md_scale_d', 'dco_m', 'dov_m', 'preg_w', 'prior_preg_b')]
-# epds_wdds_sub.isnull().sum()
+
 epds_wdds_org = Organiser(epds_wdds_sub[:]).format()  # wcodes already unnested
 EPDS_WDDS = Panelist(epds_wdds_org[:]).get_panels()
+
+# Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
+# EPDS_WDDS.isnull().sum()  # 2 c_codes missing ; 93 panels missing (rounds after endline)
+# x = EPDS_WDDS[EPDS_WDDS['c_code'].isnull()]  # wcode 1718, 3822 - assign to clusters 17 and 38
+EPDS_WDDS.loc[EPDS_WDDS['wcode'].eq(1718) & EPDS_WDDS['c_code'].isnull(), 'c_code'] = 17
+EPDS_WDDS.loc[EPDS_WDDS['wcode'].eq(3822) & EPDS_WDDS['c_code'].isnull(), 'c_code'] = 38
+EPDS_WDDS.loc[:, 'c_code'] = EPDS_WDDS.loc[:, 'c_code'].astype('int64')  # Make c_code integer
+EPDS_WDDS = EPDS_WDDS.dropna(subset=['panel'])  # drop instances from rounds post endline
 
 #%%
 # GET AGRICULTURE PRODUCTION DATA
@@ -77,6 +88,11 @@ hfias = hfias_base_org.append(hfias_bi_org).append(hfias_end_org)
 hfias = Organiser(hfias[:]).format()
 HFIAS = Panelist(hfias).get_panels()
 
+# Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
+# HFIAS.isnull().sum()  # 180 panels missing (rounds after endline)
+HFIAS.loc[:, 'c_code'] = HFIAS.loc[:, 'c_code'].astype('int64')  # Make c_code integer
+HFIAS = HFIAS.dropna(subset=['panel'])  # drop instances from rounds post endline
+
 #%%
 # GET GEE FLOODING DATA
 # Load satellite image data from JSON file to dataframe, clean images and export to csv
@@ -89,6 +105,8 @@ FLOOD = get_flood(surv)
 
 os.chdir('C:/Users/offne/Documents/FAARM/')
 
+# Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
+# FLOOD.isnull().sum()  # no NAs
 
 #%%
 # GET DEMOGRAPHIC DATA
@@ -125,11 +143,17 @@ DEM = dem_base.append(dem_end)
 DEM = Organiser(DEM[:]).format()
 DEM = Panelist(DEM[:]).get_panels()  # there are 180 missing panels from measure taken after Endline
 
+# Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
+# DEM.isnull().sum()  # 180 panels missing (rounds after endline)
+DEM.loc[:, 'c_code'] = DEM.loc[:, 'c_code'].astype('int64')  # Make c_code integer
+DEM = DEM.dropna(subset=['panel'])  # drop instances from rounds post endline
+
+
 #%%
 # MERGE DATASETS
+# EPDS_WDDS.isnull().sum()
 
-
-
+#%%
 
 # DATA CLEANING TOOLS
 # l = set(list(wealth_end.columns))
@@ -137,7 +161,7 @@ DEM = Panelist(DEM[:]).get_panels()  # there are 180 missing panels from measure
 # print('Names in FC df but not in shape gdf', set(list(l - x))) #FC data set
 # print('Names in shape gdf but not in FC df', set(list(x - l))) #shape dataset
 
-# # CHECK NAVALUES
+# CHECK NAVALUES
 # DEM.isnull().sum()
 # x = hfias_bi_org[hfias_bi_org['dov'].isnull()]
 # EPDS_WDDS.loc[EPDS_WDDS['wcode'] == 661]
