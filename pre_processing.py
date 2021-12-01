@@ -4,6 +4,7 @@ import warnings
 import os
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+
 def dem_end_to_base(baseline, endline, end_HH):
     """
     Format dataframe
@@ -39,8 +40,10 @@ def get_flood(file_names):
     return flood_df
 
 
-#%%
-# LOAD DATA - columns have mixed dtypes that need to be addressed
+# ====================================================================================
+# LOAD DATA
+# ====================================================================================
+# columns have mixed dtypes that need to be addressed
 bi = pd.read_csv('Data/Bimonthly Women.csv', low_memory=False)
 baseW = pd.read_csv('Data/Baseline Women.csv', low_memory=False)
 endW = pd.read_csv('Data/Endline Women.csv', low_memory=False)
@@ -48,8 +51,21 @@ baseHH = pd.read_csv('Data/Baseline HH.csv', low_memory=False)
 endHH = pd.read_csv('Data/Endline HH.csv', low_memory=False)
 epds_wdds = pd.read_csv('Data/Bi/Women_EPDS_WDDS.csv', low_memory=False)
 
-#%%
+# DATA CLEANING TOOLS
+# l = set(list(wealth_end.columns))
+# x = set(list(DEM_BASE.columns))
+# print('Names in FC df but not in shape gdf', set(list(l - x))) #FC data set
+# print('Names in shape gdf but not in FC df', set(list(x - l))) #shape dataset
+
+# CHECK NAVALUES
+# DEM.isnull().sum()
+# x = hfias_bi_org[hfias_bi_org['dov'].isnull()]
+# EPDS_WDDS.loc[EPDS_WDDS['wcode'] == 661]
+
+# ====================================================================================
 # GET EPDS & WDDS & PREGNANCY
+# ====================================================================================
+
 epds_wdds_sub = epds_wdds.loc[:, ('wcode', 'c_code', 'dov', 'new_women',
                               'md_1', 'md_2', 'md_3', 'md_4', 'md_5', 'md_6', 'md_7', 'md_8', 'md_9', 'md_10', 'md_score', 'md_scale', 'rd',
                               'dd10r_starch', 'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv', 'dd10r_score_m', 'dd10r_min_m', 'dd10r_score', 'dd10r_min',
@@ -67,18 +83,14 @@ EPDS_WDDS.loc[:, 'c_code'] = EPDS_WDDS.loc[:, 'c_code'].astype('int64')  # Make 
 EPDS_WDDS = EPDS_WDDS.dropna(subset=['panel'])  # drop instances from rounds post endline
 EPDS_WDDS.rename(columns={'dov':'dov_epds_wdds'}, inplace = True)
 
-#%%
-# GET AGRICULTURE PRODUCTION DATA
-# GET HOUSEHOLD SIZE OVER TIME
 
+# ====================================================================================
+# GET HFIAS
+# ====================================================================================
 
-
-#%%
-# HFIAS
-# Extract HFIAS from Baseline & Bi & Endline
-hfias_base = baseW[['wcode', 'c_code', 'today_w', 'hfias1', 'hfias2', 'hfias3', 'hfias4', 'hfias5', 'hfias6', 'hfias7', 'hfias8', 'hfias9', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d']]
-hfias_bi = bi[['wcode', 'c_code', 'dov', 'hfias1', 'hfias2', 'hfias3', 'hfias4', 'hfias5', 'hfias6', 'hfias7', 'hfias8', 'hfias9', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d']]
-hfias_end = endHH[['wcode1', 'wcode2', 'wcode3', 'c_code', 'today_h', 'hfias1', 'hfias2', 'hfias3', 'hfias4', 'hfias5', 'hfias6', 'hfias7', 'hfias8', 'hfias9', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d']]
+hfias_base = baseW[['wcode', 'c_code', 'today_w', 'treatment', 'hfias1', 'hfias2', 'hfias3', 'hfias4', 'hfias5', 'hfias6', 'hfias7', 'hfias8', 'hfias9', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d']]
+hfias_bi = bi[['wcode', 'c_code', 'dov', 'treatment', 'hfias1', 'hfias2', 'hfias3', 'hfias4', 'hfias5', 'hfias6', 'hfias7', 'hfias8', 'hfias9', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d']]
+hfias_end = endHH[['wcode1', 'wcode2', 'wcode3', 'c_code', 'today_h', 'treatment', 'hfias1', 'hfias2', 'hfias3', 'hfias4', 'hfias5', 'hfias6', 'hfias7', 'hfias8', 'hfias9', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d']]
 
 hfias_base_org = Organiser(hfias_base[:]).format('2015-06-30')
 hfias_bi_org = Organiser(hfias_bi[:]).format().dropna(axis=0)  # drop rows with na values
@@ -95,8 +107,10 @@ HFIAS.loc[:, 'c_code'] = HFIAS.loc[:, 'c_code'].astype('int64')  # Make c_code i
 HFIAS = HFIAS.dropna(subset=['panel'])  # drop instances from rounds post endline
 HFIAS.rename(columns={'dov':'dov_hfias'}, inplace = True)
 
-#%%
+
+# ====================================================================================
 # GET DEMOGRAPHIC DATA
+# ====================================================================================
 
 # BASELINE:
 # WEALTH (hh): Assets, remittances (HHS), Land holding (wi)
@@ -136,8 +150,10 @@ DEM.loc[:, 'c_code'] = DEM.loc[:, 'c_code'].astype('int64')  # Make c_code integ
 DEM = DEM.dropna(subset=['panel'])  # drop instances from rounds post endline
 DEM.rename(columns={'dov':'dov_dem'}, inplace = True)
 
-#%%
+# ====================================================================================
 # GET GEE FLOODING DATA
+# ====================================================================================
+
 # Load satellite image data from JSON file to dataframe, clean images and export to csv
 os.chdir('C:/Users/offne/Documents/FAARM/Data/GEE/Flooding/')
 
@@ -152,12 +168,20 @@ os.chdir('C:/Users/offne/Documents/FAARM/')
 # FLOOD.isnull().sum()  # no NAs
 FLOOD.rename(columns={'dov':'dov_flood'}, inplace = True)
 
-# Aggregate Flooding Data by c_code and panel - NOTE remember to take max of maximum and min of minimum!!!!
+# Aggregate Flooding Data by c_code and panel
+# - NOTE remember to take max of maximum and min of minimum!!!!
 FLOOD = FLOOD.groupby(['c_code', 'panel']).mean().reset_index()
 
+# ====================================================================================
+# GET AGRICULTURE PRODUCTION DATA
+# GET HOUSEHOLD SIZE OVER TIME
+# ====================================================================================
 
 #%%
+# ====================================================================================
 # MERGE ALL DATASETS
+# ====================================================================================
+
 # Create empty data frame with all wcodes, c_codes, panels
 df1 = pd.DataFrame()
 df = pd.DataFrame()
@@ -173,21 +197,15 @@ df['panel'] = df1
 
 # Merge data - NOTE some wcodes in EPDS_WDDS have multiple instances for one panel
 x = pd.merge(df, FLOOD, how='left', on=['c_code', 'panel'])
-x = pd.merge(x, EPDS_WDDS, how='left', on=['wcode', 'wcode', 'panel'])
-x = pd.merge(x, HFIAS, how='left', on=['wcode', 'wcode', 'panel'])
+x = pd.merge(x, EPDS_WDDS, how='left', on=['wcode', 'c_code', 'panel'])
+x = pd.merge(x, HFIAS, how='left', on=['wcode', 'c_code', 'panel'])
 result = pd.merge(x, DEM, how='left', on=['wcode', 'c_code', 'panel'])
 
+
 #%%
+# ====================================================================================
 # Save to file
+# ====================================================================================
+
 result.to_csv('Data/subset_result.csv', index=False)
 
-# DATA CLEANING TOOLS
-# l = set(list(wealth_end.columns))
-# x = set(list(DEM_BASE.columns))
-# print('Names in FC df but not in shape gdf', set(list(l - x))) #FC data set
-# print('Names in shape gdf but not in FC df', set(list(x - l))) #shape dataset
-
-# CHECK NAVALUES
-# DEM.isnull().sum()
-# x = hfias_bi_org[hfias_bi_org['dov'].isnull()]
-# EPDS_WDDS.loc[EPDS_WDDS['wcode'] == 661]
