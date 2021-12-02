@@ -1,5 +1,5 @@
 import pandas as pd
-from pre_processors import Organiser, Panelist, Flooder
+from pre_processors import Organiser, Panelist, Flooder, Environment
 import warnings
 import os
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -107,7 +107,6 @@ HFIAS.loc[:, 'c_code'] = HFIAS.loc[:, 'c_code'].astype('int64')  # Make c_code i
 HFIAS = HFIAS.dropna(subset=['panel'])  # drop instances from rounds post endline
 HFIAS.rename(columns={'dov':'dov_hfias'}, inplace = True)
 
-
 # ====================================================================================
 # GET DEMOGRAPHIC DATA
 # ====================================================================================
@@ -173,11 +172,32 @@ FLOOD.rename(columns={'dov':'dov_flood'}, inplace = True)
 FLOOD = FLOOD.groupby(['c_code', 'panel']).mean().reset_index()
 
 # ====================================================================================
+# GET GEE ENVIRONMENTAL DATA
+# ====================================================================================
+os.chdir('C:/Users/offne/Documents/FAARM/Data/Gee/')
+
+ndvi = Environment('ndvi.geojson').get_environment()
+prec = Environment('precipitation.geojson').get_environment()
+# No evapotranspiration (collection cuts off at P5) and no temperature (file won't read)
+
+os.chdir('C:/Users/offne/Documents/FAARM/')
+
+# Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
+# evap.isnull().sum()  # no NAs
+
+# Aggregate Flooding Data by c_code and panel
+# - NOTE remember to take max of maximum and min of minimum!!!!
+ndvi = ndvi.groupby(['c_code', 'panel']).mean().reset_index()
+prec = prec.groupby(['c_code', 'panel']).mean().reset_index()
+
+# Merge datasets
+ENV = pd.merge(ndvi, prec, how='left', on=['c_code', 'panel'])
+
+# ====================================================================================
 # GET AGRICULTURE PRODUCTION DATA
 # GET HOUSEHOLD SIZE OVER TIME
 # ====================================================================================
 
-#%%
 # ====================================================================================
 # MERGE ALL DATASETS
 # ====================================================================================
@@ -197,6 +217,7 @@ df['panel'] = df1
 
 # Merge data - NOTE some wcodes in EPDS_WDDS have multiple instances for one panel
 x = pd.merge(df, FLOOD, how='left', on=['c_code', 'panel'])
+x = pd.merge(df, ENV, how='left', on=['c_code', 'panel'])
 x = pd.merge(x, EPDS_WDDS, how='left', on=['wcode', 'c_code', 'panel'])
 x = pd.merge(x, HFIAS, how='left', on=['wcode', 'c_code', 'panel'])
 result = pd.merge(x, DEM, how='left', on=['wcode', 'c_code', 'panel'])

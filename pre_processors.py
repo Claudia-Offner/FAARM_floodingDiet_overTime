@@ -218,9 +218,48 @@ class Flooder:
 
         return df
 
+class Environment:
+
+    def __init__(self, file_name):
+        self.file_name = file_name
+
+    def get_json(self):
+        """ Function for loading JSON files """
+        path = self.file_name
+
+        with open(path, "r") as f:
+            itn = json.load(f)
+        return itn
+
+    def get_environment(self):
+        r1 = self.get_json()
+        # create output data frame
+        df = pd.DataFrame(
+            columns=['cluster_co', 'panel', 'dov', 'Cluster_Mean', 'region_Mean',
+                     'OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng'])
+        images = len(r1['features'])
+        for i in range(images):  # for every image in geojson
+            image = r1['features'][i]['properties']['Clusters']
+            clusters = len(image)
+            for c in range(clusters):  # for every cluster in Clusters
+                # Get cluster stats
+                prop = image[c]['properties']
+                # Get regional stats
+                prop['dov'] = r1['features'][i]['properties']['Date']
+                prop['panel'] = r1['features'][i]['properties']['Panel']
+                prop['region_Mean'] = r1['features'][i]['properties']['Region_Mean']
+                df = df.append(prop, ignore_index=True)
+
+        df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng'], axis=1)
+        df.rename(columns={'cluster_co': 'c_code'}, inplace=True)
+        keep_same = {'c_code', 'panel'}
+        df.columns = ['{}{}'.format(c, '' if c in keep_same else "_{}".format(self.file_name[:4])) for c in df.columns]
+
+        return df
+
+
 
 #%%
-# os.chdir('C:/Users/offne/Documents/FAARM/')
-#
 # ag = pd.read_csv('Data/Bi/HH_Ag_Prod_Div.csv', low_memory=False)
+
 
