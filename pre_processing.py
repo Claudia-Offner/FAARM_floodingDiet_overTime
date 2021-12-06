@@ -35,7 +35,8 @@ def get_flood(file_names):
         flood_df = flood_df.append(result, ignore_index=True)
 
     flood_df['panel'] = flood_df['panel'].str.replace('P9', 'end')
-    flood_df.rename(columns={'cluster_co': 'c_code'}, inplace=True)
+    flood_df.rename(columns={'cluster_co': 'c_code', 'Cluster_Diff':'Cluster_FloodDiff',
+                             'Region_Diff': 'Region_FloodDiff'}, inplace=True)
 
     return flood_df
 
@@ -149,6 +150,7 @@ DEM.loc[:, 'c_code'] = DEM.loc[:, 'c_code'].astype('int64')  # Make c_code integ
 DEM = DEM.dropna(subset=['panel'])  # drop instances from rounds post endline
 DEM.rename(columns={'dov':'dov_dem'}, inplace = True)
 
+
 # ====================================================================================
 # GET GEE FLOODING DATA
 # ====================================================================================
@@ -159,39 +161,58 @@ os.chdir('C:/Users/offne/Documents/FAARM/Data/GEE/Flooding/')
 surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
         'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
 
-FLOOD = get_flood(surv)
+flood_df = get_flood(surv)
 
-os.chdir('C:/Users/offne/Documents/FAARM/')
+# Select non-seasonal flooding
+idx = flood_df.columns.get_loc('dov')
+flood_df.insert(loc=idx+1, column='month', value=pd.to_datetime(flood_df['dov']).dt.month)
+flood_df['month'] = flood_df['month'].apply(pd.to_numeric, downcast='integer', errors='coerce')
+flood_df = flood_df[flood_df.month.isin([11, 12, 1, 2, 3, 4, 5, 6])]
+flood_df = flood_df.reset_index().drop(['index', 'month'], axis=1)
 
 # Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
 # FLOOD.isnull().sum()  # no NAs
-FLOOD.rename(columns={'dov':'dov_flood'}, inplace = True)
+flood_df.rename(columns={'dov':'dov_flood'}, inplace = True)
 
 # Aggregate Flooding Data by c_code and panel
-# - NOTE remember to take max of maximum and min of minimum!!!!
-FLOOD = FLOOD.groupby(['c_code', 'panel']).mean().reset_index()
+FLOOD = pd.DataFrame(columns=['c_code', 'panel', 'Shape_Area', 'c_flood_sum', 'c_flood_mean', 'r_flood_sum', 'r_flood_mean', 'r_max', 'r_min'])
+sum = flood_df.groupby(['c_code', 'panel']).sum().reset_index()
+mean = flood_df.groupby(['c_code', 'panel']).mean().reset_index()
+min = flood_df.groupby(['c_code', 'panel']).min().reset_index()
+max = flood_df.groupby(['c_code', 'panel']).max().reset_index()
+FLOOD['c_flood_sum'] = sum['Cluster_FloodDiff']
+FLOOD['r_flood_sum'] = sum['Region_FloodDiff']
+FLOOD['c_code'] = sum['c_code']
+FLOOD['panel'] = sum['panel']
+FLOOD['c_flood_mean'] = mean['Cluster_FloodDiff']
+FLOOD['r_flood_mean'] = mean['Region_FloodDiff']
+FLOOD['Shape_Area'] = mean['Shape_Area']
+FLOOD['r_min'] = min['Minimum']
+FLOOD['r_max'] = max['Maximum']
+
+os.chdir('C:/Users/offne/Documents/FAARM/')
 
 # ====================================================================================
 # GET GEE ENVIRONMENTAL DATA
 # ====================================================================================
-os.chdir('C:/Users/offne/Documents/FAARM/Data/Gee/')
-
-ndvi = Environment('ndvi.geojson').get_environment()
-prec = Environment('precipitation.geojson').get_environment()
-# No evapotranspiration (collection cuts off at P5) and no temperature (file won't read)
-
-os.chdir('C:/Users/offne/Documents/FAARM/')
-
-# Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
-# evap.isnull().sum()  # no NAs
-
-# Aggregate Flooding Data by c_code and panel
-# - NOTE remember to take max of maximum and min of minimum!!!!
-ndvi = ndvi.groupby(['c_code', 'panel']).mean().reset_index()
-prec = prec.groupby(['c_code', 'panel']).mean().reset_index()
-
-# Merge datasets
-ENV = pd.merge(ndvi, prec, how='left', on=['c_code', 'panel'])
+# os.chdir('C:/Users/offne/Documents/FAARM/Data/Gee/')
+#
+# ndvi = Environment('ndvi.geojson').get_environment()
+# prec = Environment('precipitation.geojson').get_environment()
+# # No evapotranspiration (collection cuts off at P5) and no temperature (file won't read)
+#
+# os.chdir('C:/Users/offne/Documents/FAARM/')
+#
+# # Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
+# # evap.isnull().sum()  # no NAs
+#
+# # Aggregate Flooding Data by c_code and panel
+# # - NOTE remember to take max of maximum and min of minimum!!!!
+# ndvi = ndvi.groupby(['c_code', 'panel']).mean().reset_index()
+# prec = prec.groupby(['c_code', 'panel']).mean().reset_index()
+#
+# # Merge datasets
+# ENV = pd.merge(ndvi, prec, how='left', on=['c_code', 'panel'])
 
 # ====================================================================================
 # GET AGRICULTURE PRODUCTION DATA
@@ -215,12 +236,13 @@ df = df.sort_values(by=['wcode']).reset_index().drop(['index'], axis=1)  # sort 
 df1 = df1.reset_index().drop(['index'], axis=1)  # sort values
 df['panel'] = df1
 
+
 # Merge data - NOTE some wcodes in EPDS_WDDS have multiple instances for one panel
 x = pd.merge(df, FLOOD, how='left', on=['c_code', 'panel'])
-x = pd.merge(df, ENV, how='left', on=['c_code', 'panel'])
+# x = pd.merge(x, ENV, how='left', on=['c_code', 'panel'])
 x = pd.merge(x, EPDS_WDDS, how='left', on=['wcode', 'c_code', 'panel'])
 x = pd.merge(x, HFIAS, how='left', on=['wcode', 'c_code', 'panel'])
-result = pd.merge(x, DEM, how='left', on=['wcode', 'c_code', 'panel'])
+RESULT = pd.merge(x, DEM, how='left', on=['wcode', 'c_code', 'panel'])
 
 
 #%%
@@ -228,5 +250,6 @@ result = pd.merge(x, DEM, how='left', on=['wcode', 'c_code', 'panel'])
 # Save to file
 # ====================================================================================
 
-result.to_csv('Data/subset_result.csv', index=False)
+RESULT.to_csv('Data/subset_result.csv', index=False)
+
 

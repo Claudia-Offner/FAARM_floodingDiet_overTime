@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 import re
+import os
 
 def get_simple_keys(data):
     # Check JSON Keys
@@ -218,6 +219,7 @@ class Flooder:
 
         return df
 
+
 class Environment:
 
     def __init__(self, file_name):
@@ -235,7 +237,7 @@ class Environment:
         r1 = self.get_json()
         # create output data frame
         df = pd.DataFrame(
-            columns=['cluster_co', 'panel', 'dov', 'Cluster_Mean', 'region_Mean',
+            columns=['cluster_co', 'panel', 'dov', 'Cluster_Mean', 'Region_Mean',
                      'OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng'])
         images = len(r1['features'])
         for i in range(images):  # for every image in geojson
@@ -247,7 +249,7 @@ class Environment:
                 # Get regional stats
                 prop['dov'] = r1['features'][i]['properties']['Date']
                 prop['panel'] = r1['features'][i]['properties']['Panel']
-                prop['region_Mean'] = r1['features'][i]['properties']['Region_Mean']
+                prop['Region_Mean'] = r1['features'][i]['properties']['Region_Mean']
                 df = df.append(prop, ignore_index=True)
 
         df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng'], axis=1)
