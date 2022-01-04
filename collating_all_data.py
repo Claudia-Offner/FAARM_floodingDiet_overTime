@@ -1,5 +1,5 @@
 import pandas as pd
-from pre_processors import Organiser, Panelist, Flooder, Environment
+from Collators import Organiser, Panelist, Flooder, Environment
 import warnings
 import os
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -164,11 +164,11 @@ surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
 flood_df = get_flood(surv)
 
 # Select non-seasonal flooding
-idx = flood_df.columns.get_loc('dov')
-flood_df.insert(loc=idx+1, column='month', value=pd.to_datetime(flood_df['dov']).dt.month)
-flood_df['month'] = flood_df['month'].apply(pd.to_numeric, downcast='integer', errors='coerce')
-flood_df = flood_df[flood_df.month.isin([11, 12, 1, 2, 3, 4, 5, 6])]
-flood_df = flood_df.reset_index().drop(['index', 'month'], axis=1)
+# idx = flood_df.columns.get_loc('dov')
+# flood_df.insert(loc=idx+1, column='month', value=pd.to_datetime(flood_df['dov']).dt.month)
+# flood_df['month'] = flood_df['month'].apply(pd.to_numeric, downcast='integer', errors='coerce')
+# flood_df = flood_df[flood_df.month.isin([11, 12, 1, 2, 3, 4, 5, 6])]
+# flood_df = flood_df.reset_index().drop(['index', 'month'], axis=1)
 
 # Address any NA values in WCODE, CLUSTER_CO, PANEL, DOV
 # FLOOD.isnull().sum()  # no NAs
@@ -187,6 +187,7 @@ FLOOD['panel'] = sum['panel']
 FLOOD['c_flood_mean'] = mean['Cluster_FloodDiff']
 FLOOD['r_flood_mean'] = mean['Region_FloodDiff']
 FLOOD['Shape_Area'] = mean['Shape_Area']
+FLOOD['r_min'] = min['Minimum']
 FLOOD['r_min'] = min['Minimum']
 FLOOD['r_max'] = max['Maximum']
 

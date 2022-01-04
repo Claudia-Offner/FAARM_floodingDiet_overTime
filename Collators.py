@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import json
 import re
-import os
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+
 
 def get_simple_keys(data):
     # Check JSON Keys
@@ -14,6 +16,7 @@ def get_simple_keys(data):
         else:
             result += get_simple_keys(data[key])
     return result
+
 
 class Organiser:
 
@@ -179,6 +182,7 @@ class Panelist:
 
         return d
 
+
 class Flooder:
 
     def __init__(self, file_name):
@@ -196,28 +200,88 @@ class Flooder:
         r1 = self.get_json()
         # create output data frame
         df = pd.DataFrame(
-            columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'Cluster_Diff', 'Region_Diff', 'Maximum',
-                     'Minimum', 'Mean', 'Stdev', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'])
+            columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'c_flood', 'c_min', 'c_max', 'c_mean', 'c_sd',
+                     'r_flood_diff', 'r_max', 'r_min', 'r_mean', 'r_sd', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1',
+                     'Shape_Leng'])
         images = len(r1['features'])
         for i in range(images):  # for every image in geojson
-            image = r1['features'][i]['properties']['Clusters']
+            image = r1['features'][i]['properties']['clusters']
             clusters = len(image)
             for c in range(clusters):  # for every cluster in Clusters
                 # Get cluster stats
                 prop = image[c]['properties']
                 # Get regional stats
-                prop['dov'] = r1['features'][i]['properties']['Date']
-                prop['panel'] = r1['features'][i]['properties']['Panel']
-                prop['Region_Diff'] = r1['features'][i]['properties']['Region_Diff']
-                prop['Maximum'] = r1['features'][i]['properties']['Maximum']
-                prop['Minimum'] = r1['features'][i]['properties']['Minimum']
-                prop['Mean'] = r1['features'][i]['properties']['Mean']
-                prop['Stdev'] = r1['features'][i]['properties']['Stdev']
+                prop['dov'] = r1['features'][i]['properties']['date']
+                prop['panel'] = r1['features'][i]['properties']['panel']
+                prop['r_flood_diff'] = r1['features'][i]['properties']['r_flood']
+                prop['r_max'] = r1['features'][i]['properties']['r_max']
+                prop['r_min'] = r1['features'][i]['properties']['r_min']
+                prop['r_mean'] = r1['features'][i]['properties']['r_mean']
+                prop['r_sd'] = r1['features'][i]['properties']['r_sd']
                 df = df.append(prop, ignore_index=True)
 
+        df.rename(columns={'cluster_co': 'c_code', 'Shape_Area': 'c_shape_area', 'c_flood': 'c_flood_diff'}, inplace=True)
         df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'], axis=1)
 
         return df
+
+
+class Statistics:
+
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def general_stats(self):
+        df = self.dataset
+        desc = df.describe()
+        desc.loc[len(desc)] = list(df.iloc[:, :].kurtosis())
+        desc.loc[len(desc)] = list(df.iloc[:, :].skew())
+        desc = desc.rename({8:'kurtosis', 9: 'skew'}, axis='rows')
+        return desc
+
+    def stats_by_time(self, col, time, r):
+        df = self.dataset
+        res = pd.DataFrame(columns=[time, 'max', 'sd', 'mean', 'kurt', 'skew', 'count', 'num_img'])
+        for t in r:
+            x = df.loc[df[time] == t]
+            max = x[col].max().round(decimals=2)
+            sd = x[col].std().round(decimals=2)
+            mean = x[col].mean().round(decimals=2)
+            kurt = x[col].kurtosis()
+            skew = x[col].skew()
+            count = x[col].count().round(decimals=2)
+            num_img = x['dov'].drop_duplicates().count()
+            res.loc[len(res)] = [t, max, sd, mean, kurt, skew, count, num_img]
+        return res
+
+
+class Visualiser:
+
+    def __init__(self, df1, df2):
+        self.df1 = df1
+        self.df2 = df2
+
+    def compare_stats(self, time, stat):
+        df1 = self.df1
+        df2 = self.df2
+        comp = pd.merge(df1, df2, how='right', on=time)
+        comp_norm = pd.DataFrame(preprocessing.MinMaxScaler().fit_transform(comp[[f'{stat}_x', f'{stat}_y']]))
+        comp_norm.rename(columns={0: f'region_{stat}', 1: f'cluster_{stat}'}, inplace=True)
+        if time == 'month':
+            comp_norm[time] = pd.to_datetime(comp[time], format='%m').dt.month_name().str.slice(stop=3)
+        if time == 'year':
+            comp_norm[time] = df1['year'].astype(int).astype(str)
+        return comp_norm
+
+    def plotter(self, time, stat, tick_r, x_lim, title):
+        df = self.compare_stats(time, stat)
+        ax = df.plot()
+        ax.xaxis.set_ticks(tick_r)
+        ax.set_xlim(x_lim)
+        ax.set_xticklabels(list(df[time]), rotation=45)
+        ax.set_title(title)
+        plt.show(block=True)
+        plt.interactive(False)
 
 
 class Environment:
@@ -259,6 +323,47 @@ class Environment:
 
         return df
 
+
+#%%
+# class Flooder:
+#
+#     def __init__(self, file_name):
+#         self.file_name = file_name
+#
+#     def get_json(self):
+#         """ Function for loading JSON files """
+#         path = self.file_name
+#
+#         with open(path, "r") as f:
+#             itn = json.load(f)
+#         return itn
+#
+#     def json_to_df(self):
+#         r1 = self.get_json()
+#         # create output data frame
+#         df = pd.DataFrame(
+#             columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'Cluster_Diff', 'Region_Diff', 'Maximum',
+#                      'Minimum', 'Mean', 'Stdev', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'])
+#         images = len(r1['features'])
+#         for i in range(images):  # for every image in geojson
+#             image = r1['features'][i]['properties']['Clusters']
+#             clusters = len(image)
+#             for c in range(clusters):  # for every cluster in Clusters
+#                 # Get cluster stats
+#                 prop = image[c]['properties']
+#                 # Get regional stats
+#                 prop['dov'] = r1['features'][i]['properties']['Date']
+#                 prop['panel'] = r1['features'][i]['properties']['Panel']
+#                 prop['Region_Diff'] = r1['features'][i]['properties']['Region_Diff']
+#                 prop['Maximum'] = r1['features'][i]['properties']['Maximum']
+#                 prop['Minimum'] = r1['features'][i]['properties']['Minimum']
+#                 prop['Mean'] = r1['features'][i]['properties']['Mean']
+#                 prop['Stdev'] = r1['features'][i]['properties']['Stdev']
+#                 df = df.append(prop, ignore_index=True)
+#
+#         df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'], axis=1)
+#
+#         return df
 
 
 #%%

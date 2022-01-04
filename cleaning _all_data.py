@@ -12,6 +12,7 @@ df = df[['wcode', 'c_code', 'panel', 'treatment', 'new_women', 'Shape_Area',
          'c_flood_sum', 'c_flood_mean', 'r_flood_sum', 'r_flood_mean', 'r_max', 'r_min',
          'md_score', 'md_scale', 'dd10r_score', 'dd10r_min', 'hfias_score', 'hfias', 'hfias_cat', 'hfias_d',
          'preg', 'religion', 'education', 'age', 'wealth', 'dec', 'quint', 'terc']]
+         # 'Cluster_Mean_ndvi', 'Region_Mean_ndvi', 'Cluster_Mean_prec', 'Region_Mean_prec'
 
 
 # ====================================================================================
@@ -34,31 +35,10 @@ for i in cols:
 # Treatment
 df['treatment'] = df['treatment'].fillna(method='ffill', axis=0)
 
-# Remove new_women (NOTE all new women joined in 2016)
-# x = df[~df['new_women'].isnull()]
-# x = list(x['wcode'])
-# for i in x:
-#     df = df.loc[df['wcode'] != i]
-# df = df.drop(['new_women'], axis=1).reset_index().drop(['index'], axis=1)
-
-# !!!! ADDRESS MULTIPLE EL !!!!
-
 # ====================================================================================
-# ENVIRONMENT VARIABLES
+# CUMULATIVE VARIABLES
 # ====================================================================================
 
-# CUMULATIVE ENVIRONMENT VARIABLE
-# df['c_ndvi_cum'] = df[['wcode', 'Cluster_Mean_ndvi']].groupby('wcode').cumsum()
-# df['r_ndvi_cum'] = df[['wcode', 'Region_Mean_ndvi']].groupby('wcode').cumsum()
-# df['c_prec_cum'] = df[['wcode', 'Cluster_Mean_prec']].groupby('wcode').cumsum()
-# df['r_prec_cum'] = df[['wcode', 'Region_Mean_prec']].groupby('wcode').cumsum()
-
-
-# ====================================================================================
-# FLOOD VARIABLES
-# ====================================================================================
-
-# CUMULATIVE FLOOD VARIABLE
 # ISSUE: Multiple panel records for various wcodes
 # Get round values from epds
 groups = df.groupby('wcode')
@@ -69,22 +49,38 @@ for name, group in groups:
         for i in d_index:
             df.loc[i, 'c_flood_sum'] = np.nan
             df.loc[i, 'r_flood_sum'] = np.nan
+            # df.loc[i, 'Cluster_Mean_ndvi'] = np.nan
+            # df.loc[i, 'Region_Mean_ndvi'] = np.nan
+            # df.loc[i, 'Cluster_Mean_prec'] = np.nan
+            # df.loc[i, 'Region_Mean_prec'] = np.nan
 
+
+# CUMULATIVE ENVIRONMENT VARIABLE
+# df['c_ndvi_cum'] = df[['wcode', 'Cluster_Mean_ndvi']].groupby('wcode').cumsum()
+# df['r_ndvi_cum'] = df[['wcode', 'Region_Mean_ndvi']].groupby('wcode').cumsum()
+# df['c_prec_cum'] = df[['wcode', 'Cluster_Mean_prec']].groupby('wcode').cumsum()
+# df['r_prec_cum'] = df[['wcode', 'Region_Mean_prec']].groupby('wcode').cumsum()
+# CUMULATIVE FLOODING VARIABLES
 df['c_flood_cum'] = df[['wcode', 'c_flood_sum']].groupby(['wcode']).cumsum()
 df['r_flood_cum'] = df[['wcode', 'r_flood_sum']].groupby(['wcode']).cumsum()
 
+# ====================================================================================
+# FLOODING VARIABLES
+# ====================================================================================
 
 # 3 categorical variable based on IQR (CLUSTER)
-q3, q1 = np.percentile(df['c_flood_cum'], [75, 25])
-iqr = q3 - q1
+df['c_flood_cum'].describe()
+iqr = 7.823529 - 0.000000
 max = df['c_flood_cum'].max()
 df['c_flood_cat'] = pd.cut(df.c_flood_cum, bins=[-1, 0, iqr, max],
                            labels=['no flooding', 'some flooding', 'extensive flooding'])
 # Get dichotomous variable (CLUSTER)
 df['c_flood_d'] = pd.cut(df.c_flood_cum, bins=[-1, 0, max], labels=['no flooding', 'flooding'])
+
+
 # 3 categorical variable based on IQR (REGION)
-q3, q1 = np.percentile(df['r_flood_cum'], [75, 25])
-iqr = q3 - q1
+df['r_flood_cum'].describe()
+iqr = 3.828923e+06 - 5.431288e+05
 max = df['r_flood_cum'].max()
 df['r_flood_cat'] = pd.cut(df.r_flood_cum, bins=[-1, 0, iqr, max],
                            labels=['no flooding', 'some flooding', 'extensive flooding'])
@@ -120,6 +116,8 @@ data = df[['wcode', 'c_code', 'panel', 'treatment',
            'dd10r_score', 'dd10r_min',
            'hfias_score', 'hfias', 'hfias_cat', 'hfias_d',
            'preg', 'religion', 'education', 'age', 'terc']]
+           # 'Cluster_Mean_ndvi', 'Region_Mean_ndvi', 'Cluster_Mean_prec', 'Region_Mean_prec',
+           # 'c_ndvi_cum', 'r_ndvi_cum', 'c_prec_cum', 'r_prec_cum'
 
 
 # Separate BL, P8, EL
@@ -142,18 +140,17 @@ el = el.drop(['panel'], axis=1)
 x = pd.merge(bl, P8, how='right', on=['wcode', 'c_code', 'treatment'])
 full_trial = pd.merge(x, el, how='right', on=['wcode', 'c_code', 'treatment'])
 
-# Separate Trial data
-n_intervention = full_trial.loc[full_trial['treatment'] == 0]
-y_intervention = full_trial.loc[full_trial['treatment'] == 1]
+# # Separate Trial data
+# n_intervention = full_trial.loc[full_trial['treatment'] == 0]
+# y_intervention = full_trial.loc[full_trial['treatment'] == 1]
 
+full_trial.columns
 #%%
 # ====================================================================================
 # Save to file
 # ====================================================================================
 
 full_trial.to_csv('Data/full_trial.csv', index=False)
-n_intervention.to_csv('Data/n_intervention.csv', index=False)
-y_intervention.to_csv('Data/y_intervention.csv', index=False)
 
 
 #%%
@@ -164,8 +161,12 @@ y_intervention.to_csv('Data/y_intervention.csv', index=False)
 
 flood = full_trial[['wcode', 'c_flood_sum_p8', 'c_flood_cum_p8', 'c_flood_cat_p8', 'c_flood_d_p8',
                     'r_flood_sum_p8', 'r_flood_cum_p8', 'r_flood_cat_p8', 'r_flood_d_p8',
+                    # 'Cluster_Mean_ndvi_p8', 'Region_Mean_ndvi_p8', 'Cluster_Mean_prec_p8', 'Region_Mean_prec_p8',
+                    # 'c_ndvi_cum_p8', 'r_ndvi_cum_p8', 'c_prec_cum_p8', 'r_prec_cum_p8',
                     'c_flood_sum_el', 'c_flood_cum_el', 'c_flood_cat_el', 'c_flood_d_el',
                     'r_flood_sum_el', 'r_flood_cum_el', 'r_flood_cat_el', 'r_flood_d_el']]
+                    # 'Cluster_Mean_ndvi_el', 'Region_Mean_ndvi_el', 'Cluster_Mean_prec_el', 'Region_Mean_prec_el',
+                    # 'c_ndvi_cum_el', 'r_ndvi_cum_el', 'c_prec_cum_el', 'r_prec_cum_el'
 
 
 flood = flood.drop_duplicates(subset = 'wcode').reset_index().drop(['index'], axis=1)
