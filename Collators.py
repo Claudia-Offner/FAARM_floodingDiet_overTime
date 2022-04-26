@@ -200,9 +200,8 @@ class Flooder:
         r1 = self.get_json()
         # create output data frame
         df = pd.DataFrame(
-            columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'c_flood', 'c_min', 'c_max', 'c_mean', 'c_sd',
-                     'r_flood_diff', 'r_max', 'r_min', 'r_mean', 'r_sd', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1',
-                     'Shape_Leng'])
+            columns=['enum_c_cod', 'panel', 'dov', 'INSIDE_X', 'INSIDE_Y', 'area_km2', 'c_Areakm2', 'c_floodedAreakm2',
+                     'r_floodedAreakm2', 'r_max', 'r_min', 'r_mean', 'r_sd'])
         images = len(r1['features'])
         for i in range(images):  # for every image in geojson
             image = r1['features'][i]['properties']['clusters']
@@ -213,15 +212,15 @@ class Flooder:
                 # Get regional stats
                 prop['dov'] = r1['features'][i]['properties']['date']
                 prop['panel'] = r1['features'][i]['properties']['panel']
-                prop['r_flood_diff'] = r1['features'][i]['properties']['r_flood']
+                prop['r_floodedAreakm2'] = r1['features'][i]['properties']['r_floodedAreakm2']
                 prop['r_max'] = r1['features'][i]['properties']['r_max']
                 prop['r_min'] = r1['features'][i]['properties']['r_min']
                 prop['r_mean'] = r1['features'][i]['properties']['r_mean']
                 prop['r_sd'] = r1['features'][i]['properties']['r_sd']
                 df = df.append(prop, ignore_index=True)
 
-        df.rename(columns={'cluster_co': 'c_code', 'Shape_Area': 'c_shape_area', 'c_flood': 'c_flood_diff'}, inplace=True)
-        df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'], axis=1)
+        df.rename(columns={'enum_c_cod': 'c_code'}, inplace=True)
+        df = df.drop(['INSIDE_X', 'INSIDE_Y', 'area_km2'], axis=1)
 
         return df
 
@@ -241,17 +240,18 @@ class Statistics:
 
     def stats_by_time(self, col, time, r):
         df = self.dataset
-        res = pd.DataFrame(columns=[time, 'max', 'sd', 'mean', 'kurt', 'skew', 'count', 'num_img'])
+        res = pd.DataFrame(columns=[time, 'min', 'max', 'sd', 'mean', 'kurt', 'skew', 'count']) #num_img
         for t in r:
             x = df.loc[df[time] == t]
-            max = x[col].max().round(decimals=2)
-            sd = x[col].std().round(decimals=2)
-            mean = x[col].mean().round(decimals=2)
+            min = round(x[col].min(), 2)
+            max = round(x[col].max(), 2)
+            sd = round(x[col].std(), 2)
+            mean = round(x[col].mean(), 2)
             kurt = x[col].kurtosis()
             skew = x[col].skew()
-            count = x[col].count().round(decimals=2)
-            num_img = x['dov'].drop_duplicates().count()
-            res.loc[len(res)] = [t, max, sd, mean, kurt, skew, count, num_img]
+            count = round(x[col].count(), 2)
+            # num_img = x['dov'].drop_duplicates().count()
+            res.loc[len(res)] = [t, min, max, sd, mean, kurt, skew, count] #num_img
         return res
 
 
