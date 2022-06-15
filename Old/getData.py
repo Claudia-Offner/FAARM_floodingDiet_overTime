@@ -5,70 +5,17 @@ from pandas.api.types import is_numeric_dtype
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-# def get_flood(file_names):
-#
-#     flood_df = pd.DataFrame(columns=['c_code', 'panel', 'dov', 'c_Areakm2', 'c_floodedAreakm2', 'r_floodedAreakm2', 'r_max',
-#                                      'r_min', 'r_mean', 'r_sd'])
-#
-#     for i in file_names:
-#         result = Flooder(i).json_to_df()
-#         flood_df = flood_df.append(result, ignore_index=True)
-#
-#     flood_df['panel'] = flood_df['panel'].str.replace('P9', 'end')
-#
-#     return flood_df
-#
-# # ====================================================================================
-# # GET GEE FLOODING DATA
-# # ====================================================================================
-# # Load satellite image data from JSON file to dataframe, clean images and export to csv
-# os.chdir('C:/Users/offne/Documents/GitHub/FAARM_Analysis/Data/Cluster_100mbuff_10mres_tuned/')
-#
-# surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
-#         'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
-#
-# flood_df = get_flood(surv)
-# flood_df['dov'] = pd.to_datetime(flood_df['dov'], errors='coerce')
-# flood_df = Panelist(flood_df).get_dd_mm_yyyy()
-#
-# # Calculate Flood Percentage by Cluster
-# flood_df['perc_flooded'] = flood_df['c_floodedAreakm2']/flood_df['c_Areakm2']
-#
-# # Flood mean grouped by wcode, year, month
-# flood_df['month2'] = flood_df['month'].apply(lambda x: '{0:0>2}'.format(x))
-# flood_df['year_month'] = flood_df['year'].astype(str) + '-' + flood_df['month2'].astype(str)
-# flood_df = flood_df.groupby(['c_code', 'year_month', 'panel'], as_index=False).mean()
-# flood_df = flood_df.sort_values(by=['c_code', 'year_month']).reset_index().drop('index', axis=1)  # IMPORTANT FOR LAG sort values
-#
-# # Save data
-# os.chdir('C:/Users/offne/Documents/GitHub/FAARM_Analysis/')
-# flood_df.to_csv('Data/Cluster100_10mflood_df.csv', index=False)
 
-
-# # Get means of Major Flood Event Months !!! ADAPT TO YEAR_MONTH VARIABLE INSTEAD !!!
-# flood_201607 = flood_df.loc[flood_df['year'].eq(2016) & flood_df['month'].eq(7)].groupby('c_code').mean().reset_index()
-# flood_201704 = flood_df.loc[flood_df['year'].eq(2017) & flood_df['month'].eq(4)].groupby('c_code').mean().reset_index()
-# flood_201808 = flood_df.loc[flood_df['year'].eq(2018) & flood_df['month'].eq(7)].groupby('c_code').mean().reset_index()
-# flood_events = pd.DataFrame(columns=['c_code', 'perc_flood_201607', 'perc_flood_201704', 'perc_flood_201808'])
-# flood_events['perc_flood_201607'] = flood_201607['perc_flooded']
-# flood_events['perc_flood_201704'] = flood_201704['perc_flooded']
-# flood_events['perc_flood_201808'] = flood_201808['perc_flooded']
-# flood_events['c_code'] = flood_201607['c_code']
-#
-# # Save data
-# flood_events.to_csv('Data/Cluster100_10mflood_events_df.csv', index=False)
-
-# Read Flood Data from CSV
-flood_df = pd.read_csv('Data/Cluster100_10mflood_df.csv', low_memory=False)
-
+# Read Flood/ Environmental Data from CSV
+flood_df = pd.read_csv(r'G:\My Drive\GEE\1_Flooding_environ_df.csv', low_memory=False)
 
 # ====================================================================================
 # GET WDDS DATA
 # ====================================================================================
 
 # Read diet data from csv
-bi = pd.read_csv('Data/womens dd - long.csv', low_memory=False)
-bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'season')]
+bi = pd.read_csv('../Data/womens dd - long.csv', low_memory=False) # !!!!!!
+bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'season', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m', 'ramadan', 'preg')]
 
 bi_org = Organiser(bi_sub[:]).format()  # wcodes already unnested
 bi_Diet = Panelist(bi_org[:]).get_panels()
@@ -117,7 +64,7 @@ x = pd.merge(df, flood_df, how='left', on=['c_code','year_month'])
 RESULT = pd.merge(x, bi_Diet, how='left', on=['wcode', 'c_code', 'year_month'])
 
 # Clean up columns
-RESULT = RESULT.drop(['day_x', 'day_y', 'month_y', 'year_y', 'panel_y', 'dov_bi_Diet'], axis=1)
+RESULT = RESULT.drop(['month_y', 'year_y', 'dov_bi_Diet'], axis=1)
 RESULT.rename(columns={'panel_x':'panel', 'year_x': 'year', 'month_x':'month'}, inplace = True)
 
 
@@ -142,6 +89,7 @@ RESULT['season'] = RESULT['season'].replace(season_nums)
 
 # Dummy code binary DD
 RESULT['dd10r_min'] = RESULT['dd10r_min'].map({'Inadequate diet': 0,'Diet diverse': 1})  # 1 = has inadquate diet
+# RESULT['dd10r_min_m'] = RESULT['dd10r_min_m'].map({'Inadequate diet': 0,'Diet diverse': 1})  # 1 = has inadquate diet
 
 # Drop string columns
 RESULT.drop(['year_month', 'panel'], axis=1)
@@ -190,7 +138,7 @@ RESULT = RESULT.sort_values(by=['wcode', 'year_month']).reset_index().drop(['ind
 # GET BASELINE CHARACTERISTICS
 # ====================================================================================
 
-base = pd.read_csv('Data/FSN-MH data test 2_220314.csv', low_memory=False)
+base = pd.read_csv('../Data/FSN-MH data test 2_220314.csv', low_memory=False)
 base_sub = base.loc[:, ('wcode', 'c_code', 'g_2h_BL', 'fam_type_BL', 'wi_hl_BL', 'wi_al_BL', 'wi_land_BL', 'num_crops_BL',
                         'woman_edu_cat__BL', 'hfias_BL', 'hfias_score_BL', 'hfias_cat_BL', 'hfias_d_BL',
                         'dd10r_score_m_BL', 'dd10r_min_m_BL', 'dd10r_score_BL',

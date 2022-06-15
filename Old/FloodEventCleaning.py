@@ -2,7 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import os
 
-os.chdir('C:/Users/offne/Documents/GitHub/FAARM_Analysis/Data/Flooding Events/')
+os.chdir('/Data/Flooding Events/')
 
 # Load 1000 buffer
 shape1000 = gpd.read_file('flood_zonalstats_1000m.shp')

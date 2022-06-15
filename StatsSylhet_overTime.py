@@ -28,7 +28,7 @@ def get_flood(file_names):
 
     return flood_df
 
-os.chdir('C:/Users/offne/Documents/GitHub/FAARM_Analysis/Data/ClusterBound_tuned')
+os.chdir('C:/Users/offne/Documents/GitHub/FAARM_Analysis/Data/Cluster_100mbuff_10mres_tuned')
 
 surv = ['P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
         'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson']
