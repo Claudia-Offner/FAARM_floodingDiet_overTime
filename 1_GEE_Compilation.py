@@ -101,18 +101,17 @@ os.chdir(r'G:\My Drive\GEE')
 
 # Get data
 # elev = json_to_df_1D(Flooder('Environ/elev_res.geojson').get_json())
-temp = json_to_df_2D(Flooder('Environ/temp_res.geojson').get_json())
-# evap = json_to_df_2D(Flooder('Environ/evap_res.geojson').get_json()).drop(['min', 'max'], axis=1, inplace=True)
-# ndvi = json_to_df_2D(Flooder('Environ/ndvi_res.geojson').get_json()).drop(['min', 'max'], axis=1, inplace=True)
-# prec = json_to_df_2D(Flooder('Environ/prec_res.geojson').get_json()).drop(['min', 'max'], axis=1, inplace=True)
+# temp = json_to_df_2D(Flooder('Environ/temp_res.geojson').get_json())
+# evap = json_to_df_2D(Flooder('Environ/evap_res.geojson').get_json())
+# ndvi = json_to_df_2D(Flooder('Environ/ndvi_res.geojson').get_json())
+# prec = json_to_df_2D(Flooder('Environ/prec_res.geojson').get_json())
 # Save to csv
 # elev.to_csv('elev_df.csv', index=False)
-temp.to_csv('temp_df.csv', index=False)
+# temp.to_csv('temp_df.csv', index=False)
 # evap.to_csv('evap_df.csv', index=False)
 # ndvi.to_csv('ndvi_df.csv', index=False)
 # prec.to_csv('prec_df.csv', index=False)
 
-#%%
 elev = pd.read_csv('elev_df.csv', low_memory=False)
 temp = pd.read_csv('temp_df.csv', low_memory=False)
 evap = pd.read_csv('evap_df.csv', low_memory=False)
@@ -120,15 +119,12 @@ ndvi = pd.read_csv('ndvi_df.csv', low_memory=False)
 prec = pd.read_csv('prec_df.csv', low_memory=False)
 flood_df = pd.read_csv('flood_df.csv', low_memory=False)
 
+
 # DATA CLEANING & FORMATTING
 
 # Convert temperature data from kelvin (scale 0.02) to celcius
 for i in ['mean', 'min', 'max']:
     temp[i] = temp[i] * 0.02 - 273.15
-    if i != 'mean':
-        # Rename columns
-        col_name = 'temp_' + i
-        temp.rename(columns={i: col_name}, inplace=True)
 
 # Re-format all datasets
 df_list = [temp, evap, ndvi, prec]
@@ -138,8 +134,10 @@ for i in df_list:
     i['dov'] = pd.to_datetime(i['dov'])
     i = Panelist(i).get_dd_mm_yyyy()
     # Rename mean column
-    col_name = retrieve_name(i)[0] + '_mean'
-    i.rename(columns={'mean': col_name}, inplace=True)
+    mean_name = retrieve_name(i)[0] + '_mean'
+    min_name = retrieve_name(i)[0] + '_min'
+    max_name = retrieve_name(i)[0] + '_max'
+    i.rename(columns={'mean': mean_name, 'min':min_name, 'max':max_name}, inplace=True)
     # Make single digits double
     i['month'] = i['month'].astype(int).apply(lambda x: '{0:0>2}'.format(x))
     # year_month column

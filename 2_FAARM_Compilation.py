@@ -18,14 +18,14 @@ flood_df = pd.read_csv(r'G:\My Drive\GEE\1_Flooding_environ_df.csv', low_memory=
 # ====================================================================================
 
 # Read diet data from original csv (DF 1)
-bi = pd.read_csv('Data/womens dd - long.csv', low_memory=False) # !!!!!!
-bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m', 'ramadan', 'preg')]
-df_name = 'Cluster100_10mflood_diet_df'
+# bi = pd.read_csv('Data/womens dd - long.csv', low_memory=False) # !!!!!!
+# bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m', 'ramadan', 'preg')]
+# df_name = 'Cluster100_10mflood_diet_df'
 
 # Read diet data from new csv (DF 2) - w/ weights
-# bi=pd.read_csv('Data/CompiledDD_Apr22.csv',low_memory=False)
-# bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m', 'ramadan', 'preg', 'wdiet_wt')]
-# df_name = 'Cluster100_10mflood_diet_df2'
+bi=pd.read_csv('Data/CompiledDD_Apr22.csv',low_memory=False)
+bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m', 'ramadan', 'preg', 'wdiet_wt')]
+df_name = 'Cluster100_10mflood_diet_df'
 
 # Data organising & cleaning
 bi_org = Organiser(bi_sub[:]).format()  # wcodes already unnested
