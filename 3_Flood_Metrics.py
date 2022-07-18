@@ -87,8 +87,32 @@ sing_clust = sing_clust[sing_clust['c_code'] == 43]
 visual(sing_clust, 'flooded_weight', 'Single Cluster Level')
 
 
+# EXTRACT DATA
+# Take the overall cluster seasonal average and subtract from wcode data
 
+RESULT = pd.merge(df, sstat_c[['season', 'avSeason_mean']], how='left', on=['season'])
+RESULT = seasonal_weight(RESULT, 'perc_flooded')  # Weight
+RESULT['flooded_diff'] = RESULT['perc_flooded']-RESULT['avSeason_mean']  # Anomaly
+RESULT['flooded_diff_w'] = RESULT['flooded_weight']-RESULT['avSeason_mean']  # Weighted Anomaly
 
+# Create 1 seasonal time lag for every metric
+groups = RESULT.groupby('wcode')
+RESULT['Flood_1Lag'] = ''
+RESULT['season_flood'] = ''
+for woman, group in groups:
+    # Flood weight
+    group['timelag1'] = group['flooded_weight'].shift(1)
+    mask = group['timelag1'].index
+    RESULT.loc[mask, 'flooded_weight_lag'] = group['timelag1']
+    # Flood Anomaly
+    group['timelag2'] = group['flooded_diff'].shift(1)
+    mask = group['timelag2'].index
+    RESULT.loc[mask, 'flooded_diff_lag'] = group['timelag2']
+    # Flood Anomaly Weighted
+    group['timelag3'] = group['flooded_diff_w'].shift(1)
+    mask = group['timelag3'].index
+    RESULT.loc[mask, 'flooded_diff_w_lag'] = group['timelag3']
 
-
+# Save
+RESULT.to_csv('Data/Metric_Test', index=False)
 
