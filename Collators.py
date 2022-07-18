@@ -231,6 +231,7 @@ class Statistics:
         self.dataset = dataset
 
     def general_stats(self):
+        # NOTE: Deprication warning for skew & kurtosis
         df = self.dataset
         desc = df.describe()
         desc.loc[len(desc)] = list(df.iloc[:, :].kurtosis())
