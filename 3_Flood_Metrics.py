@@ -97,8 +97,9 @@ RESULT['flooded_diff_w'] = RESULT['flooded_weight']-RESULT['avSeason_mean']  # W
 
 # Create 1 seasonal time lag for every metric
 groups = RESULT.groupby('wcode')
-RESULT['Flood_1Lag'] = ''
-RESULT['season_flood'] = ''
+RESULT['flooded_weight_lag'] = ''
+RESULT['flooded_diff_lag'] = ''
+RESULT['flooded_diff_w_lag'] = ''
 for woman, group in groups:
     # Flood weight
     group['timelag1'] = group['flooded_weight'].shift(1)
@@ -113,6 +114,11 @@ for woman, group in groups:
     mask = group['timelag3'].index
     RESULT.loc[mask, 'flooded_diff_w_lag'] = group['timelag3']
 
+RESULT['flooded_weight_lag'] = pd.to_numeric(RESULT['flooded_weight_lag'])  # set to numeric
+RESULT['flooded_diff_lag'] = pd.to_numeric(RESULT['flooded_diff_lag'])  # set to numeric
+RESULT['flooded_diff_w_lag'] = pd.to_numeric(RESULT['flooded_diff_w_lag'])  # set to numeric
+
+
 # Save
-RESULT.to_csv('Data/Metric_Test', index=False)
+RESULT.to_csv('Data/Metric_Test.csv', index=False)
 

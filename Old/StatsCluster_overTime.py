@@ -8,7 +8,7 @@ import plotly.express as px
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # flood_df = pd.read_csv('Data/Cluster100_10mflood_df.csv', low_memory=False)
-RESULT = pd.read_csv('Data/Cluster100_10mflood_diet_df.csv', low_memory=False)
+RESULT = pd.read_csv('../Data/Cluster100_10mflood_diet_df.csv', low_memory=False)
 # RESULT = RESULT[RESULT['panel'] != 'base']
 
 #%%
