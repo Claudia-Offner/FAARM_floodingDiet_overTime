@@ -6,8 +6,10 @@ import pandas as pd
 from Collators import Statistics
 import matplotlib.pyplot as plt
 
+
 # IMPORTANT - set file path to data folder location
-data_path = 'C:/Users/ClaudiaOffner/Documents/GitHub/FAARM_Analysis/Data'
+data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
+            '- DD-Flooding TimeSeries - CO/4. Data/Final'
 os.chdir(data_path)
 
 

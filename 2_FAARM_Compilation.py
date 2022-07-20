@@ -8,7 +8,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # IMPORTANT - set file path to data folder location
-data_path = 'C:/Users/ClaudiaOffner/Documents/GitHub/FAARM_Analysis/Data'
+data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
+            '- DD-Flooding TimeSeries - CO/4. Data/Final'
 os.chdir(data_path)
 
 
@@ -208,7 +209,7 @@ for c in cols:
 # Check NA values
 # RESULT.columns[RESULT.isnull().any()]
 
-#%%
+
 # Save to CSV
 # path = df_name + '.csv'
 RESULT.to_csv(df_name, index=False)

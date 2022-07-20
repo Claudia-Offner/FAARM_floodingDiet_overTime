@@ -6,11 +6,11 @@ import os
 import pandas as pd
 import inspect
 import warnings
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # IMPORTANT - set file path to data folder location
-data_path = 'C:/Users/ClaudiaOffner/Documents/GitHub/FAARM_Analysis/Data'
+data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
+            '- DD-Flooding TimeSeries - CO/4. Data/Final'
 
 
 # FUNCTIONS
@@ -81,51 +81,50 @@ def get_flood(file_names):
     return df
 
 
-#%%
 # ====================================================================================
 # GEE FLOODING EXPOSURE
 # ====================================================================================
 # Load satellite image data from JSON file to dataframe, clean images and export to csv
-os.chdir(data_path + '/GEE_Flooding_Clusters')
+# os.chdir(data_path + '/GEE_Flooding_Clusters')
+#
+# surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
+#         'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
+#
+# flood_df = get_flood(surv)
+# flood_df['dov'] = pd.to_datetime(flood_df['dov'], errors='coerce')
+# flood_df = Panelist(flood_df).get_dd_mm_yyyy()
+#
+# # Calculate Flood Percentage by Cluster
+# flood_df['perc_flooded'] = flood_df['c_floodedAreakm2'] / flood_df['c_Areakm2']
+#
+# # Flood mean grouped by wcode, year, month
+# flood_df['month2'] = flood_df['month'].apply(lambda x: '{0:0>2}'.format(x))
+# flood_df['year_month'] = flood_df['year'].astype(str) + '-' + flood_df['month2'].astype(str)
+# flood_df = flood_df.groupby(['c_code', 'year_month'], as_index=False).mean()  # panel
+# flood_df = flood_df.sort_values(by=['c_code', 'year_month']).reset_index().drop('index', axis=1)  # important for lag
+# flood_df.drop('day', axis=1, inplace=True)
+#
+# # Save data
+# os.chdir(data_path)
+# flood_df.to_csv('gee_flood_df.csv', index=False)
 
-surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
-        'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
 
-flood_df = get_flood(surv)
-flood_df['dov'] = pd.to_datetime(flood_df['dov'], errors='coerce')
-flood_df = Panelist(flood_df).get_dd_mm_yyyy()
-
-# Calculate Flood Percentage by Cluster
-flood_df['perc_flooded'] = flood_df['c_floodedAreakm2'] / flood_df['c_Areakm2']
-
-# Flood mean grouped by wcode, year, month
-flood_df['month2'] = flood_df['month'].apply(lambda x: '{0:0>2}'.format(x))
-flood_df['year_month'] = flood_df['year'].astype(str) + '-' + flood_df['month2'].astype(str)
-flood_df = flood_df.groupby(['c_code', 'year_month'], as_index=False).mean()  # panel
-flood_df = flood_df.sort_values(by=['c_code', 'year_month']).reset_index().drop('index', axis=1)  # important for lag
-flood_df.drop('day', axis=1, inplace=True)
-
-# Save data
-os.chdir(data_path)
-flood_df.to_csv('gee_flood_df.csv', index=False)
-
-# %%
 # ====================================================================================
 # GEE ENVIRONMENT CONTROLS
 # ====================================================================================
-os.chdir(data_path)
+# os.chdir(data_path)
 
 # Get data
 # NOTE: Run each data frame line by line (struggles to process at once)
 # elev = json_to_df(Flooder('GEE_Environment_Clusters/elev_res.geojson').get_json())
 # temp = nested_json_to_df(Flooder('GEE_Environment_Clusters/temp_res.geojson').get_json())
-evap = nested_json_to_df(Flooder('GEE_Environment_Clusters/evap_res.geojson').get_json())
+# evap = nested_json_to_df(Flooder('GEE_Environment_Clusters/evap_res.geojson').get_json())
 # ndvi = nested_json_to_df(Flooder('GEE_Environment_Clusters/ndvi_res.geojson').get_json())
 # prec = nested_json_to_df(Flooder('GEE_Environment_Clusters/prec_res.geojson').get_json())
 # Save to csv
 # elev.to_csv('gee_elev_df.csv', index=False)
 # temp.to_csv('gee_temp_df.csv', index=False)
-evap.to_csv('gee_evap_df.csv', index=False)
+# evap.to_csv('gee_evap_df.csv', index=False)
 # ndvi.to_csv('gee_ndvi_df.csv', index=False)
 # prec.to_csv('gee_prec_df.csv', index=False)
 
@@ -133,6 +132,7 @@ evap.to_csv('gee_evap_df.csv', index=False)
 # ====================================================================================
 # DATA CLEANING & FORMATTING
 # ====================================================================================
+os.chdir(data_path)
 
 elev = pd.read_csv('gee_elev_df.csv', low_memory=False)
 temp = pd.read_csv('gee_temp_df.csv', low_memory=False)
