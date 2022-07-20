@@ -1,10 +1,15 @@
-#%%
+# DESCRIPTION
+
+# IMPORT
 import pandas as pd
 import numpy as np
 import json
 import re
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
+
+
+# FUNCTIONS
 
 
 def get_simple_keys(data):
@@ -16,6 +21,9 @@ def get_simple_keys(data):
         else:
             result += get_simple_keys(data[key])
     return result
+
+
+# OOP
 
 
 class Organiser:
@@ -55,10 +63,10 @@ class Organiser:
         # Unnest values
         unnested = pd.DataFrame(columns=list(d.columns)).drop(['wcode2', 'wcode3', 'NAwcode2', 'NAwcode3'], axis=1)
         for i in d.index:
-            if d['NAwcode2'][i] == True:
+            if d['NAwcode2'][i]:
                 row = [d['wcode2'][i]] + list(d.iloc[i, 3:(len(d.columns) - 2)])
                 unnested.loc[len(unnested)] = row
-            elif d['NAwcode3'][i] == True:
+            elif d['NAwcode3'][i]:
                 row = [d['wcode3'][i]] + list(d.iloc[i, 3:(len(d.columns) - 2)])
                 unnested.loc[len(unnested)] = row
             else:
@@ -88,7 +96,7 @@ class Panelist:
         time = pd.DataFrame(columns=['day', 'month', 'year'])
 
         for i in items:
-            if pd.isnull([i]) == True:
+            if pd.isnull([i]):
                 time.loc[len(time)] = ['', '', '']
             else:
                 i = str(i).replace(" ", "")
@@ -112,7 +120,7 @@ class Panelist:
 
         # Create Timestamps
         time = time.astype(str)
-        time['time'] = time['year'] + '-' + time['month'] + '-' +time['day']
+        time['time'] = time['year'] + '-' + time['month'] + '-' + time['day']
         time['dov'] = pd.to_datetime(time['time'], errors='coerce')
         time = time.replace(r'^\s*$', np.nan, regex=True)
         d['dov'] = time['dov']
@@ -133,24 +141,23 @@ class Panelist:
 
         # Assign to df
         idx = d.columns.get_loc('dov')
-        d.insert(loc=idx+1, column='day', value=pd.to_datetime(d['dov']).dt.day)
-        d.insert(loc=idx+2, column='month', value=pd.to_datetime(d['dov']).dt.month)
-        d.insert(loc=idx+3, column='year', value=pd.to_datetime(d['dov']).dt.year)
+        d.insert(loc=idx + 1, column='day', value=pd.to_datetime(d['dov']).dt.day)
+        d.insert(loc=idx + 2, column='month', value=pd.to_datetime(d['dov']).dt.month)
+        d.insert(loc=idx + 3, column='year', value=pd.to_datetime(d['dov']).dt.year)
         cols = ['day', 'month', 'year']
         d[cols] = d[cols].apply(pd.to_numeric, downcast='integer', errors='coerce')
 
         return d
 
     def get_panels(self):
-        '''
+        """
         Get panel categories
         - INPUT: df with timestamp column named 'dov'
         - OUTPUT: df with 'panel' column
-        '''
+        """
         d = self.get_dd_mm_yyyy()
 
-
-        rounds = {'base': ['2015-03-01', '2015-06-30'], # baseline
+        rounds = {'base': ['2015-03-01', '2015-06-30'],  # baseline
                   'P1': ['2015-07-01', '2015-12-31'],
                   'P2': ['2016-01-01', '2016-06-30'],
                   'P3': ['2016-07-01', '2016-12-31'],
@@ -159,21 +166,21 @@ class Panelist:
                   'P6': ['2018-01-01', '2018-06-30'],
                   'P7': ['2018-07-01', '2018-12-31'],
                   'P8': ['2019-01-01', '2019-06-30'],
-                  'end': ['2019-07-01', '2020-02-29']} # endline
+                  'end': ['2019-07-01', '2020-02-29']}  # endline
 
         idx = d.columns.get_loc('dov')
-        d.insert(loc=idx, column='panel', value= '')
+        d.insert(loc=idx, column='panel', value='')
         for key in rounds.keys():
-               items = rounds[key]
-               start_date = pd.to_datetime(items[0])
-               end_date = pd.to_datetime(items[1])
-               x = d.loc[:, 'dov'].between(start_date, end_date, inclusive=True)
-               x = pd.DataFrame(x)
-               for i in x.index:
-                      if x.loc[i, ('dov')] == True:
-                             d.loc[i, 'panel'] = key
-                      else:
-                          continue
+            items = rounds[key]
+            start_date = pd.to_datetime(items[0])
+            end_date = pd.to_datetime(items[1])
+            x = d.loc[:, 'dov'].between(start_date, end_date, inclusive=True)
+            x = pd.DataFrame(x)
+            for i in x.index:
+                if x.loc[i, 'dov']:  # PARENTHESES REMOVED FROM 'DOV'
+                    d.loc[i, 'panel'] = key
+                else:
+                    continue
 
         panel_categories = ['base', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'end']
 
@@ -236,23 +243,23 @@ class Statistics:
         desc = df.describe()
         desc.loc[len(desc)] = list(df.iloc[:, :].kurtosis())
         desc.loc[len(desc)] = list(df.iloc[:, :].skew())
-        desc = desc.rename({8:'kurtosis', 9: 'skew'}, axis='rows')
+        desc = desc.rename({8: 'kurtosis', 9: 'skew'}, axis='rows')
         return desc
 
     def stats_by_time(self, col, time, r):
         df = self.dataset
-        res = pd.DataFrame(columns=[time, 'min', 'max', 'sd', 'mean', 'kurt', 'skew', 'count']) #num_img
+        res = pd.DataFrame(columns=[time, 'min', 'max', 'sd', 'mean', 'kurt', 'skew', 'count'])  # num_img
         for t in r:
             x = df.loc[df[time] == t]
-            min = round(x[col].min(), 2)
-            max = round(x[col].max(), 2)
+            mini = round(x[col].min(), 2)
+            maxi = round(x[col].max(), 2)
             sd = round(x[col].std(), 2)
             mean = round(x[col].mean(), 2)
             kurt = x[col].kurtosis()
             skew = x[col].skew()
             count = round(x[col].count(), 2)
             # num_img = x['dov'].drop_duplicates().count()
-            res.loc[len(res)] = [t, min, max, sd, mean, kurt, skew, count] #num_img
+            res.loc[len(res)] = [t, mini, maxi, sd, mean, kurt, skew, count]  # num_img
         return res
 
 
@@ -324,8 +331,7 @@ class Environment:
 
         return df
 
-
-#%%
+# %%
 # class Flooder:
 #
 #     def __init__(self, file_name):
@@ -367,7 +373,5 @@ class Environment:
 #         return df
 
 
-#%%
+# %%
 # ag = pd.read_csv('Data/Bi/HH_Ag_Prod_Div.csv', low_memory=False)
-
-
