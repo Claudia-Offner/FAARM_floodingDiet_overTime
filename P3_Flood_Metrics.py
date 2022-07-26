@@ -46,6 +46,7 @@ def seasonal_weight(d, var):
 
 df = pd.read_csv('2_FAARM_GEE_df.csv', low_memory=False)
 
+
 # FOCUS on clusters & regional flooding (do not need wcode data)
 df['r_Areakm2'] = 12298  # add sylhet division total km2
 df['r_code'] = 'Sylhet'
@@ -140,5 +141,7 @@ RESULT['flooded_weight_lag'] = pd.to_numeric(RESULT['flooded_weight_lag'])  # se
 RESULT['flooded_diff_lag'] = pd.to_numeric(RESULT['flooded_diff_lag'])  # set to numeric
 RESULT['flooded_diff_w_lag'] = pd.to_numeric(RESULT['flooded_diff_w_lag'])  # set to numeric
 
+
 # Save
 RESULT.to_csv('3_FloodMetrics.csv', index=False)
+

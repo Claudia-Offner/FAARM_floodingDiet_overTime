@@ -25,7 +25,7 @@ gee_df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 # ====================================================================================
 
 # Read diet data from original csv (DF 1)
-# bi = pd.read_csv('Data/FAARM/JW_womensDD_long.csv', low_memory=False) # !!!!!!
+# bi = pd.read_csv('FAARM/JW_womensDD_long.csv', low_memory=False) # !!!!!!
 # bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m',
 #                     'ramadan', 'preg')]
 # df_name = 'Cluster100_10mflood_diet_df'
@@ -34,7 +34,6 @@ gee_df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 bi = pd.read_csv('FAARM/JW_CompiledDD_Apr22.csv', low_memory=False)
 bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m',
                     'ramadan', 'preg', 'wdiet_wt')]
-df_name = '2_FAARM_GEE_df.csv'
 
 # Data organising & cleaning
 bi_org = Organiser(bi_sub[:]).format()  # wcodes already unnested
@@ -44,12 +43,12 @@ bi_Diet['panel'] = bi_Diet['panel'].fillna('end')
 
 # Add time variables
 bi_Diet = Panelist(bi_Diet).get_dd_mm_yyyy()
-bi_Diet['month'] = bi_Diet['month'].apply(lambda f: '{0:0>2}'.format(f))
+bi_Diet[['year', 'month', 'day']] = bi_Diet['dov'].dt.date.astype(str).str.split('-', expand=True)
 bi_Diet['year_month'] = bi_Diet['year'].astype(str) + '-' + bi_Diet['month'].astype(str)
 bi_Diet.rename(columns={'dov': 'dov_bi_Diet'}, inplace=True)
 # bi_Diet['season'] = bi_Diet['season'].fillna(method='ffill', axis=0)
 
- 
+
 # ====================================================================================
 # MERGE DATA
 # ====================================================================================
@@ -81,7 +80,6 @@ RESULT = pd.merge(x, bi_Diet, how='left', on=['wcode', 'c_code', 'year_month'])
 RESULT = RESULT.drop(['month_y', 'year_y', 'dov_bi_Diet'], axis=1)
 RESULT.rename(columns={'panel_x': 'panel', 'year_x': 'year', 'month_x': 'month'}, inplace=True)
 
- 
 # ====================================================================================
 # DATA CLEANING
 # ====================================================================================
@@ -211,5 +209,4 @@ for c in cols:
 
 
 # Save to CSV
-# path = df_name + '.csv'
-RESULT.to_csv(df_name, index=False)
+RESULT.to_csv('2_FAARM_GEE_df.csv', index=False)

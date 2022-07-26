@@ -82,6 +82,16 @@ def get_flood(file_names):
 
 
 # ====================================================================================
+# GET GEE FLOOD REFERENCE STATS
+# ====================================================================================
+
+# FROM PTYHON TOOLKIT - JSON_Processing.py Extractor Class
+# os.chdir(data_path)
+# main_prop = ['Date', 'Maximum', 'Minimum', 'Mean', 'Stdev']
+# y = Extractor('ReferenceSelection.geojson').json_to_df(main_props=main_prop)
+# y.to_csv('ReferenceSelection.csv', index=False)
+
+# ====================================================================================
 # GEE FLOODING EXPOSURE
 # ====================================================================================
 # Load satellite image data from JSON file to dataframe, clean images and export to csv
@@ -128,7 +138,7 @@ def get_flood(file_names):
 # ndvi.to_csv('gee_ndvi_df.csv', index=False)
 # prec.to_csv('gee_prec_df.csv', index=False)
 
-# %%
+#
 # ====================================================================================
 # DATA CLEANING & FORMATTING
 # ====================================================================================
