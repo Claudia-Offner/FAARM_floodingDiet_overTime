@@ -1,11 +1,13 @@
 # DESCRIPTION
 
 # IMPORT
-from Collators import Flooder, Panelist
+from Collators import Extractor, Panelist, SpatialProcessor
 import os
 import pandas as pd
 import inspect
 import warnings
+
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # IMPORTANT - set file path to data folder location
@@ -24,56 +26,16 @@ def retrieve_name(var):
     return [var_name for var_name, var_val in callers_local_vars if var_val is var]
 
 
-def nested_json_to_df(json):
-    """
-    This function iterates over an image collection and extracts cluster specific data for each image
-    (i.e. 2 dimensions). Pay attention to the column names, they should be specific to data at hand.
-    """
-    r1 = json
-    # create output data frame
-    df = pd.DataFrame(columns=['enum_c_cod', 'dov', 'INSIDE_X', 'INSIDE_Y', 'area_km2', 'mean', 'min', 'max'])
-    images = len(r1['features'])
-    for img in range(images):  # for every image in geojson
-        image = r1['features'][img]['properties']['clusters']
-        clusters = len(image)
-        for c in range(clusters):  # for every cluster in Clusters
-            # Get cluster stats
-            prop = image[c]['properties']
-            # Get regional stats
-            prop['dov'] = r1['features'][img]['properties']['date']
-            df = df.append(prop, ignore_index=True)
-
-    df.rename(columns={'enum_c_cod': 'c_code'}, inplace=True)
-    df = df.drop(['INSIDE_X', 'INSIDE_Y', 'area_km2'], axis=1)
-
-    return df
-
-
-def json_to_df(json):
-    """
-    This function extracts cluster specific data for 1 image (i.e. 1 dimension). Pay attention to the column names,
-    they should be specific to data at hand.
-    """
-    r1 = json
-    # create output data frame
-    df = pd.DataFrame(columns=['enum_c_cod', 'INSIDE_X', 'INSIDE_Y', 'area_km2', 'elev'])
-    clusters = len(r1['features'])
-    for clus in range(clusters):  # for every image in geojson
-        prop = r1['features'][clus]['properties']
-        df = df.append(prop, ignore_index=True)
-
-    df.rename(columns={'enum_c_cod': 'c_code'}, inplace=True)
-    df = df.drop(['INSIDE_X', 'INSIDE_Y', 'area_km2'], axis=1)
-
-    return df
-
-
 def get_flood(file_names):
     df = pd.DataFrame(columns=['c_code', 'panel', 'dov', 'c_Areakm2', 'c_floodedAreakm2', 'r_floodedAreakm2', 'r_max',
                                'r_min', 'r_mean', 'r_sd'])
 
+    props = ['date', 'panel', 'r_floodedAreakm2', 'r_max', 'r_min', 'r_mean', 'r_sd']
+    nprops = ['enum_c_cod', 'c_Areakm2', 'c_floodedAreakm2']
+    nfeat = 'clusters'
+
     for f in file_names:
-        result = Flooder(f).json_to_df()
+        result = Extractor(f).nested_json_to_df(main_props=props, nested_feature=nfeat, nested_props=nprops)
         df = df.append(result, ignore_index=True)
 
     df['panel'] = df['panel'].str.replace('P9', 'end')
@@ -81,20 +43,30 @@ def get_flood(file_names):
     return df
 
 
-# ====================================================================================
-# GET GEE FLOOD REFERENCE STATS
-# ====================================================================================
-
-# FROM PTYHON TOOLKIT - JSON_Processing.py Extractor Class
+# ========================================================================================
+# Create Bounding Box from FAARM 1km Buffer file (for G1_compReference.js)
+# ========================================================================================
 # os.chdir(data_path)
+#
+#
+# # Reproject to a projected coordinate system in meters (32646), for precise 1km buffer
+# x = SpatialProcessor('FAARM/enum_cCode_buffer1000.shp').create_bbox(crs=32646, buffer=1000, plot=False)
+# y = SpatialProcessor(x).transform_df(crs=4326) # Transform back to WSG84
+# y.to_file('FAARM/FAARM1km_bbox_CO.shp')  # Export
+
+
+# ========================================================================================
+# Convert Composite Reference Statistics to CSV for selection (from G1_compReference.js)
+# ========================================================================================
 # main_prop = ['Date', 'Maximum', 'Minimum', 'Mean', 'Stdev']
 # y = Extractor('ReferenceSelection.geojson').json_to_df(main_props=main_prop)
 # y.to_csv('ReferenceSelection.csv', index=False)
 
+
 # ====================================================================================
 # GEE FLOODING EXPOSURE
 # ====================================================================================
-# Load satellite image data from JSON file to dataframe, clean images and export to csv
+# # Load satellite image data from JSON file to dataframe, clean images and export to csv
 # os.chdir(data_path + '/GEE_Flooding_Clusters')
 #
 # surv = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
@@ -117,28 +89,36 @@ def get_flood(file_names):
 # # Save data
 # os.chdir(data_path)
 # flood_df.to_csv('gee_flood_df.csv', index=False)
-
+#
 
 # ====================================================================================
 # GEE ENVIRONMENT CONTROLS
 # ====================================================================================
-# os.chdir(data_path)
+os.chdir(data_path)
 
 # Get data
 # NOTE: Run each data frame line by line (struggles to process at once)
-# elev = json_to_df(Flooder('GEE_Environment_Clusters/elev_res.geojson').get_json())
-# temp = nested_json_to_df(Flooder('GEE_Environment_Clusters/temp_res.geojson').get_json())
-# evap = nested_json_to_df(Flooder('GEE_Environment_Clusters/evap_res.geojson').get_json())
-# ndvi = nested_json_to_df(Flooder('GEE_Environment_Clusters/ndvi_res.geojson').get_json())
-# prec = nested_json_to_df(Flooder('GEE_Environment_Clusters/prec_res.geojson').get_json())
-# Save to csv
-# elev.to_csv('gee_elev_df.csv', index=False)
-# temp.to_csv('gee_temp_df.csv', index=False)
-# evap.to_csv('gee_evap_df.csv', index=False)
-# ndvi.to_csv('gee_ndvi_df.csv', index=False)
-# prec.to_csv('gee_prec_df.csv', index=False)
+props = ['date']
+nprops = ['enum_c_cod', 'dov', 'mean', 'min', 'max']
+nfeat = 'clusters'
 
-#
+elev = Extractor('GEE_Environment_Clusters/elev_res.geojson').json_to_df(main_props=['enum_c_cod', 'elev'])
+temp = Extractor('GEE_Environment_Clusters/temp_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+                                                                                nested_props=nprops)
+evap = Extractor('GEE_Environment_Clusters/evap_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+                                                                                nested_props=nprops)
+ndvi = Extractor('GEE_Environment_Clusters/ndvi_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+                                                                                nested_props=nprops)
+prec = Extractor('GEE_Environment_Clusters/prec_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+                                                                                nested_props=nprops)
+# Save to csv
+elev.to_csv('gee_elev_df.csv', index=False)
+temp.to_csv('gee_temp_df.csv', index=False)
+evap.to_csv('gee_evap_df.csv', index=False)
+ndvi.to_csv('gee_ndvi_df.csv', index=False)
+prec.to_csv('gee_prec_df.csv', index=False)
+
+
 # ====================================================================================
 # DATA CLEANING & FORMATTING
 # ====================================================================================
