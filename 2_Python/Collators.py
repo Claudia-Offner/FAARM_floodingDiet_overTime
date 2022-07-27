@@ -2,80 +2,204 @@
 
 # IMPORT
 import pandas as pd
+import geopandas as gpd
 import numpy as np
 import json
 import re
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
-
-
-# FUNCTIONS
-
-
-def get_simple_keys(data):
-    # Check JSON Keys
-    result = []
-    for key in data.keys():
-        if type(data[key]) != dict:
-            result.append(key)
-        else:
-            result += get_simple_keys(data[key])
-    return result
+from shapely.geometry import Polygon
 
 
 # OOP
 
+class Extractor:
 
-class Organiser:
-
-    def __init__(self, df):
-        self.df = df
-
-    def format(self, date=None):
-        d = self.df
+    def __init__(self, path):
         """
-        Format dataframe: set wcode & dov, sort df and create timestamp
+        Method for self
+        :param path: directory path and file name
         """
-        if 'wcode1' in d.columns:
-            d.rename(columns={'wcode1': 'wcode'}, inplace=True)
-        names = ['today_hh', 'today_h', 'today_w']
-        for i in names:
-            if i in d.columns:
-                d.rename(columns={i: 'dov'}, inplace=True)  # Set date to 'dov
-        d['dov'] = d['dov'].replace(np.nan, date, regex=True)
-        d['dov'] = pd.to_datetime(d['dov'], errors='coerce')  # create time stamp
-        res = d.sort_values(by=['wcode', 'dov']).reset_index().drop(['index'], axis=1)  # sort values
-        return res
+        self.path = path
 
-    def set_na(self, cols, date=None):
-        d = self.format(date)
-        # Identify NA values
-        for c in cols:
-            d[c] = d[c].replace('-7777', ' ', regex=True)
-            d[c] = d[c].replace('.a', ' ', regex=True)
-            d[c] = d[c].replace(r'^\s*$', np.nan, regex=True)
-            d[f'NA{c}'] = d[c].notna()
-        return d
+    def get_json(self):
+        """
+        Method for loading JSON files to be processed
+        :return: Dictionary variable from json
+        """
+        path = self.path
 
-    def unnest_wcodes(self, date=None):
+        with open(path, "r") as f:
+            itn = json.load(f)
+        return itn
 
-        d = self.set_na(['wcode2', 'wcode3'], date)
-        # Unnest values
-        unnested = pd.DataFrame(columns=list(d.columns)).drop(['wcode2', 'wcode3', 'NAwcode2', 'NAwcode3'], axis=1)
-        for i in d.index:
-            if d['NAwcode2'][i]:
-                row = [d['wcode2'][i]] + list(d.iloc[i, 3:(len(d.columns) - 2)])
-                unnested.loc[len(unnested)] = row
-            elif d['NAwcode3'][i]:
-                row = [d['wcode3'][i]] + list(d.iloc[i, 3:(len(d.columns) - 2)])
-                unnested.loc[len(unnested)] = row
-            else:
-                continue
-        orig = pd.DataFrame(d).drop(['wcode2', 'wcode3', 'NAwcode2', 'NAwcode3'], axis=1)
-        unnested = unnested.append(orig)
-        unnested['wcode'] = unnested['wcode'].astype(int)
+    def json_to_df(self, main_props):
+        """
+        Method extracts cluster specific data for 1 dimension (i.e. 1 image). Pay attention to the column names, they
+        should be specific to data at hand (use get_simple_keys to check).
 
-        return Organiser(unnested).format()
+        :param main_props: Main properties to extract for each image
+        :return: Pandas dataframe with one row for every instance.
+        """
+        r1 = self.get_json()
+
+        # Create output data frame
+        df = pd.DataFrame()
+        features = len(r1['features'])
+        for i in range(features):  # for every image in geojson
+            prop = r1['features'][i]['properties']
+            # prop['Date'] = r1['features'][i]['id']  # IF there is feature information outside of properties
+            df = df.append(prop, ignore_index=True)
+
+        df = df.filter(main_props)
+        df.rename(columns={'enum_c_cod': 'c_code'}, inplace=True)
+
+        return df
+
+    def nested_json_to_df(self, main_props, nested_feature, nested_props):
+        """
+        This function iterates over an image collection and extracts nested data for each image (i.e. multiple clusters)
+        Pay attention to the column names, they should be specific to data at hand (use get_simple_keys to check).
+
+        :param main_props: Main properties to extract for each image (values will be the same for nested features)
+        :param nested_feature: JSON key name containing nest information (i.e. 'clusters')
+        :param nested_props: Properties to extract for every nested instance
+        :return: Pandas dataframe of main & nested instances in long format (i.e. images & clusters as rows; properties
+        as cols)
+        """
+
+        r1 = self.get_json()
+
+        # create output data frame
+        df = pd.DataFrame()
+        features = len(r1['features'])
+        for f in range(features):  # for every feature in geojson
+            main = r1['features'][f]['properties']
+            feat = r1['features'][f]['properties'][nested_feature]
+            nested = len(feat)
+            for n in range(nested):  # for every feature in nested
+                # Get nested feature stats
+                prop = feat[n]['properties']
+                # Get main feature stats
+                for m in main_props:
+                    prop[m] = main[m]
+
+                df = df.append(prop, ignore_index=True)
+
+        df = df.filter(main_props + nested_props)
+        df.rename(columns={'enum_c_cod': 'c_code', 'date': 'dov'}, inplace=True)
+
+        return df
+
+
+class SpatialProcessor:
+
+    def __init__(self, file_name):
+        """
+        Method for self
+        :param file_name: directory path and file name
+        """
+        self.file_name = file_name
+
+    def load_file(self):
+        """
+        Method for loading any spatial data type into a readable format.
+        :return:  Shapely dataframe for shapefiles; rasterio dataframe for rasters; GeoPandas data frame for csvs
+        """
+
+        file = self.file_name
+
+        if isinstance(file, gpd.GeoDataFrame):
+            return file
+        elif file.endswith('.shp'):
+            df = gpd.read_file(file)  # Geopandas
+
+        return df
+
+    def transform_df(self, crs=None):
+        """
+        Method to change CRS as desired
+        :param crs: EPSG codes in numeric format (i.e. 4326)
+        :return:
+        """
+
+        d = self.load_file()
+        if crs is not None:
+            df = d.to_crs(epsg=crs)  # 4326 = WSG84
+            return df
+        else:
+            return d
+
+    def spatial_desc(self, crs=None, plot=False):
+        """
+        Method to extract spatial information required for data handling decision making (i.e. file CRS, bounding box
+        coordinates, plot map). This can be applied to any spatial data type and option to change CRS and plot is
+        provided.
+
+        :param crs: EPSG codes in numeric format (i.e. 4326)
+        :param plot: maps provided geometry
+        :return: Summary of spatial information and dictionary containing said information.
+        """
+
+        data = self.transform_df(crs=crs)
+        file_name = self.file_name
+
+        if plot is True:
+            # Plot
+            fig, ax = plt.subplots(figsize=(10, 10))
+            data.plot(ax=ax, color='teal')
+            ax.set_title(file_name)
+            plt.show()
+
+        if isinstance(data, gpd.GeoDataFrame):
+
+            desc = {'crs': data.crs, 'bbox': data.total_bounds}
+            # data.bounds  # bbox of every polygon
+            # data.centroid  # Centroid of every polygon
+
+        else:
+            desc = 'You need to write more code for this file type'
+
+        return desc
+
+    def create_bbox(self, crs=None, buffer=None, plot=True):
+        """
+        Method for creating a bounding box shapefile from any spatial data type, using coordinates identified from
+        spatial description. Option to set CRS, buffer and plot.
+
+        :param crs: EPSG codes in numeric format (i.e. 4326)
+        :param buffer: Buffer around bbox, depends on CRS of the shape (check projection is in meters)
+        :param plot: maps bounding box against original geometry to assess if the buffer/crs is as desired
+        :return: polygon shapefile of data bounding box
+        """
+        data = self.transform_df(crs=crs)
+        desc = self.spatial_desc(crs=crs)
+        file_name = self.file_name
+
+        # Extract bounding coordinates from descriptives and create a shapefile.
+        bbox = desc['bbox']
+        shape = Polygon([[bbox[0], bbox[1]],
+                        [bbox[0], bbox[3]],
+                        [bbox[2], bbox[3]],
+                        [bbox[2], bbox[1]]])
+
+        shape = gpd.GeoDataFrame(pd.DataFrame(['p1'], columns=['geom']),
+                         geometry=[shape])
+
+        if buffer is not None:
+            shape['geometry'] = shape.geometry.buffer(buffer, join_style=2)
+
+        bbox = shape.set_crs(crs, allow_override=True)
+
+        if plot is True:
+            # Plot
+            fig, ax = plt.subplots(figsize=(10, 10))
+            shape.plot(ax=ax, color='teal')
+            data.plot(ax=ax, color='lightgrey', alpha=0.25)
+            ax.set_title('bbox_' + file_name)
+            plt.show()
+
+        return bbox
 
 
 class Panelist:
@@ -190,46 +314,56 @@ class Panelist:
         return d
 
 
-class Flooder:
+class Organiser:
 
-    def __init__(self, file_name):
-        self.file_name = file_name
+    def __init__(self, df):
+        self.df = df
 
-    def get_json(self):
-        """ Function for loading JSON files """
-        path = self.file_name
+    def format(self, date=None):
+        d = self.df
+        """
+        Format dataframe: set wcode & dov, sort df and create timestamp
+        """
+        if 'wcode1' in d.columns:
+            d.rename(columns={'wcode1': 'wcode'}, inplace=True)
+        names = ['today_hh', 'today_h', 'today_w']
+        for i in names:
+            if i in d.columns:
+                d.rename(columns={i: 'dov'}, inplace=True)  # Set date to 'dov
+        d['dov'] = d['dov'].replace(np.nan, date, regex=True)
+        d['dov'] = pd.to_datetime(d['dov'], errors='coerce')  # create time stamp
+        res = d.sort_values(by=['wcode', 'dov']).reset_index().drop(['index'], axis=1)  # sort values
+        return res
 
-        with open(path, "r") as f:
-            itn = json.load(f)
-        return itn
+    def set_na(self, cols, date=None):
+        d = self.format(date)
+        # Identify NA values
+        for c in cols:
+            d[c] = d[c].replace('-7777', ' ', regex=True)
+            d[c] = d[c].replace('.a', ' ', regex=True)
+            d[c] = d[c].replace(r'^\s*$', np.nan, regex=True)
+            d[f'NA{c}'] = d[c].notna()
+        return d
 
-    def json_to_df(self):
-        r1 = self.get_json()
-        # create output data frame
-        df = pd.DataFrame(
-            columns=['enum_c_cod', 'panel', 'dov', 'INSIDE_X', 'INSIDE_Y', 'area_km2', 'c_Areakm2', 'c_floodedAreakm2',
-                     'r_floodedAreakm2', 'r_max', 'r_min', 'r_mean', 'r_sd'])
-        images = len(r1['features'])
-        for i in range(images):  # for every image in geojson
-            image = r1['features'][i]['properties']['clusters']
-            clusters = len(image)
-            for c in range(clusters):  # for every cluster in Clusters
-                # Get cluster stats
-                prop = image[c]['properties']
-                # Get regional stats
-                prop['dov'] = r1['features'][i]['properties']['date']
-                prop['panel'] = r1['features'][i]['properties']['panel']
-                prop['r_floodedAreakm2'] = r1['features'][i]['properties']['r_floodedAreakm2']
-                prop['r_max'] = r1['features'][i]['properties']['r_max']
-                prop['r_min'] = r1['features'][i]['properties']['r_min']
-                prop['r_mean'] = r1['features'][i]['properties']['r_mean']
-                prop['r_sd'] = r1['features'][i]['properties']['r_sd']
-                df = df.append(prop, ignore_index=True)
+    def unnest_wcodes(self, date=None):
 
-        df.rename(columns={'enum_c_cod': 'c_code'}, inplace=True)
-        df = df.drop(['INSIDE_X', 'INSIDE_Y', 'area_km2'], axis=1)
+        d = self.set_na(['wcode2', 'wcode3'], date)
+        # Unnest values
+        unnested = pd.DataFrame(columns=list(d.columns)).drop(['wcode2', 'wcode3', 'NAwcode2', 'NAwcode3'], axis=1)
+        for i in d.index:
+            if d['NAwcode2'][i]:
+                row = [d['wcode2'][i]] + list(d.iloc[i, 3:(len(d.columns) - 2)])
+                unnested.loc[len(unnested)] = row
+            elif d['NAwcode3'][i]:
+                row = [d['wcode3'][i]] + list(d.iloc[i, 3:(len(d.columns) - 2)])
+                unnested.loc[len(unnested)] = row
+            else:
+                continue
+        orig = pd.DataFrame(d).drop(['wcode2', 'wcode3', 'NAwcode2', 'NAwcode3'], axis=1)
+        unnested = unnested.append(orig)
+        unnested['wcode'] = unnested['wcode'].astype(int)
 
-        return df
+        return Organiser(unnested).format()
 
 
 class Statistics:
@@ -262,116 +396,3 @@ class Statistics:
             res.loc[len(res)] = [t, mini, maxi, sd, mean, kurt, skew, count]  # num_img
         return res
 
-
-class Visualiser:
-
-    def __init__(self, df1, df2):
-        self.df1 = df1
-        self.df2 = df2
-
-    def compare_stats(self, time, stat):
-        df1 = self.df1
-        df2 = self.df2
-        comp = pd.merge(df1, df2, how='right', on=time)
-        comp_norm = pd.DataFrame(preprocessing.MinMaxScaler().fit_transform(comp[[f'{stat}_x', f'{stat}_y']]))
-        comp_norm.rename(columns={0: f'region_{stat}', 1: f'cluster_{stat}'}, inplace=True)
-        if time == 'month':
-            comp_norm[time] = pd.to_datetime(comp[time], format='%m').dt.month_name().str.slice(stop=3)
-        if time == 'year':
-            comp_norm[time] = df1['year'].astype(int).astype(str)
-        return comp_norm
-
-    def plotter(self, time, stat, tick_r, x_lim, title):
-        df = self.compare_stats(time, stat)
-        ax = df.plot()
-        ax.xaxis.set_ticks(tick_r)
-        ax.set_xlim(x_lim)
-        ax.set_xticklabels(list(df[time]), rotation=45)
-        ax.set_title(title)
-        plt.show(block=True)
-        plt.interactive(False)
-
-
-class Environment:
-
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-    def get_json(self):
-        """ Function for loading JSON files """
-        path = self.file_name
-
-        with open(path, "r") as f:
-            itn = json.load(f)
-        return itn
-
-    def get_environment(self):
-        r1 = self.get_json()
-        # create output data frame
-        df = pd.DataFrame(
-            columns=['cluster_co', 'panel', 'dov', 'Cluster_Mean', 'Region_Mean',
-                     'OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng'])
-        images = len(r1['features'])
-        for i in range(images):  # for every image in geojson
-            image = r1['features'][i]['properties']['Clusters']
-            clusters = len(image)
-            for c in range(clusters):  # for every cluster in Clusters
-                # Get cluster stats
-                prop = image[c]['properties']
-                # Get regional stats
-                prop['dov'] = r1['features'][i]['properties']['Date']
-                prop['panel'] = r1['features'][i]['properties']['Panel']
-                prop['Region_Mean'] = r1['features'][i]['properties']['Region_Mean']
-                df = df.append(prop, ignore_index=True)
-
-        df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Area', 'Shape_Le_1', 'Shape_Leng'], axis=1)
-        df.rename(columns={'cluster_co': 'c_code'}, inplace=True)
-        keep_same = {'c_code', 'panel'}
-        df.columns = ['{}{}'.format(c, '' if c in keep_same else "_{}".format(self.file_name[:4])) for c in df.columns]
-
-        return df
-
-# %%
-# class Flooder:
-#
-#     def __init__(self, file_name):
-#         self.file_name = file_name
-#
-#     def get_json(self):
-#         """ Function for loading JSON files """
-#         path = self.file_name
-#
-#         with open(path, "r") as f:
-#             itn = json.load(f)
-#         return itn
-#
-#     def json_to_df(self):
-#         r1 = self.get_json()
-#         # create output data frame
-#         df = pd.DataFrame(
-#             columns=['cluster_co', 'panel', 'dov', 'Shape_Area', 'Cluster_Diff', 'Region_Diff', 'Maximum',
-#                      'Minimum', 'Mean', 'Stdev', 'OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'])
-#         images = len(r1['features'])
-#         for i in range(images):  # for every image in geojson
-#             image = r1['features'][i]['properties']['Clusters']
-#             clusters = len(image)
-#             for c in range(clusters):  # for every cluster in Clusters
-#                 # Get cluster stats
-#                 prop = image[c]['properties']
-#                 # Get regional stats
-#                 prop['dov'] = r1['features'][i]['properties']['Date']
-#                 prop['panel'] = r1['features'][i]['properties']['Panel']
-#                 prop['Region_Diff'] = r1['features'][i]['properties']['Region_Diff']
-#                 prop['Maximum'] = r1['features'][i]['properties']['Maximum']
-#                 prop['Minimum'] = r1['features'][i]['properties']['Minimum']
-#                 prop['Mean'] = r1['features'][i]['properties']['Mean']
-#                 prop['Stdev'] = r1['features'][i]['properties']['Stdev']
-#                 df = df.append(prop, ignore_index=True)
-#
-#         df = df.drop(['OBJECTID', 'OBJECTID_1', 'Shape_Le_1', 'Shape_Leng'], axis=1)
-#
-#         return df
-
-
-# %%
-# ag = pd.read_csv('Data/Bi/HH_Ag_Prod_Div.csv', low_memory=False)
