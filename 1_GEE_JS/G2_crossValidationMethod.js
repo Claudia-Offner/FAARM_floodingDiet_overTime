@@ -8,41 +8,52 @@ var Admin2 = ee.FeatureCollection("FAO/GAUL/2015/level2"),
     JRC = ee.Image("JRC/GSW1_3/GlobalSurfaceWater"),
     WWF = ee.Image("WWF/HydroSHEDS/03VFDEM"),
     gfd = ee.ImageCollection("GLOBAL_FLOOD_DB/MODIS_EVENTS/V1"),
-    FAARM_clusters = ee.FeatureCollection("users/offnerclaudia/FAARM_clusters"),
     reference_img = ee.Image("users/offnerclaudia/FAARM_reference_image");
-
-//---------------------------------- OPTIMIZE PARAMETERS ---------------------------------//
-
 // Global Flood Database Parameters
 var country = 'Bangladesh';         // Select counry to extract all national flood records Global Flood Database
-var databaseID = 4508;              // Manually chec individual flooding events from Global Flood Database
+
+// 4382: July 25, 2016 (2016-07-25) - 1.62 (89.39%) 10m ; 1.53 (90.17%) 30m
+// var databaseID = 4382;              // Manually chec individual flooding events from Global Flood Database
+// var start = '2016-07-25';           // Start date of event according to Global Flood Database
+// var end = '2016-08-25';             // End date - mosaic all images within a month of start date
+
+// 4459: March 30, 2017 (2017-03-30) - 1.60 (92.09%) 30m
+var databaseID = 4459;              // Manually chec individual flooding events from Global Flood Database
+var start = '2017-03-30';           // Start date of event according to Global Flood Database
+var end = '2017-04-30';             // End date - mosaic all images within a month of start date
+
+// 4508:  August 10, 2017 (2017-08-10) - 1.65 (86.26%) 10m; 1.58 (87.29%) 30m
+// var databaseID = 4508;              // Manually chec individual flooding events from Global Flood Database
+// var start = '2017-08-10';           // Start date of event according to Global Flood Database
+// var end = '2017-09-10';             // End date - mosaic all images within a month of start date
+
 
 // Extraction Method Paramters
-var start = '2017-08-10';           // Start date of event according to Global Flood Database
-var end = '2017-09-10';             // End date of event according to Global Flood Database (rule: mosaic all images within a month of start date)
-var region = 'Sylhet';              // Select study of region of method application
+// var region = 'Sylhet';              // Select study of region of method application
 var polarization = 'VH';            // or 'VV' - VH mostly is the preferred polarization for flood mapping.However, it always depends on your study area, you can select 'VV' as well.
 var pass_direction = 'DESCENDING';  // or 'ASCENDING' when images are being compared use only one pass direction. Consider changing this parameter, if your image collection is empty. In some areas more Ascending images exist than than descending or the other way around.
-var difference_threshold = 1.15;    // threshold to be applied on the difference image (after flood - before flood). It has been chosen by trial and error (check model accuracy - aim to be over 80%). In case your flood extent result shows0 many false-positives or negatve signals, consider changing it!
+var difference_threshold = 1.6;    // threshold to be applied on the difference image (after flood - before flood). It has been chosen by trial and error (check model accuracy - aim to be over 80%). In case your flood extent result shows0 many false-positives or negatve signals, consider changing it!
 var months = 12;                    // Months out of the year that a pixel has water, to identify it is a permenant water body to be removed from flood analysis
 var slope = 5;                      // Analysis will remove areas with high slope, so this should be set according to region
 
 // Cross Validation
-var scale = 130;                    // Set scale of area extraction
+var scale = 30;                    // Set scale of area extraction
 
-// Results: [4382 (82%), 4459 (83%), 4508 (85%)]
+// Results Sylhet: [4382 (82%), 4459 (83%), 4508 (85%)] - diff threshold of 1.15; scale 130m
+// Results Cluster: [4382 (88%), 4459 (90%), 4508 (87% - 1.60)] - diff threshold of 1.60; scale 30m
+
 
 //---------------------------------- GET SATELLITE DATA ---------------------------------//
 
 // GET RELEVANT DISTRICTS - Districts Habiganj, Sunamganj - Sylhet division
-var district = ee.FeatureCollection(Admin2).filter(ee.Filter.eq('ADM1_NAME', region)).geometry();
+// var district = ee.FeatureCollection(Admin2).filter(ee.Filter.eq('ADM1_NAME', region)).geometry();
+var district = ee.Geometry.Polygon([[[91.3550689370853064, 24.3921216248458990], [91.6038783082803008, 24.3921216248458990], [91.6038783082803008, 24.7049478124276014], [91.3550689370853064, 24.7049478124276014]]])
 // var habiganj = ee.FeatureCollection(Admin2).filter(ee.Filter.eq('ADM2_NAME', 'Habiganj')).geometry();
 // var sunamganj = ee.FeatureCollection(Admin2).filter(ee.Filter.eq('ADM2_NAME', 'Sunamganj')).geometry();
 // var district = habiganj.union(sunamganj, ee.ErrorMargin(1));
 
 Map.centerObject(district, 9); //Center map view to AOI
 Map.addLayer(district, {color: 'grey'}, 'Selected Districts');
-Map.addLayer(FAARM_clusters, {color: 'pink'}, 'Clusters District'); // import cluster geometry
 
 // GET SATELLITE DATA
 var collection = s1

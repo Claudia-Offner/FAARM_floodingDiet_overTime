@@ -26,38 +26,42 @@ def retrieve_name(var):
     return [var_name for var_name, var_val in callers_local_vars if var_val is var]
 
 
-#%%
+
 # ========================================================================================
 # GET BOUNDING BOX (for GEE)
 # ========================================================================================
-# Create Bounding Box from FAARM 1km Buffer file (for G1_compReference.js)
-os.chdir(data_path)
+# # Create Bounding Box from FAARM 1km Buffer file (for G1_compReference.js)
+# os.chdir(data_path)
+#
+# # Reproject to a projected coordinate system in meters (32646), for precise 1km buffer
+# x = SpatialProcessor('FAARM/enum_cCode_buffer1000.shp').create_bbox(crs=32646, buffer=1000, plot=False)
+# y = SpatialProcessor(x).transform_df(crs=4326)  # Transform back to WSG84
+# y.to_file('FAARM/FAARM1km_bbox_CO.shp')  # Export
 
-# Reproject to a projected coordinate system in meters (32646), for precise 1km buffer
-x = SpatialProcessor('FAARM/enum_cCode_buffer1000.shp').create_bbox(crs=32646, buffer=1000, plot=False)
-y = SpatialProcessor(x).transform_df(crs=4326)  # Transform back to WSG84
-y.to_file('FAARM/FAARM1km_bbox_CO.shp')  # Export
 
-#%%
 # ========================================================================================
 # GET REFERENCE STATS (for GEE)
 # ========================================================================================
-# Convert Composite Reference Statistics to CSV for selection (from G1_compReference.js)
+# # Convert Composite Reference Statistics to CSV for selection (from G1_compReference.js)
+# os.chdir(data_path + '/GEE_Flooding_Clusters')
+#
+# main_prop = ['Date', 'Maximum', 'Minimum', 'Mean', 'Stdev']
+# y = Extractor('ReferenceStats.geojson').json_to_df(main_props=main_prop, out_param='id')
+# y.reset_index(inplace=True)
+# y.to_csv('ReferenceStats.csv', index=False)
 
-main_prop = ['Date', 'Maximum', 'Minimum', 'Mean', 'Stdev']
-y = Extractor('ReferenceSelection.geojson').json_to_df(main_props=main_prop)
-y.to_csv('ReferenceSelection.csv', index=False)
 
-#%%
+
 # ====================================================================================
 # GEE FLOODING EXPOSURE (for FAARM)
 # ====================================================================================
 # Load satellite image data from JSON file to dataframe, clean images and export to csv
-os.chdir(data_path + '/GEE_Flooding_Clusters')
+os.chdir(data_path + '/GEE_Flooding_Clusters/10m_1.68threshold_6months')
 
-file_names = ['P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',
+file_names = ['start.geojson', 'P1.geojson', 'P2.geojson', 'P3.geojson', 'P4.geojson', 'P5.geojson',  #
               'P6.geojson', 'P7.geojson', 'P8.geojson', 'P9.geojson', 'end.geojson']
 
+#  Create df with properties
 flood_df = pd.DataFrame(columns=['c_code', 'panel', 'dov', 'c_Areakm2', 'c_floodedAreakm2', 'r_floodedAreakm2', 'r_max',
                                  'r_min', 'r_mean', 'r_sd'])
 
@@ -65,12 +69,13 @@ props = ['date', 'panel', 'r_floodedAreakm2', 'r_max', 'r_min', 'r_mean', 'r_sd'
 nprops = ['enum_c_cod', 'c_Areakm2', 'c_floodedAreakm2']
 nfeat = 'clusters'
 
+# Append each geojson to empty df
 for f in file_names:
     result = Extractor(f).nested_json_to_df(main_props=props, nested_feature=nfeat, nested_props=nprops)
     flood_df = flood_df.append(result, ignore_index=True)
 
+# Organise dataframe
 flood_df['panel'] = flood_df['panel'].str.replace('P9', 'end')
-
 flood_df['dov'] = pd.to_datetime(flood_df['dov'], errors='coerce')
 flood_df = Panelist(flood_df).get_dd_mm_yyyy()
 
@@ -88,39 +93,41 @@ flood_df.drop('day', axis=1, inplace=True)
 os.chdir(data_path)
 flood_df.to_csv('gee_flood_df.csv', index=False)
 
-#%%
+
 # ====================================================================================
 # GEE ENVIRONMENT CONTROLS (for FAARM)
 # ====================================================================================
-os.chdir(data_path)
+# os.chdir(data_path)
+#
+# # Get data
+# # NOTE: Run each data frame line by line (struggles to process at once)
+# props = ['date']
+# nprops = ['enum_c_cod', 'dov', 'mean', 'min', 'max']
+# nfeat = 'clusters'
 
-# Get data
-# NOTE: Run each data frame line by line (struggles to process at once)
-props = ['date']
-nprops = ['enum_c_cod', 'dov', 'mean', 'min', 'max']
-nfeat = 'clusters'
+# elev = Extractor('GEE_Environment_Clusters/elev_res_30m.geojson').json_to_df(main_props=['enum_c_cod', 'elev'])
+# temp = Extractor('GEE_Environment_Clusters/temp_res_250m.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+#                                                                                 nested_props=nprops)
+# evap = Extractor('GEE_Environment_Clusters/evap_res_250m.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+#                                                                                 nested_props=nprops)
+# ndvi = Extractor('GEE_Environment_Clusters/ndvi_res_250m.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+#                                                                                 nested_props=nprops)
+# prec = Extractor('GEE_Environment_Clusters/prec_res_250m.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
+#                                                                                 nested_props=nprops)
 
-elev = Extractor('GEE_Environment_Clusters/elev_res.geojson').json_to_df(main_props=['enum_c_cod', 'elev'])
-temp = Extractor('GEE_Environment_Clusters/temp_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
-                                                                                nested_props=nprops)
-evap = Extractor('GEE_Environment_Clusters/evap_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
-                                                                                nested_props=nprops)
-ndvi = Extractor('GEE_Environment_Clusters/ndvi_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
-                                                                                nested_props=nprops)
-prec = Extractor('GEE_Environment_Clusters/prec_res.geojson').nested_json_to_df(main_props=props, nested_feature=nfeat,
-                                                                                nested_props=nprops)
-# Save to csv
-elev.to_csv('gee_elev_df.csv', index=False)
-temp.to_csv('gee_temp_df.csv', index=False)
-evap.to_csv('gee_evap_df.csv', index=False)
-ndvi.to_csv('gee_ndvi_df.csv', index=False)
-prec.to_csv('gee_prec_df.csv', index=False)
+# # Save to csv
+# elev.to_csv('gee_elev_df.csv', index=False)
+# temp.to_csv('gee_temp_df.csv', index=False)
+# evap.to_csv('gee_evap_df.csv', index=False)
+# ndvi.to_csv('gee_ndvi_df.csv', index=False)
+# prec.to_csv('gee_prec_df.csv', index=False)
 
 
 # ====================================================================================
 # DATA CLEANING & FORMATTING (for FAARM)
 # ====================================================================================
 os.chdir(data_path)
+
 
 elev = pd.read_csv('gee_elev_df.csv', low_memory=False)
 temp = pd.read_csv('gee_temp_df.csv', low_memory=False)
@@ -165,7 +172,7 @@ res2 = pd.merge(res1, prec, how='left', on=['c_code', 'year_month', 'year', 'mon
 res3 = pd.merge(res2, elev, how='left', on=['c_code'])
 res4 = pd.merge(res3, flood_df, how='left', on=['c_code', 'year_month', 'year', 'month'])
 
-# Handle missing values: 268 temperature & 297 evapotranspiration
+# Check missing values: 268 temperature & 297 evapotranspiration
 res4.isna().sum()
 
 # Merge with flood data and export

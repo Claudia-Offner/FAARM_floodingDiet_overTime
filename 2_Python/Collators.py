@@ -15,6 +15,7 @@ from shapely.geometry import Polygon
 
 class Extractor:
 
+
     def __init__(self, path):
         """
         Method for self
@@ -33,7 +34,7 @@ class Extractor:
             itn = json.load(f)
         return itn
 
-    def json_to_df(self, main_props):
+    def json_to_df(self, main_props, out_param=None):
         """
         Method extracts cluster specific data for 1 dimension (i.e. 1 image). Pay attention to the column names, they
         should be specific to data at hand (use get_simple_keys to check).
@@ -48,7 +49,8 @@ class Extractor:
         features = len(r1['features'])
         for i in range(features):  # for every image in geojson
             prop = r1['features'][i]['properties']
-            # prop['Date'] = r1['features'][i]['id']  # IF there is feature information outside of properties
+            if out_param is not None:
+                prop['Date'] = r1['features'][i][out_param]  # IF there is feature information outside of properties
             df = df.append(prop, ignore_index=True)
 
         df = df.filter(main_props)
