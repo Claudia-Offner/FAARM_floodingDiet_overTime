@@ -45,12 +45,12 @@ df <- read.csv(file='3_FloodMetrics.csv', fileEncoding='UTF-8-BOM')
 # Select relevant variables
 df <- df %>% select(c_code, wcode, year_season, year, season, season_DD, season_flood,
                     perc_flooded, Flood_1Lag, 
-                    flooded_diff_w_lag, flooded_diff_lag, flooded_weight_lag,
+                    flooded_diff, flooded_anom_w_lag, flooded_anom_lag, flooded_weight_lag,
                     dd10r_score, dd10r_min, dd10r_score_m, dd10r_min_m, wdiet_wt, 
-                    temp_mean, temp_min, temp_max, 
-                    evap_mean, evap_min, evap_max,
-                    ndvi_mean, ndvi_min, ndvi_max,
-                    prec_mean, prec_min, prec_max, elev,
+                    temp_mean, temp_min, temp_max, temp_mean_lag,
+                    evap_mean, evap_min, evap_max, evap_mean_lag,
+                    ndvi_mean, ndvi_min, ndvi_max, ndvi_mean_lag,
+                    prec_mean, prec_min, prec_max, prec_mean_lag, elev,
                     treatment, ramadan, preg, dd10r_score_m_BL, dd10r_score_m_EL,
                     age_3_BL, g_2h_BL, fam_type_BL, dep_ratio, g_2h_BL, fam_type_BL, 
                     wi_hl_BL, wi_al_BL, wi_land_BL, num_crops_BL, hfias_BL,
@@ -89,8 +89,7 @@ adj.mat <- poly2nb(cluster_shp)
 W.adj.mat <- nb2mat(adj.mat, style = "B", zero.policy=T) 
 
 # Re-factor Season codes so Mar/Apr is used as the reference level (dry season)
-df$season_DD <- factor(df$season_DD, levels=c("Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec","Jan/Feb"))
-df$season_flood <- factor(df$season_flood, levels=c("Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec","Jan/Feb"))
+df$season_flood <- factor(df$season_flood, levels=c("Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec", "Jan/Feb"))
 # levels(df$season_DD) # Check levels
 
 # Reset index
@@ -99,18 +98,27 @@ rownames(df) <- NULL
 # Set generic priors
 prec.prior <- list(prec = list(param = c(0.001, 0.001)))
 
-
 # Scale Environmental Variables
 # https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
 df$elev <- scale(df$elev) # NEED to standardize to make interpretative
 df$temp_mean <- scale(df$temp_mean)
 df$prec_mean <- scale(df$prec_mean)
 df$evap_mean <- scale(df$evap_mean)
-df$Flood_1Lag <- scale(df$Flood_1Lag) # Makes model more interpretative - but what is 1 SD in flooding represent???
-df$flooded_diff_lag <- scale(df$flooded_diff_lag) 
+df$ndvi_mean <- scale(df$ndvi_mean)
+df$temp_mean_lag <- scale(df$temp_mean_lag)
+df$prec_mean_lag <- scale(df$prec_mean_lag)
+df$evap_mean_lag <- scale(df$evap_mean_lag)
+df$ndvi_mean_lag <- scale(df$ndvi_mean_lag)
+df$perc_flooded <- scale(df$perc_flooded) # Makes model more interpretative - but what is 1 SD in flooding represent???
+df$Flood_1Lag <- scale(df$Flood_1Lag) 
+df$flooded_diff <- scale(df$flooded_diff) 
+df$flooded_anom_lag <- scale(df$flooded_anom_lag) 
 df$flooded_weight_lag <- scale(df$flooded_weight_lag) 
-df$flooded_diff_w_lag <- scale(df$flooded_diff_w_lag) 
+df$flooded_anom_w_lag <- scale(df$flooded_anom_w_lag) 
 
+# Create treatment subsets
+# treat <- subset(df, treatment == 1)
+# control <- subset(df, treatment == 0)
 
 #### 3. Functions ####
 
@@ -196,7 +204,7 @@ plotResults <- function(res) {
   ggplot(data=res, aes(y=Index, x=Mean, xmin=Lower_CI, xmax=Upper_CI)) +
     geom_point() + 
     geom_text(aes(label = Mean, colour = Importance),
-              size = 3.5, nudge_x = 2, nudge_y = 0, check_overlap = FALSE) +
+              size = 3.5, nudge_x = 1.5, nudge_y = 0, check_overlap = FALSE) +
     scale_colour_manual(values = cols) + 
     theme(legend.position = "bottom") +
     geom_errorbarh(height=.3) +

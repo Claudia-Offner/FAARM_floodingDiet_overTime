@@ -77,129 +77,7 @@ s <- s[!duplicated(s), ] # remove duplicates
 out_time_ys <- merge(s, out_time_ys, by='c_code') 
 out_matrix_ys <-data.matrix(out_time_ys[,4:ncol(out_time_ys)]) # set to matrix
 
-#### 1. Crude Association (LMER - control for subject code) ####
-
-
-crude_gme <- lmer(dd10r_score_m ~ perc_flooded+(1|wcode),
-                  data=df)
-crude_res <- getME_res(crude_gme)
-plotResults(crude_res)
-crude_res
-
-# Check residual autocorrelation
-res <- summary(crude_gme)$residuals
-n <- length(res) 
-mod2 <- lm(res[-n] ~ res[-1]) 
-summary(mod2)
-
-#### 2. Step-wise Selection of variables (A-priori) ####
-
-# CHECK how correlated Environmental variables are with Flooding exposure
-# - Decided to only include mean values for backward selection
-corr_gme <- lmer(perc_flooded ~ 
-                   temp_mean + temp_min + temp_max + 
-                   evap_mean + # evap_min + evap_max +
-                   ndvi_mean + ndvi_min + ndvi_max +
-                   prec_mean + prec_min + prec_max + elev + (1|wcode),
-                 data=df)
-corr_res <- getME_res(corr_gme)
-plotResults(corr_res)
-
-# Outcome !!! no season included !!!
-step_test <-  glm(dd10r_score_m ~ 
-                    temp_mean + evap_mean + ndvi_mean + prec_mean + elev + 
-                    treatment + ramadan + preg + dd10r_score_m_BL + dd10r_score_m_EL +
-                    age_3_BL + g_2h_BL + fam_type_BL + dep_ratio + g_2h_BL + fam_type_BL + 
-                    wi_hl_BL + wi_al_BL + wi_land_BL + num_crops_BL + hfias_BL +
-                    woman_edu_cat__BL + mobility_BL + support_BL + 
-                    communication_BL + decision_BL + know_score_BL +
-                    dep_ratio + md_score_BL + wealth_BL + dec_BL + quint_BL + 
-                    terc_BL + wealth2_BL + dec2_BL + quint2_BL + terc2_BL,
-                  family = gaussian, data = df)
-
-# Double Selection
-step(step_test, direction = 'backward')
-
-# Exposure !!! - no season included !!!
-step_test <-  glm(Flood_1Lag ~ 
-                    temp_mean + evap_mean + ndvi_mean + prec_mean + elev + 
-                    treatment + ramadan + preg + dd10r_score_m_BL + dd10r_score_m_EL +
-                    age_3_BL + g_2h_BL + fam_type_BL + dep_ratio + g_2h_BL + fam_type_BL + 
-                    wi_hl_BL + wi_al_BL + wi_land_BL + num_crops_BL + hfias_BL +
-                    woman_edu_cat__BL + mobility_BL + support_BL + 
-                    communication_BL + decision_BL + know_score_BL +
-                    dep_ratio + md_score_BL + wealth_BL + dec_BL + quint_BL + 
-                    terc_BL + wealth2_BL + dec2_BL + quint2_BL + terc2_BL,
-                  family = gaussian, data = df)
-
-# Double Selection
-step(step_test, direction = 'backward')
-
-
-# Selected Formula: OUT
-# Call:  glm(formula = dd10r_score_m ~ temp_mean + evap_mean + ndvi_mean + 
-#              prec_mean + elev + treatment + ramadan + preg + dd10r_score_m_BL + 
-#              dd10r_score_m_EL* + g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL + 
-#              wi_al_BL* + wi_land_BL + hfias_BL + woman_edu_cat__BL* + mobility_BL* + 
-#              communication_BL + decision_BL* + know_score_BL* + wealth_BL + 
-#              terc_BL* + wealth2_BL + quint2_BL + terc2_BL*, family = gaussian, 
-#            data = df)
-
-# Selected Formula: EXP
-# Call:  glm(formula = Flood_1Lag ~ temp_mean + evap_mean + ndvi_mean + 
-#              prec_mean + elev + treatment + ramadan + preg + dd10r_score_m_BL + 
-#              age_3_BL* + g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL + 
-#              wi_land_BL + hfias_BL + support_BL + communication_BL + md_score_BL + 
-#              wealth_BL + dec_BL* + wealth2_BL + dec2_BL* + quint2_BL*, family = gaussian, 
-#            data = df)
-
-# CHOSEN CONFOUNDERS (1-4: BOTH; 5: Outcome; 6: Exposure) 
-# - decided to exclude overlapping wealth variables to minimise multi-colinearity in the model
-# temp_mean + evap_mean + ndvi_mean + prec_mean + elev +
-# treatment + ramadan + preg + dd10r_score_m_BL + 
-# g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL + 
-# wi_land_BL + hfias_BL + communication_BL + wealth_BL + wealth2_BL + #quint2_BL + 
-# dd10r_score_m_EL + wi_al_BL + woman_edu_cat__BL + mobility_BL + decision_BL + know_score_BL + 
-# age_3_BL
-
-#### Preliminary Dag (LMER - mixed effects w/ confounders)
-
-conf_gme <- lmer(dd10r_score_m ~ Flood_1Lag + 
-                   temp_mean + evap_mean + ndvi_mean + prec_mean + elev +
-                   treatment + ramadan + preg + dd10r_score_m_BL +
-                   g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL +
-                   wi_land_BL + hfias_BL + communication_BL + wealth_BL + wealth2_BL + #quint2_BL +
-                   dd10r_score_m_EL + wi_al_BL + woman_edu_cat__BL + mobility_BL + decision_BL + know_score_BL +
-                   age_3_BL +(1|wcode),
-                data=df)
-conf_res <- getME_res(conf_gme)
-plotResults(conf_res)
-conf_res
-
-summary(conf_gme)
-
-# Check residual autocorrelation
-res <- summary(conf_gme)$residuals
-n <- length(res) 
-mod2 <- lm(res[-n] ~ res[-1]) 
-summary(mod2)
-
-# Check model autocorrelation 
-acf(residuals(conf_gme)) # Indicates a trend & series not stationary (violates assumption) - difference
-acf(diff(residuals(conf_gme))) # Removes trend - although there is one point before 5 months (so introduce a lag variable)
-
-# Not a huge amount of autocorrelation once confounders & wcode are accounted for
-### BUT the DW Test or the Linear Regression test are not robust to anomalies in the data (GLOBAL MEASURE). 
-### If you have Pulses, Seasonal Pulses , Level Shifts or Local Time Trends these tests are useless 
-### as these untreated components inflate the variance of the errors thus downward biasing the tests 
-### causing you ( as you have found out ) to incorrectly accept the null hypothesis of no auto-correlation. 
-# https://stats.stackexchange.com/questions/14914/how-to-test-the-autocorrelation-of-the-residuals 
-
-# = Autocorrelation analysis required
-
-# TEST for stationary, using augmented Dickey-Fuller tests
-
-#### 3. FLOOD: Spatial Analysis ####
+#### 1. FLOOD: Spatial Analysis ####
 tmap_mode("plot")
 
 #### Spatial distribution over annual average (FLOOD)
@@ -225,7 +103,7 @@ df3 <- df2
 df3@data$mean <- rowMeans(data.matrix(df3@data[,2:ncol(df2@data)]))
 map <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
   tm_shape(df3) +
-  tm_polygons('mean', title="Flood Severity Level", palette=c("#ff5050"))+
+  tm_polygons('mean', title="Flood Severity Level")+ # palette=c("#ff5050")
   tm_compass(position=c("left","top"))+
   tm_scale_bar()
 lf <- tmap_leaflet(map)
@@ -248,7 +126,7 @@ bound$Ii_expCluster <- expClusters$sig
 tm_shape(bound) + tm_polygons(col="Ii_expCluster", palette=c("#ff5050", "#6699FF"), title = "Moran's Local I - Flooding")
 
 
-#### 3. DIET: Spatial Analysis ####
+#### 1. DIET: Spatial Analysis ####
 
 #### Spatial distribution over annual average (DIET)
 df2 <- merge(bound, out_time, by='c_code') 
@@ -302,7 +180,7 @@ tm_shape(bound) + tm_polygons(col="Ii_outCluster", palette=c("#ff5050", "#6699FF
 # 
 # 
 # 
-#### 4. FLOOD: Temporal Analysis ####
+#### 2. FLOOD: Temporal Analysis ####
 timeMean <- colMeans(exp_matrix_ys)
   
 # Look at the mean few_ipc across country over time (in years)
@@ -382,7 +260,7 @@ ggplot(data = bacfdf, mapping = aes(x = lag, y = acf)) +
   labs(y="PACF", x="Lag", title="PACF Differenced - Flooding")
 
 
-#### 4. DIET: Temporal Analysis ####
+#### 2. DIET: Temporal Analysis ####
 
 # Look at the mean few_ipc across country over time (in years)
 d<- as.data.frame(colMeans(out_matrix))
@@ -399,17 +277,17 @@ ggplot(data = d, aes(y=colMeans(out_matrix_ys), x = a))+
   # scale_x_continuous(breaks=a[seq(1, length(a),12)], labels = c("2010_01", "2011_01", "2012_01", "2013_01", "2014_01","2015_01", "2016_01", "2017_01", "2018_01", "2019_01"))+
   labs(x = "Season", y = "Average Flood %", title = "Seasonal Time Series of Dietary Diversity")
 
-# # Order heat map by c_code & WCODE % flooded means to examine effects
-# ggplot(df) +
-#   geom_tile(aes(x=year_season, y=reorder(c_code, wcode, mean, order=TRUE), fill = dd10r_score_m)) +
-#   scale_fill_gradient(name = "% Flooded",low = "blue", high = "red") +
-#   labs(x = "Year-Season", y = "Cluster Code")
-# 
-# # Order heat map by c_code & LAT % flooded means to examine effects
-# ggplot(df) +
-#   geom_tile(aes(x=year_season, y=reorder(c_code, lat, mean, order=TRUE), fill = dd10r_score_m)) +
-#   scale_fill_gradient(name = "% Flooded",low = "blue", high = "red") +
-#   labs(x = "Year-Season", y = "Cluster Code")
+# Order heat map by c_code & WCODE % flooded means to examine effects
+ggplot(df) +
+  geom_tile(aes(x=year_season, y=reorder(c_code, wcode, mean, order=TRUE), fill = dd10r_score_m)) +
+  scale_fill_gradient(name = "% Flooded",low = "blue", high = "red") +
+  labs(x = "Year-Season", y = "Cluster Code")
+
+# Order heat map by c_code & LAT % flooded means to examine effects
+ggplot(df) +
+  geom_tile(aes(x=year_season, y=reorder(c_code, lat, mean, order=TRUE), fill = dd10r_score_m)) +
+  scale_fill_gradient(name = "% Flooded",low = "blue", high = "red") +
+  labs(x = "Year-Season", y = "Cluster Code")
 
 # QUANTIFY TEMPORAL DEPENDENCIES
 
@@ -457,8 +335,161 @@ ggplot(data = bacfdf, mapping = aes(x = lag, y = acf)) +
   labs(y="PACF", x="Lag", title="PACF Differenced - Dietary Diversity")
 
 
-#### 5. Conclusions ####
+#### ** Conclusions ####
 
 # - Year & season matter
 # - A lag is required to interpret the causal relation between flood and diet
 # - Spatial autocorrelation matters
+
+
+# elev + temp_mean + evap_mean + ndvi_mean + prec_mean +
+#   treatment + ramadan + preg + dd10r_score_m_BL +
+#   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+#   communication_BL + quint2_BL + woman_edu_cat__BL + 
+#   mobility_BL + decision_BL + know_score_BL +
+#### 3. Crude Association (LMER - control for subject code) ####
+
+# Raw
+crude_gme <- lmer(dd10r_score_m ~ perc_flooded+(1|wcode),
+                  data=df)
+crude_res <- getME_res(crude_gme)
+plotResults(crude_res)
+crude_res
+
+# Lag
+crude_gmeL <- lmer(dd10r_score_m ~ Flood_1Lag+(1|wcode),
+                   data=df)
+crude_resL <- getME_res(crude_gmeL)
+plotResults(crude_resL)
+crude_resL
+
+#### Lag & interaction 
+crude_gmeLI <- lmer(dd10r_score_m ~ Flood_1Lag*season_flood+(1|wcode),
+                  data=df)
+crude_resLI <- getME_res(crude_gmeLI)
+plotResults(crude_resLI)
+
+# Check residual autocorrelation
+# res <- summary(crude_gme)$residuals
+# n <- length(res) 
+# mod2 <- lm(res[-n] ~ res[-1]) 
+# summary(mod2)
+
+#### 4. Step-wise Selection of variables (A-priori) ####
+
+# CHECK how correlated Environmental variables are with Flooding exposure
+# - Decided to only include mean values for backward selection
+corr_gme <- lmer(perc_flooded ~ 
+                   temp_mean + temp_min + temp_max + 
+                   evap_mean + evap_min + evap_max +
+                   ndvi_mean + ndvi_min + ndvi_max +
+                   prec_mean + prec_min + prec_max + elev + (1|wcode),
+                 data=df)
+corr_res <- getME_res(corr_gme)
+plotResults(corr_res)
+
+
+# Outcome !!! no season included !!!
+step_test <-  glm(dd10r_score_m ~ 
+                    temp_mean + ndvi_mean + evap_mean + prec_mean + elev +
+                    treatment + ramadan + preg + dd10r_score_m_BL +
+                    age_3_BL + g_2h_BL + fam_type_BL + dep_ratio + g_2h_BL + fam_type_BL + 
+                    wi_hl_BL + wi_al_BL + wi_land_BL + num_crops_BL + hfias_BL +
+                    woman_edu_cat__BL + mobility_BL + support_BL + 
+                    communication_BL + decision_BL + know_score_BL +
+                    dep_ratio + md_score_BL + wealth_BL + dec_BL + quint_BL + 
+                    terc_BL + wealth2_BL + dec2_BL + quint2_BL + terc2_BL,
+                  family = gaussian, data = df)
+
+# Double Selection
+step(step_test, direction = 'backward')
+
+# Exposure !!! - no season included !!!
+step_test <-  glm(Flood_1Lag ~ 
+                    temp_mean + ndvi_mean + evap_mean + prec_mean + elev +
+                    treatment + ramadan + preg + dd10r_score_m_BL + 
+                    age_3_BL + g_2h_BL + fam_type_BL + dep_ratio + g_2h_BL + fam_type_BL + 
+                    wi_hl_BL + wi_al_BL + wi_land_BL + num_crops_BL + hfias_BL +
+                    woman_edu_cat__BL + mobility_BL + support_BL + 
+                    communication_BL + decision_BL + know_score_BL +
+                    dep_ratio + md_score_BL + wealth_BL + dec_BL + quint_BL + 
+                    terc_BL + wealth2_BL + dec2_BL + quint2_BL + terc2_BL,
+                  family = gaussian, data = df)
+
+# Double Selection
+step(step_test, direction = 'backward')
+
+
+# Selected Formula: OUT
+# Call:  glm(formula = dd10r_score_m ~ temp_mean + evap_mean + ndvi_mean + 
+#              prec_mean + elev + treatment + ramadan + preg + dd10r_score_m_BL + 
+#              dd10r_score_m_EL* + g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL + 
+#              wi_al_BL* + wi_land_BL + hfias_BL + woman_edu_cat__BL* + mobility_BL* + 
+#              communication_BL + decision_BL* + know_score_BL* + wealth_BL + 
+#              terc_BL* + wealth2_BL + quint2_BL + terc2_BL*, family = gaussian, 
+#            data = df)
+
+# Selected Formula: EXP
+# Call:  glm(formula = Flood_1Lag ~ temp_mean + evap_mean + ndvi_mean + 
+#              prec_mean + elev + treatment + ramadan + preg + dd10r_score_m_BL + 
+#              age_3_BL* + g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL + 
+#              wi_land_BL + hfias_BL + support_BL + communication_BL + md_score_BL + 
+#              wealth_BL + dec_BL* + wealth2_BL + dec2_BL* + quint2_BL*, family = gaussian, 
+#            data = df)
+
+# PRELIMINARY SELECTION (1-4: BOTH; 5: Outcome; 6: Exposure) 
+# - decided to exclude overlapping wealth & EL variables to minimize co linearity in the model
+# - Precipitation was also removed because it is to closely related to water inundation
+# temp_mean + evap_mean + ndvi_mean + elev +
+# treatment + ramadan + preg + dd10r_score_m_BL + 
+# g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL + 
+# wi_land_BL + hfias_BL + communication_BL + quint2_BL + 
+# dd10r_score_m_EL + wi_al_BL + woman_edu_cat__BL + mobility_BL + decision_BL + know_score_BL + 
+# age_3_BL
+
+#### Preliminary Dag (LMER - mixed effects w/ confounders)
+
+conf_gme <- lmer(dd10r_score_m ~ Flood_1Lag*season_flood + 
+                   elev + temp_mean + evap_mean + ndvi_mean +
+                   treatment + ramadan + preg + dd10r_score_m_BL +
+                   g_2h_BL + fam_type_BL + dep_ratio + wi_hl_BL +
+                   wi_land_BL + hfias_BL + communication_BL + quint2_BL +
+                   wi_al_BL + woman_edu_cat__BL + mobility_BL + decision_BL + know_score_BL +
+                   age_3_BL + (1|wcode),
+                 data=df)
+conf_res <- getME_res(conf_gme)
+plotResults(conf_res)
+conf_res
+
+# FINAL FORMULA
+conf_gme2 <- lmer(dd10r_score_m ~ Flood_1Lag*season_flood + 
+                    temp_mean + evap_mean + ndvi_mean +
+                    treatment + ramadan + preg + dd10r_score_m_BL +
+                    g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                    communication_BL + quint2_BL + woman_edu_cat__BL + 
+                    mobility_BL + decision_BL + know_score_BL + (1|wcode),
+                  data=df)
+conf_res2 <- getME_res(conf_gme2)
+plotResults(conf_res2)
+conf_res2
+
+# Check residual autocorrelation
+res <- summary(conf_gme)$residuals
+n <- length(res) 
+mod2 <- lm(res[-n] ~ res[-1]) 
+summary(mod2)
+
+# Check model autocorrelation 
+acf(residuals(conf_gme)) # Indicates a trend & series not stationary (violates assumption) - difference
+acf(diff(residuals(conf_gme))) # Removes trend - although there is one point before 5 months (so introduce a lag variable)
+
+# Not a huge amount of autocorrelation once confounders & wcode are accounted for
+### BUT the DW Test or the Linear Regression test are not robust to anomalies in the data (GLOBAL MEASURE). 
+### If you have Pulses, Seasonal Pulses , Level Shifts or Local Time Trends these tests are useless 
+### as these untreated components inflate the variance of the errors thus downward biasing the tests 
+### causing you ( as you have found out ) to incorrectly accept the null hypothesis of no auto-correlation. 
+# https://stats.stackexchange.com/questions/14914/how-to-test-the-autocorrelation-of-the-residuals 
+
+# = Autocorrelation analysis required
+
+# TEST for stationary, using augmented Dickey-Fuller tests
