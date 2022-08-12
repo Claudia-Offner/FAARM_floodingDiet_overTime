@@ -5,13 +5,34 @@ import pandas as pd
 import os
 from Collators import Panelist, Organiser
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+
+# FUNCTIONS
+
+def lagger(cols, df, lag):
+    groups = df.groupby('wcode')
+    for c in cols:
+        df[c + '_lag'] = ''
+        for woman, group in groups:
+            group['timelag1'] = group[c].shift(lag)
+            mask = group['timelag1'].index
+            df.loc[mask, c + '_lag'] = group['timelag1']
+        if c == 'season':
+            RESULT['season_DD'] = RESULT[c]
+            RESULT['season_DD'] = RESULT['season_DD'].replace(season_names)
+            RESULT[c + '_lag'] = RESULT[c + '_lag'].replace(season_names)
+            RESULT[c + '_lag'] = RESULT[c + '_lag'].fillna('Nov/Dec')  # Fill season flood NA with Jan/Feb
+        else:
+            df[c + '_lag'] = pd.to_numeric(df[c + '_lag'])  # set to numeric
+
+    return df
 
 # IMPORTANT - set file path to data folder location
 data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
             '- DD-Flooding TimeSeries - CO/4. Data/Final'
 os.chdir(data_path)
-
 
 # ====================================================================================
 # GET GEE FLOODING DATA
@@ -92,7 +113,6 @@ month = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
 for m in month:
     RESULT.loc[RESULT['year_month'].str.contains(m, regex=False), 'month'] = float(m)
 
- 
 # Fill in missing Seasons (months): 1(Sept-Oct);2(Nov-Dec);3(Jan-Feb);4(Mar-Apr);5(May-June);6(Jul-Aug)
 season_DD = {1: 'Jan/Feb', 2: 'Jan/Feb', 3: 'Mar/Apr', 4: 'Mar/Apr', 5: 'May/Jun', 6: 'May/Jun',
              7: 'Jul/Aug', 8: 'Jul/Aug', 9: 'Sept/Oct', 10: 'Sept/Oct', 11: 'Nov/Dec', 12: 'Nov/Dec'}
@@ -118,30 +138,10 @@ for c in col:
     RESULT[c] = RESULT[c] + 0.01
     RESULT[c] = round(RESULT[c])
 
-# 1 season time lag for flooding (score)
-groups = RESULT.groupby('wcode')
-RESULT['Flood_1Lag'] = ''
-RESULT['season_flood'] = ''
-for woman, group in groups:
-    # Flood
-    group['timelag1'] = group['perc_flooded'].shift(1)
-    mask = group['timelag1'].index
-    RESULT.loc[mask, 'Flood_1Lag'] = group['timelag1']
-    # Season
-    group['timelag2'] = group['season'].shift(1)
-    mask = group['timelag2'].index
-    RESULT.loc[mask, 'season_flood'] = group['timelag2']
+# 1 season time lag for flooding & environmental variables
+RESULT = lagger(['season', 'perc_flooded', 'evap_mean', 'prec_mean', 'ndvi_mean', 'temp_mean'], RESULT, 1)
+RESULT.rename(columns={'perc_flooded_lag': 'Flood_1Lag', 'season_lag': 'season_flood'}, inplace=True)
 
- 
-RESULT['Flood_1Lag'] = pd.to_numeric(RESULT['Flood_1Lag'])  # set to numeric
-
-# Add season names again
-RESULT['season_DD'] = RESULT['season']
-RESULT['season_DD'] = RESULT['season_DD'].replace(season_names)
-RESULT['season_flood'] = RESULT['season_flood'].replace(season_names)
-RESULT['season_flood'] = RESULT['season_flood'].fillna('Nov/Dec')  # Fill season flood NA with Jan/Feb
-
- 
 # Reorganise data
 RESULT['month'] = RESULT['month'].astype(int).apply(lambda f: '{0:0>2}'.format(f))
 RESULT['year_month'] = RESULT['year'].astype(int).astype(str) + '-' + RESULT['month'].astype(str)
@@ -153,7 +153,7 @@ RESULT = RESULT.sort_values(by=['wcode', 'year_month']).reset_index().drop(['ind
 # RESULT.isnull().sum()
 # RESULT['year_season'].value_counts()
 # len(pd.unique(RESULT['year_season']))
- 
+
 # ====================================================================================
 # GET BASELINE CHARACTERISTICS
 # ====================================================================================

@@ -7,6 +7,21 @@ from Collators import Statistics
 import matplotlib.pyplot as plt
 import numpy as np
 
+# FUNCTION
+
+def lagger(cols, df, lag):
+    groups = df.groupby('wcode')
+    for c in cols:
+        df[c + '_lag'] = ''
+        for woman, group in groups:
+            group['timelag1'] = group[c].shift(lag)
+            mask = group['timelag1'].index
+            df.loc[mask, c + '_lag'] = group['timelag1']
+
+        df[c + '_lag'] = pd.to_numeric(df[c + '_lag'])  # set to numeric
+
+    return df
+
 
 # IMPORTANT - set file path to data folder location
 data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
@@ -134,27 +149,7 @@ RESULT['flooded_anom'] = RESULT['perc_flooded']-RESULT['avSeason_mean']  # Anoma
 RESULT['flooded_anom_w'] = RESULT['flooded_weight']-RESULT['avSeason_mean']  # Weighted Anomaly
 
 # Create 1 seasonal time lag for every metric
-groups = RESULT.groupby('wcode')
-RESULT['flooded_weight_lag'] = ''
-RESULT['flooded_anom_lag'] = ''
-RESULT['flooded_anom_w_lag'] = ''
-for woman, group in groups:
-    # Flood weight
-    group['timelag1'] = group['flooded_weight'].shift(1)
-    mask = group['timelag1'].index
-    RESULT.loc[mask, 'flooded_weight_lag'] = group['timelag1']
-    # Flood Anomaly
-    group['timelag2'] = group['flooded_anom'].shift(1)
-    mask = group['timelag2'].index
-    RESULT.loc[mask, 'flooded_anom_lag'] = group['timelag2']
-    # Flood Anomaly Weighted
-    group['timelag3'] = group['flooded_anom_w'].shift(1)
-    mask = group['timelag3'].index
-    RESULT.loc[mask, 'flooded_anom_w_lag'] = group['timelag3']
-
-RESULT['flooded_weight_lag'] = pd.to_numeric(RESULT['flooded_weight_lag'])  # set to numeric
-RESULT['flooded_anom_lag'] = pd.to_numeric(RESULT['flooded_anom_lag'])  # set to numeric
-RESULT['flooded_anom_w_lag'] = pd.to_numeric(RESULT['flooded_anom_w_lag'])  # set to numeric
+RESULT = lagger(['flooded_weight', 'flooded_anom', 'flooded_anom_w'], RESULT, 1)
 
 # Save
 RESULT.to_csv('3_FloodMetrics.csv', index=False)
