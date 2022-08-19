@@ -54,13 +54,14 @@ def seasonal_weight(d, var):
     d['flooded_weight'] = d['weight'] * d[var]
 
     return d
-
+#%%
 # ====================================================================================
 # CODE
 # ====================================================================================
 
 
 df = pd.read_csv('2_FAARM_GEE_df.csv', low_memory=False)
+# df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 
 
 # FOCUS on clusters & regional flooding (do not need wcode data)
@@ -89,7 +90,7 @@ sstat_c = sstat_c.add_prefix('avSeason_').rename(columns={'avSeason_season': 'se
 # mstat = mstat.add_prefix('avMonthly_').rename(columns={'avMonthly_month': 'month'})
 # stats_c = Statistics(df).general_stats().drop(['count'], axis=0)
 
-
+#%%
 # ====================================================================================
 # TEST: Weighted Metric & Anomaly Metric
 # ====================================================================================
