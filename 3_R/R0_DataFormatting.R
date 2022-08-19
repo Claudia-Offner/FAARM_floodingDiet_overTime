@@ -196,7 +196,7 @@ plotResults <- function(res1) {
   
   res <- round_df(res1, 3)
   
-  result_name <- deparse(substitute(res))
+  result_name <- deparse(substitute(res1))
   cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
 
   # Plot Results
