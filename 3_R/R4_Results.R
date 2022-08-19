@@ -6,123 +6,121 @@
 # Detatch packages & clear environment/plots
 # rm(list = ls())
 
-library(tictoc)
-library(INLA)
-library(sf)
-library(rgdal)
-library(dplyr)
-library(spdep)
-library(ggplot2)
-library(bayestestR)
-library(lme4)
-require("ggrepel")
-
 #### IMPORTANT - set file path to data folder location
-setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
+# setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
 
-# Note: The intercept term in a regression table tells us the average expected 
-# value for the response variable when all of the predictor variables are equal 
-# to zero. However, the regression coefficient for the intercept is only 
-# meaningful if it’s reasonable that all of the predictor variables in the model 
-# can actually be equal to zero.
-# https://www.statology.org/how-to-interpret-regression-coefficients/
+#### 0. LMER (2 way Interaction - no spatial-temporal autocorrelation) ####
+# TEST: Do the coefficients between frequentist models add up precisely for each model?
 
-# set intercept to 0 to see Mar/Apr (interpret outputs as DD average rather than effect size?)
-
-
-#### A. Crude Association (LMER - control for subject code) ####
-
-crude_gme <- lmer(dd10r_score_m ~ season_flood*Flood_1Lag + (1|wcode),
-                  data=df)
-crude_res <- getME_res(crude_gme)
-plotResults(crude_res)
-
-#### B. Preliminary (LMER - with confounders) ####
-
+# Full Interaction: How does the impact of flooding on DD depend on each season?
 basic_gme <- lmer(dd10r_score_m ~ season_flood*Flood_1Lag + 
-                   temp_mean + evap_mean + ndvi_mean +
-                   treatment + ramadan + preg + dd10r_score_m_BL +
-                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                   communication_BL + quint2_BL + woman_edu_cat__BL + 
-                   mobility_BL + decision_BL + know_score_BL + (1|wcode),
-                 data=df)
-basic_gme_res <- getME_res(basic_gme)
-plotResults(basic_gme_res)
-
-#### 1. RINLA (2 way Interaction - no spatial-temporal autocorrelation)####
-
-basic_inla <- inla(dd10r_score_m ~ season_flood*Flood_1Lag + 
                     temp_mean + evap_mean + ndvi_mean +
                     treatment + ramadan + preg + dd10r_score_m_BL +
                     g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
                     communication_BL + quint2_BL + woman_edu_cat__BL + 
-                    mobility_BL + decision_BL + know_score_BL + 
-                 f(wcode, model = 'iid'),
-                 family ='gaussian', data = df,
-                 control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                 control.predictor = list(compute = TRUE))
-basic_inla_res <- getINLA_res(basic_inla)
-plotResults(basic_inla_res)
+                    mobility_BL + decision_BL + know_score_BL + (1|wcode),
+                  data=df)
+basic_gme_res <- getME_res(basic_gme)
+plotResults(basic_gme_res)
 
-# Stratified effects
-basic_inla2 <- inla(dd10r_score_m ~ season_flood:Flood_1Lag + 
-                     temp_mean + evap_mean + ndvi_mean +
-                     treatment + ramadan + preg + dd10r_score_m_BL +
-                     g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                     communication_BL + quint2_BL + woman_edu_cat__BL + 
-                     mobility_BL + decision_BL + know_score_BL + 
-                     f(wcode, model = 'iid'),
-                   family ='gaussian', data = df,
-                   control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                   control.predictor = list(compute = TRUE))
-basic_inla_STRAT <- getINLA_res(basic_inla2)
-plotResults(basic_inla_STRAT)
 
-#### 2. RINLA (2 way Interaction - with spatial-temporal autocorrelation) ####
+# Stratified Effect: What is the impact of flooding on DD for each season?
+basic_gme_STRAT <- lmer(dd10r_score_m ~ season_flood:Flood_1Lag + season_flood + # Control for season
+                    temp_mean + evap_mean + ndvi_mean +
+                    treatment + ramadan + preg + dd10r_score_m_BL +
+                    g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                    communication_BL + quint2_BL + woman_edu_cat__BL + 
+                    mobility_BL + decision_BL + know_score_BL + (1|wcode),
+                  data=df)
+basic_gme_res_STRAT <- getME_res(basic_gme_STRAT)
+plotResults(basic_gme_res_STRAT)
 
+
+# Recalculated Effects
+x <- basic_gme_res %>% filter(grepl('Flood', Variables))
+x[-(1),2] <- x[1,2] + x[-(1),2] # get main effects
+x$Lower_CI <- x$Mean - x$SD # get CI
+x$Upper_CI <- x$Mean + x$SD # get CI
+y <- basic_gme_res %>% filter(!grepl('Flood', Variables)) %>% rbind(x) %>% arrange(Index) # merge back
+plotResults(y)
+
+# = Outputs between these models do not add up precisely (because they are different models)
+
+#### 1. RINLA (2 way Interaction - with spatial-temporal autocorrelation) ####
+
+# Full Interaction: How does the impact of flooding on DD depend on each season?
 st_inla <- inla(dd10r_score_m ~ season_flood*Flood_1Lag + 
                   temp_mean + evap_mean + ndvi_mean + 
                   treatment + ramadan + preg + dd10r_score_m_BL +
                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
                   communication_BL + quint2_BL + woman_edu_cat__BL + 
                   mobility_BL + decision_BL + know_score_BL + 
-               f(season_flood, model = 'iid') +
-               f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                           group = season_id, control.group = list(model = "ar1"),
-                                           hyper = prec.prior),
-             family ='gaussian', data = df,
-             control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-             control.predictor = list(compute = TRUE))
-st_inla_res <- getINLA_res(st_inla)
-plotResults(st_inla_res)
-
-# Stratified effects
-st_inla2 <- inla(dd10r_score_m ~ season_flood:Flood_1Lag + 
-                   temp_mean + evap_mean + ndvi_mean + 
-                  treatment + ramadan + preg + dd10r_score_m_BL +
-                  g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                  communication_BL + quint2_BL + woman_edu_cat__BL + 
-                  mobility_BL + decision_BL + know_score_BL + 
-                  f(season_flood, model = 'iid') +
+                  # f(season_flood, model = 'iid') + # RANDOM EFFECT FOR SEASON?
                   f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
                                               group = season_id, control.group = list(model = "ar1"),
                                               hyper = prec.prior),
                 family ='gaussian', data = df,
                 control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
                 control.predictor = list(compute = TRUE))
+st_inla_res <- getINLA_res(st_inla)
+plotResults(st_inla_res)
+
+
+# Stratified Effect: What is the impact of flooding on DD for each season? (I think this makes most sense)
+st_inla2 <- inla(dd10r_score_m ~ season_flood:Flood_1Lag + season_flood + # Control for season
+                   temp_mean + evap_mean + ndvi_mean + 
+                   treatment + ramadan + preg + dd10r_score_m_BL +
+                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                   communication_BL + quint2_BL + woman_edu_cat__BL + 
+                   mobility_BL + decision_BL + know_score_BL + 
+                   # f(season_flood, model = 'iid') + # OR RANDOM EFFECT FOR SEASON?
+                   f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
+                                               group = season_id, control.group = list(model = "ar1"),
+                                               hyper = prec.prior),
+                 family ='gaussian', data = df,
+                 control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                 control.predictor = list(compute = TRUE))
 st_inla_STRAT <- getINLA_res(st_inla2)
 plotResults(st_inla_STRAT)
 
 
-#### 3. RINLA (3 way - by treatment) ####
+# Recalculated Effects
+x <- st_inla_res %>% filter(grepl('Flood', Variables))
+x[-(1),3] <- x[1,3] + x[-(1),3] # get main effects
+x$Lower_CI <- x$Mean - x$SD # get CI
+x$Upper_CI <- x$Mean + x$SD # get CI
+y <- st_inla_res %>% filter(!grepl('Flood', Variables)) %>% rbind(x) %>% arrange(Index) # merge back
+plotResults(y)
+# Recode MAP_P: y[y$Lower_CI  > 1 & y$Upper_CI  < -1) | (y$Lower_CI  < 1 & y$Upper_CI  > -1] 
 
+
+#### PLOT Predicted values
+# df$st_inla_DD <- st_inla$summary.fitted.values$mean
+# out_time <-cast(df, c_code~year, mean, value = "st_inla_DD", na.rm=TRUE) # in years
+# df2 <- merge(bound, out_time, by='c_code') 
+# df2 <- subset(df2, select=-c(lat, long))
+# df3 <- df2
+# df3@data$mean <- rowMeans(data.matrix(df3@data[,2:ncol(df2@data)]))
+# map <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
+#   tm_shape(df3) +
+#   tm_polygons('mean', title="Dietary Diversity Level")+
+#   tm_compass(position=c("left","top"))+
+#   tm_scale_bar()
+# lf <- tmap_leaflet(map)
+# map
+
+
+
+#### 2. RINLA (3 way Interaction - by treatment) ####
+
+# Full Interaction: How does the impact of flooding on DD depend on each season and treatment?
 st_3_inla <- inla(dd10r_score_m ~ season_flood*Flood_1Lag*treatment + 
                   temp_mean + evap_mean + ndvi_mean +
                   ramadan + preg + dd10r_score_m_BL +
                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
                   communication_BL + quint2_BL + woman_edu_cat__BL + 
                   mobility_BL + decision_BL + know_score_BL + 
-                  f(season_flood, model = 'iid') +
+                  # f(season_flood, model = 'iid') + # RANDOM EFFECT FOR SEASON?
                   f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
                                               group = season_id, control.group = list(model = "ar1"),
                                               hyper = prec.prior),
@@ -132,13 +130,14 @@ st_3_inla <- inla(dd10r_score_m ~ season_flood*Flood_1Lag*treatment +
 st_3_inla_res <- getINLA_res(st_3_inla)
 plotResults(st_3_inla_res)
 
-st_3_inla_STRAT <- inla(dd10r_score_m ~ season_flood:Flood_1Lag*treatment + 
+# Stratified Effect: What is the impact of flooding on DD for each season and every treatment? (I think this makes most sense)
+st_3_inla_STRAT <- inla(dd10r_score_m ~ season_flood:Flood_1Lag*treatment + season_flood + # Control for season
                     temp_mean + evap_mean + ndvi_mean +
                     ramadan + preg + dd10r_score_m_BL +
                     g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
                     communication_BL + quint2_BL + woman_edu_cat__BL + 
                     mobility_BL + decision_BL + know_score_BL + 
-                    f(season_flood, model = 'iid') +
+                    # f(season_flood, model = 'iid') + # or RANDOM EFFECT FOR SEASON?
                     f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
                                                 group = season_id, control.group = list(model = "ar1"),
                                                 hyper = prec.prior),
@@ -148,82 +147,103 @@ st_3_inla_STRAT <- inla(dd10r_score_m ~ season_flood:Flood_1Lag*treatment +
 Res_st_3_inla_STRAT <- getINLA_res(st_3_inla_STRAT)
 plotResults(Res_st_3_inla_STRAT)
 
+# Recalculated Effects
+x <- st_3_inla_res %>% filter(grepl('Flood', Variables))
+x[-(1),3] <- x[1,3] + x[-(1),3] # get main effects
+x$Lower_CI <- x$Mean - x$SD # get CI
+x$Upper_CI <- x$Mean + x$SD # get CI
+y <- st_3_inla_res %>% filter(!grepl('Flood', Variables)) %>% rbind(x) %>% arrange(Index) # merge back
+plotResults(y)
+
+#### 3. RINLA (Quadratic effect) ####
+# RQ: What is the optimum magnitude of flooding in relation to DD for every season?
+
+# Make quadratic variable
+df$Flood_1Lag2 <- df$Flood_1Lag^2
+
+# Full Interaction
+quad_inla <- inla(dd10r_score_m ~ Flood_1Lag*season_flood + Flood_1Lag2*season_flood + 
+                     temp_mean + evap_mean + ndvi_mean +
+                     treatment + ramadan + preg + dd10r_score_m_BL +
+                     g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                     communication_BL + quint2_BL + woman_edu_cat__BL + 
+                     mobility_BL + decision_BL + know_score_BL + 
+                     f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
+                                                 group = season_id, control.group = list(model = "ar1"),
+                                                 hyper = prec.prior),
+                   family ='gaussian', data = df,
+                   control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                   control.predictor = list(compute = TRUE))
+quad_inla_res <- getINLA_res(quad_inla)
+plotResults(quad_inla_res)
+
+
+# Stratified Effect (I think this would be preferred over a full interaction...)
+quad_inla_STRAT <- inla(dd10r_score_m ~ season_flood:Flood_1Lag + season_flood:Flood_1Lag2 + season_flood + 
+                    temp_mean + evap_mean + ndvi_mean +
+                    treatment + ramadan + preg + dd10r_score_m_BL +
+                    g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                    communication_BL + quint2_BL + woman_edu_cat__BL + 
+                    mobility_BL + decision_BL + know_score_BL + 
+                    f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
+                                                group = season_id, control.group = list(model = "ar1"),
+                                                hyper = prec.prior),
+                  family ='gaussian', data = df,
+                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                  control.predictor = list(compute = TRUE))
+quad_inla_res_STRAT <- getINLA_res(quad_inla_STRAT)
+plotResults(quad_inla_res_STRAT)
+
+
+# How would we plot these? Not sure how to make sense of them, most seem unimportant...
+
+
 #### COMPARE ####
 # Compare Metrics
-# comp <- selINLA_mod(list('basic_inla', 'st_inla', 'st_3_inla'))
-# comp[order(comp$MLIK), ] # The higher the better fit - Flooded_Diff
-# comp[order(comp$DIC), ] # The lower the better fit - Flood_1
-# comp[order(comp$WAIC), ] # The lower the better fit - Flood_1
-
-#### Treatment subsets ####
-
-# CONTROL
-st_inlaC <- inla(dd10r_score_m ~ season_flood*Flood_1Lag + 
-                   temp_mean + evap_mean + ndvi_mean +
-                   ramadan + preg + dd10r_score_m_BL +
-                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                   communication_BL + quint2_BL + woman_edu_cat__BL + 
-                   mobility_BL + decision_BL + know_score_BL + 
-                   f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                               group = season_id, control.group = list(model = "ar1"),
-                                               hyper = prec.prior),
-                 family ='gaussian', data = control,
-                 control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                 control.predictor = list(compute = TRUE))
-Res_st_inlaC <- getINLA_res(st_inlaC)
-plotResults(Res_st_inlaC)
-
-st_inlaC_STRAT <- inla(dd10r_score_m ~ season_flood:Flood_1Lag + 
-                         temp_mean + evap_mean + ndvi_mean +
-                         ramadan + preg + dd10r_score_m_BL +
-                         g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                         communication_BL + quint2_BL + woman_edu_cat__BL + 
-                         mobility_BL + decision_BL + know_score_BL + 
-                         f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                                     group = season_id, control.group = list(model = "ar1"),
-                                                     hyper = prec.prior),
-                       family ='gaussian', data = control,
-                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                       control.predictor = list(compute = TRUE))
-Res_st_inlaC_STRAT <- getINLA_res(st_inlaC_STRAT)
-plotResults(Res_st_inlaC_STRAT)
-
-# TREAT
-st_inlaT <- inla(dd10r_score_m ~ season_flood*Flood_1Lag + 
-                   temp_mean + evap_mean + ndvi_mean +
-                   ramadan + preg + dd10r_score_m_BL +
-                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                   communication_BL + quint2_BL + woman_edu_cat__BL + 
-                   mobility_BL + decision_BL + know_score_BL + 
-                   f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                               group = season_id, control.group = list(model = "ar1"),
-                                               hyper = prec.prior),
-                 family ='gaussian', data = treat,
-                 control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                 control.predictor = list(compute = TRUE))
-Res_st_inlaT <- getINLA_res(st_inlaT)
-plotResults(Res_st_inlaT)
-
-st_inlaT_STRAT <- inla(dd10r_score_m ~ season_flood:Flood_1Lag + 
-                         temp_mean + evap_mean + ndvi_mean +
-                         ramadan + preg + dd10r_score_m_BL +
-                         g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                         communication_BL + quint2_BL + woman_edu_cat__BL + 
-                         mobility_BL + decision_BL + know_score_BL + 
-                         f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                                     group = season_id, control.group = list(model = "ar1"),
-                                                     hyper = prec.prior),
-                       family ='gaussian', data = treat,
-                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                       control.predictor = list(compute = TRUE))
-Res_st_inlaT_STRAT <- getINLA_res(st_inlaT_STRAT)
-plotResults(Res_st_inlaT_STRAT)
-
-#### *** Plot posteriors over Space and time *** ####
+# comp <- selINLA_mod(list('st_inla', 'st_3_inla', 'quad_inla'))
+# comp[order(comp$MLIK), ] # The higher the better fit 
+# comp[order(comp$DIC), ] # The lower the better fit 
+# comp[order(comp$WAIC), ] # The lower the better fit 
 
 
-plotResults(Res2_Treat_6month)
+################################################################################
 
+#### *** Plot posteriors over Space and time *** 
+
+# Predicted Values
+df$pred <- basic_inla$summary.fitted.values$mean
+
+
+# GROUPING
+ggplot() +
+  geom_point(data=df, aes(x=dd10r_score_m, y=Flood_1Lag, colour=season_flood)) +
+  # ylim(0, 0.03) +
+  facet_grid(season_flood ~ .)
+
+
+# Separated Spatial-Temporal Effects
+inla_GST1 <- inla(dd10r_score_m ~ Flood_1Lag*season_flood + 
+                    temp_mean + evap_mean + ndvi_mean +
+                    treatment + ramadan + preg + dd10r_score_m_BL +
+                    g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                    communication_BL + quint2_BL + woman_edu_cat__BL + 
+                    mobility_BL + decision_BL + know_score_BL +
+                    f(wcode, model = 'iid') + 
+                    f(season_id, model='ar1', hyper=prec.prior) + 
+                    f(OBJECTID_1, model='besagproper', graph=W.adj.mat, hyper=prec.prior),
+                  family ='gaussian', data = df, 
+                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                  control.predictor = list(compute = TRUE))
+Res_inla_GST1 <- getINLA_res(inla_GST1)
+plotResults(Res_inla_GST1)
+
+# Get posteriors for each cluster
+x <- inla_GST1[["summary.random"]][["OBJECTID_1"]]
+x[order(x$mean), ]
+
+# Get posteriors for each time point
+y <- inla_GST1[["summary.random"]][["season_id"]]
+y[order(y$mean), ]
 
 # plotResults(Res2[c(1:15),])
 # x <- Res2[-c(16:29),]
@@ -287,7 +307,7 @@ tm_shape(bound) +
 
 
 
-#### *** Model validation *** #####
+#### *** Model validation *** 
 # 
 # This is the model we will focus on.
 # There is no need to run it again, but we
@@ -366,7 +386,7 @@ plot(V1,
 #### Does it have to do with the flood data?
 #### Is it a power thing? Does removing rows/time points help?
 
-################################################################################
+
 
 prec.prior <- list(prec = list(prior = "logtnormal", param = c(1, 0.01))) # the probability of ?? being greater than 1 is equal to 0.01
 test <- list(mean = list(Flood_1Lag = -100,
@@ -422,82 +442,3 @@ summary(df)
 
 
 cor.test(df$prec, df$season)
-
-
-#### *** 3.4 R-INLA Flood Metrics *** ####
-# Check why this does not work for script 3...
-
-# NOTE: Use 'Metric_test.csv' file from 0_DataFormatting.R to run this code (and check variable selection) !!!
-
-## HERE: This model makes the most sense theoretically - outputs seem interpret able
-Flood_1 <- inla(dd10r_score_m ~ Flood_1Lag + season_DD + season_flood:Flood_1Lag #Flood_1Lag
-                + temp_mean + evap_mean + ndvi_mean + prec_mean + elev
-                + treatment + ramadan + preg + dd10r_score_m_BL + dd10r_score_m_EL + hfias_BL
-                + g_2h_BL + fam_type_BL + wi_land_BL + wi_hl_BL + wi_al_BL
-                + woman_edu_cat__BL + mobility_BL + communication_BL
-                + decision_BL + know_score_BL + wealth_BL
-                + f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                              group = season_id, control.group = list(model = "ar1"),
-                                              hyper = prec.prior),
-                family ='gaussian', data = df,
-                control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                control.predictor = list(compute = TRUE))
-Flood_1Lag <- getINLA_res(Flood_1)
-plotResults(Flood_1Lag)
-
-
-Flooded_diff <- inla(dd10r_score_m ~ flooded_diff_lag + season_DD + season_flood:flooded_diff_lag #Flood_1Lag   #Flood_1Lag
-                     + temp_mean + evap_mean + ndvi_mean + prec_mean + elev
-                     + treatment + ramadan + preg + dd10r_score_m_BL + dd10r_score_m_EL + hfias_BL
-                     + g_2h_BL + fam_type_BL + wi_land_BL + wi_hl_BL + wi_al_BL
-                     + woman_edu_cat__BL + mobility_BL + communication_BL
-                     + decision_BL + know_score_BL + wealth_BL
-                     + f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                                   group = season_id, control.group = list(model = "ar1"),
-                                                   hyper = prec.prior),
-                     family ='gaussian', data = df,
-                     control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                     control.predictor = list(compute = TRUE))
-Flooded_diff_lag <- getINLA_res(Flooded_diff)
-plotResults(Flooded_diff_lag)
-
-
-Flooded_weight <- inla(dd10r_score_m ~ flooded_weight_lag + season_DD + season_flood:flooded_weight_lag #Flood_1Lag   #Flood_1Lag
-                       + temp_mean + evap_mean + ndvi_mean + prec_mean + elev
-                       + treatment + ramadan + preg + dd10r_score_m_BL + dd10r_score_m_EL + hfias_BL
-                       + g_2h_BL + fam_type_BL + wi_land_BL + wi_hl_BL + wi_al_BL
-                       + woman_edu_cat__BL + mobility_BL + communication_BL
-                       + decision_BL + know_score_BL + wealth_BL
-                       + f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                                     group = season_id, control.group = list(model = "ar1"),
-                                                     hyper = prec.prior),
-                       family ='gaussian', data = df,
-                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                       control.predictor = list(compute = TRUE))
-Flooded_weight_lag <- getINLA_res(Flooded_weight)
-plotResults(Flooded_weight_lag)
-
-
-Flooded_diff_w <- inla(dd10r_score_m ~ flooded_diff_w_lag + season_DD + season_flood:flooded_diff_w_lag #Flood_1Lag   #Flood_1Lag
-                       + temp_mean + evap_mean + ndvi_mean + prec_mean + elev
-                       + treatment + ramadan + preg + dd10r_score_m_BL + dd10r_score_m_EL + hfias_BL
-                       + g_2h_BL + fam_type_BL + wi_land_BL + wi_hl_BL + wi_al_BL
-                       + woman_edu_cat__BL + mobility_BL + communication_BL
-                       + decision_BL + know_score_BL + wealth_BL
-                       + f(wcode, model = 'iid') + f(OBJECTID_1, model = "besagproper", graph = W.adj.mat,
-                                                     group = season_id, control.group = list(model = "ar1"),
-                                                     hyper = prec.prior),
-                       family ='gaussian', data = df,
-                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                       control.predictor = list(compute = TRUE))
-Flooded_diff_w_lag <- getINLA_res(Flooded_diff_w)
-plotResults(Flooded_diff_w_lag)
-
-#### COMPARE ####
-
-# Compare Metrics
-comp <- selINLA_mod(list('Flood_1', 'Flooded_diff', 'Flooded_weight', 'Flooded_diff_w'))
-comp[order(comp$MLIK), ] # The higher the better fit - Flooded_Diff
-comp[order(comp$DIC), ] # The lower the better fit - Flood_1
-comp[order(comp$WAIC), ] # The lower the better fit - Flood_1
-

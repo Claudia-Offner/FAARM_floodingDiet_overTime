@@ -17,10 +17,10 @@ library(tidyr)
 #### 1. Format data ####
 
 # Subset and merge GEE & FAARM datasets
-df <- df %>%
-  group_by(wcode) %>%
-  fill(dd10r_score_m, .direction = "down") %>%
-  as.data.frame()
+# df <- df %>%
+#   group_by(wcode) %>%
+#   fill(dd10r_score_m, .direction = "down") %>%
+#   as.data.frame()
 
 df <- df[df$year_season == '2017-3',]
 df <- as.data.frame(left_join(df, flood, by = c("wcode", "c_code", "treatment")))

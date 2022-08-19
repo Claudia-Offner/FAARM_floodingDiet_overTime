@@ -12,6 +12,7 @@ library(dplyr)
 library(spdep)
 library(ggplot2)
 library(bayestestR)
+library(lme4) # R4_Results
 
 #### Ensure that RINLA can handle big datasets
 inla.setOption("num.threads", 4)
@@ -109,16 +110,14 @@ df$temp_mean_lag <- scale(df$temp_mean_lag)
 df$prec_mean_lag <- scale(df$prec_mean_lag)
 df$evap_mean_lag <- scale(df$evap_mean_lag)
 df$ndvi_mean_lag <- scale(df$ndvi_mean_lag)
-df$perc_flooded <- scale(df$perc_flooded) # Makes model more interpretative - but what is 1 SD in flooding represent???
-df$Flood_1Lag <- scale(df$Flood_1Lag) 
-df$flooded_diff <- scale(df$flooded_diff) 
 df$flooded_anom_lag <- scale(df$flooded_anom_lag) 
 df$flooded_weight_lag <- scale(df$flooded_weight_lag) 
 df$flooded_anom_w_lag <- scale(df$flooded_anom_w_lag) 
+# Scale main flood exp
+df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
+sd(df$Flood_1Lag) # SD is approx 1% flood coverage
+# df$Flood_1Lag  <- (df$Flood_1Lag - min(df$Flood_1Lag))/(max(df$Flood_1Lag) - min(df$Flood_1Lag)) # normalise?
 
-# Create treatment subsets
-# treat <- subset(df, treatment == 1)
-# control <- subset(df, treatment == 0)
 
 #### 3. Functions ####
 
@@ -131,7 +130,6 @@ round_df <- function(x, digits) {
   x[numeric_columns] <-  round(x[numeric_columns], digits)
   x
 }
-
 
 # Function to read ME results in table
 getME_res <- function(model){
@@ -163,7 +161,7 @@ getME_res <- function(model){
 getINLA_res <- function(model) {
   
   # Function to Format INLA results in table
-  result <- rbind(cbind(summary(model)$fixed[,-7])) #, cbind(summary(model)$hyperpar)
+  result <- rbind(cbind(model[["summary.fixed"]]))      # summary(model)$fixed[,-7])) #, cbind(summary(model)$hyperpar)
   result <- tibble::rownames_to_column(data.frame(result), "variables") # create column for intercepts
   result$index <- 1:nrow(result) # set index
   # Get posterior distribution & Calculate MAP
@@ -179,23 +177,24 @@ getINLA_res <- function(model) {
   result <- as.data.frame(dplyr::left_join(as.data.frame(result), posterior, by = c('variables')))
   
   # Reorganize data frame
-  colnames(result) <- c("Variables", "Mean","SD", "Lower_CI", "median", "Upper_CI", "mode", "Index", 'MAP_P') #, "Z_score", "P_Value"
+  colnames(result) <- c("Variables", "Mean","SD", "Lower_CI", "median", "Upper_CI", "mode", "kld", "Index", 'MAP_P') #, "Z_score", "P_Value"
   result <- as.data.frame(result) %>% 
-    dplyr::select(Index, Variables, Mean, SD, Lower_CI, Upper_CI, MAP_P) %>% #  Z_score, P_Value
-    mutate_if(is.numeric, round, 5)
+    dplyr::select(Index, Variables, Mean, SD, Lower_CI, Upper_CI, MAP_P) #%>% #  Z_score, P_Value
+    # mutate_if(is.numeric, round, 5)
   
   # Set significance col (for plotting)
   result$MAP_P <- as.numeric(result$MAP_P)
   result$Importance <- '0_None'
   result$Importance[result$MAP_P <= 0.10 & result$MAP_P >= 0.05] <- '1_Weak'
   result$Importance[result$MAP_P <= 0.05] <- '2_Strong'
-  # result$Importance[result$MAP_P <= 0.01 ] <- 'Strong'
-  
+
   return(result)
 }
 
-# Function to plot R-INLA results in forest plot
-plotResults <- function(res) {
+# Function to plot R-INLA results in forest plot; NOTE: use round_df function on df
+plotResults <- function(res1) {
+  
+  res <- round_df(res1, 3)
   
   result_name <- deparse(substitute(res))
   cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
@@ -255,7 +254,6 @@ selINLA_mod <- function(models){
 #   df<-df[!(df$wcode==i),]
 # }
 
-
 # Cubic transformation for flooding (based on initial exploratory analysis)
 # df$perc_flooded_cub <- df$perc_flooded^(1/3)
 # df$Flood_1Lag_cub <- df$Flood_1Lag^(1/3)
@@ -265,4 +263,6 @@ selINLA_mod <- function(models){
 # df$season_flood <- factor(df$season_flood, levels=c("Jul/Aug", "Sept/Oct", "Nov/Dec", "Jan/Feb", "Mar/Apr","May/Jun"))
 # # levels(df$season_DD)
 
-
+# Create treatment subsets
+# treat <- subset(df, treatment == 1)
+# control <- subset(df, treatment == 0)
