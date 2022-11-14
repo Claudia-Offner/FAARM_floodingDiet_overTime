@@ -14,7 +14,16 @@ library(ggcorrplot)
 library(tmap)
 library(lme4)
 library(tseries)
+library(ggplot2)
 
+#### 0. NON-ST Analysis ####
+
+hist(df$dd10r_score_m, col="#ff5050", )
+
+df$season_flood2 <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec"))
+ggplot(df,aes(x=season_flood2,y=perc_flooded))+
+  geom_boxplot(fill="#6699FF",outlier.color="black")+
+  labs(x = "Season", y = "Flooding (Cluster %)", title = "Central Tendancy of Flooding by Season")
 
 #### ** Spatial-temporal Formatting ** ####
 
@@ -185,10 +194,11 @@ timeMean <- colMeans(exp_matrix_ys)
   
 # Look at the mean few_ipc across country over time (in years)
 d<- as.data.frame(colMeans(exp_matrix))
+
 ggplot(data = d, aes(y=colMeans(exp_matrix), x = seq(2015, 2019, by=1)))+
   geom_line(color = "#6699FF", size = 2)+
   scale_x_continuous(breaks=seq(2010, 2019, by=1))+
-  labs(x = "Year", y = "Flood (Cluster %)", title = "Yearly Flood Severity Average")
+  labs(x = "Year", y = "Flooding (Cluster %)", title = "Yearly Flood Severity Average")
 
 # Look at the mean few_ipc across country over time (in seasons)
 d<- as.data.frame(colMeans(exp_matrix_ys))
@@ -392,8 +402,8 @@ plotResults(corr_res)
 # Outcome !!! no season included !!!
 step_test <-  glm(dd10r_score_m ~ 
                     temp_mean + ndvi_mean + evap_mean + prec_mean + elev +
-                    treatment + ramadan + preg + dd10r_score_m_BL +
-                    age_3_BL + g_2h_BL + fam_type_BL + dep_ratio + g_2h_BL + fam_type_BL + 
+                    treatment + ramadan + preg + dd10r_score_m_BL + 
+                    age_3_BL + g_2h_BL + fam_type_BL +
                     wi_hl_BL + wi_al_BL + wi_land_BL + num_crops_BL + hfias_BL +
                     woman_edu_cat__BL + mobility_BL + support_BL + 
                     communication_BL + decision_BL + know_score_BL +
@@ -408,7 +418,7 @@ step(step_test, direction = 'backward')
 step_test <-  glm(Flood_1Lag ~ 
                     temp_mean + ndvi_mean + evap_mean + prec_mean + elev +
                     treatment + ramadan + preg + dd10r_score_m_BL + 
-                    age_3_BL + g_2h_BL + fam_type_BL + dep_ratio + g_2h_BL + fam_type_BL + 
+                    age_3_BL + g_2h_BL + fam_type_BL +
                     wi_hl_BL + wi_al_BL + wi_land_BL + num_crops_BL + hfias_BL +
                     woman_edu_cat__BL + mobility_BL + support_BL + 
                     communication_BL + decision_BL + know_score_BL +

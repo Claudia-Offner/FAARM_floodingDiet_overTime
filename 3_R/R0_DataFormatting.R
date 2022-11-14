@@ -20,6 +20,9 @@ inla.setOption("num.threads", 4)
 #### IMPORTANT - set file path to data folder location
 setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
 
+# write.csv(df, "C:/Users/ClaudiaOffner/Downloads/CLEAN", row.names=FALSE)
+
+
 #### 1. Load & Select Data ####
 
 # Load shape data (as spatial vector df)
@@ -45,19 +48,19 @@ df <- read.csv(file='3_FloodMetrics.csv', fileEncoding='UTF-8-BOM')
 
 # Select relevant variables
 df <- df %>% select(c_code, wcode, year_season, year, season, season_DD, season_flood,
-                    perc_flooded, Flood_1Lag, 
+                    perc_flooded, Flood_1Lag,
                     flooded_diff, flooded_anom_w_lag, flooded_anom_lag, flooded_weight_lag,
-                    dd10r_score, dd10r_min, dd10r_score_m, dd10r_min_m, wdiet_wt, 
+                    dd10r_score, dd10r_min, dd10r_score_m, dd10r_min_m, wdiet_wt,
                     temp_mean, temp_min, temp_max, temp_mean_lag,
                     evap_mean, evap_min, evap_max, evap_mean_lag,
                     ndvi_mean, ndvi_min, ndvi_max, ndvi_mean_lag,
                     prec_mean, prec_min, prec_max, prec_mean_lag, elev,
                     treatment, ramadan, preg, dd10r_score_m_BL, dd10r_score_m_EL,
-                    age_3_BL, g_2h_BL, fam_type_BL, dep_ratio, g_2h_BL, fam_type_BL, 
+                    age_3_BL, g_2h_BL, fam_type_BL, dep_ratio, g_2h_BL, fam_type_BL,
                     wi_hl_BL, wi_al_BL, wi_land_BL, num_crops_BL, hfias_BL,
-                    woman_edu_cat__BL, mobility_BL, support_BL, 
+                    woman_edu_cat__BL, mobility_BL, support_BL,
                     communication_BL, decision_BL, know_score_BL,
-                    dep_ratio, md_score_BL, wealth_BL, dec_BL, quint_BL, 
+                    dep_ratio, md_score_BL, wealth_BL, dec_BL, quint_BL,
                     terc_BL, wealth2_BL, dec2_BL, quint2_BL, terc2_BL)
 
 
@@ -114,8 +117,8 @@ df$flooded_anom_lag <- scale(df$flooded_anom_lag)
 df$flooded_weight_lag <- scale(df$flooded_weight_lag) 
 df$flooded_anom_w_lag <- scale(df$flooded_anom_w_lag) 
 # Scale main flood exp
-df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
 sd(df$Flood_1Lag) # SD is approx 1% flood coverage
+df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
 # df$Flood_1Lag  <- (df$Flood_1Lag - min(df$Flood_1Lag))/(max(df$Flood_1Lag) - min(df$Flood_1Lag)) # normalise?
 
 
@@ -159,6 +162,9 @@ getME_res <- function(model){
 
 # Function to read R-INLA results in table
 getINLA_res <- function(model) {
+  # NOTE: Maximum A Posteriori (MAP) is the probability distribution of te parameter haven seen the data
+  # posterior probability distribution tells us the degree of belief we should have for any particular value of the parameter.
+  # https://stats.stackexchange.com/questions/341553/what-is-bayesian-posterior-probability-and-how-is-it-different-to-just-using-a-p
   
   # Function to Format INLA results in table
   result <- rbind(cbind(model[["summary.fixed"]]))      # summary(model)$fixed[,-7])) #, cbind(summary(model)$hyperpar)
@@ -184,9 +190,15 @@ getINLA_res <- function(model) {
   
   # Set significance col (for plotting)
   result$MAP_P <- as.numeric(result$MAP_P)
-  result$Importance <- '0_None'
-  result$Importance[result$MAP_P <= 0.10 & result$MAP_P >= 0.05] <- '1_Weak'
-  result$Importance[result$MAP_P <= 0.05] <- '2_Strong'
+  result$Importance[result$Lower_CI > 0 & result$Upper_CI > 0] <- '2_Strong'
+  result$Importance[result$Lower_CI < 0 & result$Upper_CI < 0] <- '2_Strong'
+  result$Importance[result$Lower_CI <= 0 & result$Lower_CI >= -0.01 | result$Lower_CI >= 0 & result$Lower_CI <= 0.01] <- '1_Weak'
+  result$Importance[result$Upper_CI <= 0 & result$Upper_CI >= -0.01 | result$Upper_CI >= 0 & result$Upper_CI <= 0.01] <- '1_Weak'
+  result$Importance[result$Lower_CI < 0 & result$Upper_CI > 0 ] <- '0_None'
+
+  # result$Importance <- '0_None'
+  # result$Importance[result$MAP_P <= 0.10 & result$MAP_P >= 0.05] <- '1_Weak'
+  # result$Importance[result$MAP_P <= 0.05] <- '2_Strong'
 
   return(result)
 }
@@ -266,3 +278,4 @@ selINLA_mod <- function(models){
 # Create treatment subsets
 # treat <- subset(df, treatment == 1)
 # control <- subset(df, treatment == 0)
+

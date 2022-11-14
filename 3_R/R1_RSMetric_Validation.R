@@ -46,21 +46,23 @@ t.test(df$dd10r_min_m, df$Flood_1Lag)
 
 # GENERAL LINEAR MODELS
 #### COPING STRATEGY
-bme <- glm(flood231 ~ perc_flooded, family='binomial', data=df)
+bme <- glm(flood231 ~ Flood_1Lag, family='binomial', data=df)
 summary(bme) 
+exp(0.54303)
 
 # Strong positive association: increases in flooding give an 8.18 odds in developing coping strategies 
 
 ####  BOROWING MONEY/FOOD
-bme <- glm(flood234 ~ perc_flooded, family='binomial', data=df)
+bme <- glm(flood234 ~ Flood_1Lag, family='binomial', data=df)
 summary(bme) 
+exp(0.29159)
 
 # Some evidence for positive association: increases in flooding  give 4.2 odds in borrowing money/food to coping strategies 
 
 ####  FLOOD PERCEPTION
-bme <- glm(flood33_bin ~ perc_flooded, family='binomial', data=df)
+bme <- glm(flood33_bin ~ Flood_1Lag, family='binomial', data=df)
 summary(bme) 
-
+exp(0.73702)
 
 #### 3.1. Compare ME Models for DD (no need to control for wcode because individual observations) ####
 
