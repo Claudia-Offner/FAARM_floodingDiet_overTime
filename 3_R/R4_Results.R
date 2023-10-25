@@ -21,7 +21,7 @@ write.csv(st_inla3_STRATres, "C:/Users/ClaudiaOffner/Downloads/st_inla3_STRAT.cs
 #   dplyr::mutate(Flood_6Lag = dplyr::lag(Flood_1Lag, n = 5, default = NA)) %>% # general time  lag of 6 by admin_code
 #   as.data.frame()
 
-#### 0. LMER (No seasonal Interactions) ####
+#### 0. RINLA WDDS (No seasonal Interactions) ####
 # TEST: Do the coefficients between frequentist models add up precisely for each model?
 
 # MODIFIED EFFECT: What is the seasonal impact of flooding on DD? (I think this makes most sense)
@@ -51,41 +51,41 @@ st_inla_res$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season',
                             'Wealth BL', 'Education BL', 'Mobility BL', 
                             'Decision BL', 'Knowledge BL')
 plotResults(st_inla_res)
-st_inla_res$OR <- exp(st_inla_res$Mean)
+# st_inla_res$OR <- exp(st_inla_res$Mean)
 
 
-st_inla_T <- inla(dd10r_score_m ~ season_flood + Flood_1Lag*treatment + 
-                  temp_mean + evap_mean + ndvi_mean + 
-                  ramadan + preg + dd10r_score_m_BL +
-                  g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                  communication_BL + quint2_BL + woman_edu_cat__BL + 
-                  mobility_BL + decision_BL + know_score_BL + 
-                  f(wcode, model = 'iid') + # control for women random effect on DD
-                  # f(season_flood, model = 'iid') + # Control for seasonal effects on diet
-                  # f(season_id, Flood_1Lag, model='ar1') + # Control for temporal autocorrelation
-                  # f(OBJECTID_1, Flood_1Lag, model = 'besagproper', graph = W.adj.mat),
-                  f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
-                    group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
-                    hyper = prec.prior),
-                family ='gaussian', data = df,
-                control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                control.predictor = list(compute = TRUE))
-st_inla_Tres <- getINLA_res(st_inla_T)
-st_inla_Tres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season', 
-                            'Jul/Aug season', 'Sep/Oct season', 'Nov/Dec season', 
-                            'Jan/Feb season', 'Flooding Extent (Control)','Treatment',
-                            'Temperature', 'Evapotranspiration', 'NDVI', 'Ramadan',
-                            'Pregnancy', 'DD BL', 'Religion BL', 'Dependency Ratio BL',
-                            'Land Owned BL', 'HFIAS BL', 'Communication BL',
-                            'Wealth BL', 'Education BL', 'Mobility BL', 
-                            'Decision BL', 'Knowledge BL', 'Flooding Extent (Treatment)')
-plotResults(st_inla_Tres)
-st_inla_Tres$OR <- exp(st_inla_Tres$Mean)
+# st_inla_T <- inla(dd10r_score_m ~ season_flood + Flood_1Lag*treatment + 
+#                   temp_mean + evap_mean + ndvi_mean + 
+#                   ramadan + preg + dd10r_score_m_BL +
+#                   g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+#                   communication_BL + quint2_BL + woman_edu_cat__BL + 
+#                   mobility_BL + decision_BL + know_score_BL + 
+#                   f(wcode, model = 'iid') + # control for women random effect on DD
+#                   # f(season_flood, model = 'iid') + # Control for seasonal effects on diet
+#                   # f(season_id, Flood_1Lag, model='ar1') + # Control for temporal autocorrelation
+#                   # f(OBJECTID_1, Flood_1Lag, model = 'besagproper', graph = W.adj.mat),
+#                   f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
+#                     group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
+#                     hyper = prec.prior),
+#                 family ='gaussian', data = df,
+#                 control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+#                 control.predictor = list(compute = TRUE))
+# st_inla_Tres <- getINLA_res(st_inla_T)
+# st_inla_Tres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season', 
+#                             'Jul/Aug season', 'Sep/Oct season', 'Nov/Dec season', 
+#                             'Jan/Feb season', 'Flooding Extent (Control)','Treatment',
+#                             'Temperature', 'Evapotranspiration', 'NDVI', 'Ramadan',
+#                             'Pregnancy', 'DD BL', 'Religion BL', 'Dependency Ratio BL',
+#                             'Land Owned BL', 'HFIAS BL', 'Communication BL',
+#                             'Wealth BL', 'Education BL', 'Mobility BL', 
+#                             'Decision BL', 'Knowledge BL', 'Flooding Extent (Treatment)')
+# plotResults(st_inla_Tres)
+# st_inla_Tres$OR <- exp(st_inla_Tres$Mean)
 
 
 # = Outputs between these models do not add up precisely (because they are different models)
 
-#### 1. RINLA (2 way Interaction - by season) ####
+#### 1. RINLA WDDS (2 way Interaction - by season) ####
 
 # RANDOM SLOPE: What is the slope of flooding, by season, on DD - given its overall effect on DD?
 # Not selected because seasons can be considered fixed effects so does not meet assumptions
@@ -159,7 +159,10 @@ st_inla2_STRATres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season',
                             'Sep/Oct season : Flooding Extent', 'Nov/Dec season : Flooding Extent',
                             'Jan/Feb season : Flooding Extent')
 plotResults(st_inla2_STRATres)
-st_inla2_STRATres$OR <- exp(st_inla2_STRATres$Mean)
+
+testINLA_Interact(st_inla2_STRAT, st_inla_STRAT)
+
+# st_inla2_STRATres$OR <- exp(st_inla2_STRATres$Mean)
 # st_inla2_STRAT[["summary.random"]][["OBJECTID_1"]]
 
 # Compare
@@ -172,7 +175,7 @@ st_inla2_STRATres$OR <- exp(st_inla2_STRATres$Mean)
 # - Interaction: rejected  because season is a nominal variable with no 'zero' reference - making interpretability near impossble
 # - Modification: accepted (the results also make most sense)
 
-#### 2. RINLA (3 way Interaction - by season & treatment) ####
+#### 2. RINLA WDDS (3 way Interaction - by season & treatment) ####
 
 
 # RANDOM SLOPE: What is the slope of flooding, by season and treatment, on DD 
@@ -214,28 +217,89 @@ st_inla2_STRATres$OR <- exp(st_inla2_STRATres$Mean)
 # st_inla3_INTres <- getINLA_res(st_inla3_INT)
 # plotResults(st_inla3_INTres)
 
-
 # MODIFIED EFFECT: How does the seasonal impact of flooding depend on treatment?(I think this makes most sense)
 st_inla3_STRAT <- inla(dd10r_score_m ~ season_flood + season_flood:Flood_1Lag*treatment +
-                    temp_mean + evap_mean + ndvi_mean +
-                    ramadan + preg + dd10r_score_m_BL +
-                    g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
-                    communication_BL + quint2_BL + woman_edu_cat__BL + 
-                    mobility_BL + decision_BL + know_score_BL + 
-                    # f(season_flood, model = 'iid') + # Control for seasonal effects on diet
+                    ramadan + dd10r_score_m_BL +  
+                    g_2h_BL + quint2_BL + 
                     f(wcode, model = 'iid') + # control for women random effect on DD
                     f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
                       group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
                       hyper = prec.prior),
-                  family ='gaussian', data = df,
+                  family ='gaussian', data = df, weights = wdiet_wt,
                   control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
                   control.predictor = list(compute = TRUE))
 st_inla3_STRATres <- getINLA_res(st_inla3_STRAT)
-st_inla3_STRATres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season', 
+plotResults(st_inla3_STRATres)
+st_inla3_STRATres$Variables <- c('(Intercept) Jan/Feb season', 'Mar/Apr season', 
+                                 'May/Jun season', 'Jul/Aug season', 
+                                 'Sep/Oct season', 'Nov/Dec season', 
+                                 'Treatment',
+                                 'Ramadan', 'DD BL', 'Religion BL', 'Wealth BL', 
+                                 'Jan/Feb season : Flooding Extent (Control)',
+                                 'Mar/Apr season : Flooding Extent (Control)',
+                                 'May/Jun season : Flooding Extent (Control)', 
+                                 'Jul/Aug season : Flooding Extent (Control)',
+                                 'Sep/Oct season : Flooding Extent (Control)', 
+                                 'Nov/Dec season : Flooding Extent (Control)',
+                                 'Jan/Feb season : Flooding Extent (Treatment)',
+                                 'Mar/Apr season : Flooding Extent (Treatment)',
+                                 'May/Jun season : Flooding Extent (Treatment)', 
+                                 'Jul/Aug season : Flooding Extent (Treatment)',
+                                 'Sep/Oct season : Flooding Extent (Treatment)', 
+                                 'Nov/Dec season : Flooding Extent (Treatment)')
+
+# names(inla.models()$likelihood)
+
+
+
+
+# Compare
+testINLA_Interact(st_inla2_STRAT, st_inla3_STRAT)
+comp <- selINLA_mod(list('st_inla', 'st_inla2_STRAT', 'st_inla3_STRAT'))
+comp[order(comp$DIC), ]
+
+
+#### RINLA MDD ####
+
+# MODIFIED EFFECT: How does the seasonal impact of flooding depend on treatment?(I think this makes most sense)
+st_inla_STRAT <- inla(dd10r_min_m ~ season_flood + Flood_1Lag + treatment +
+                         temp_mean + evap_mean + ndvi_mean +
+                         ramadan + preg + wdiet_wt+ dd10r_score_m_BL +
+                         g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                         communication_BL + quint2_BL + woman_edu_cat__BL + 
+                         mobility_BL + decision_BL + know_score_BL + 
+                         # f(season_flood, model = 'iid') + # Control for seasonal effects on diet
+                         f(wcode, model = 'iid') + # control for women random effect on DD
+                         f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
+                           group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
+                           hyper = prec.prior),
+                       family ='logistic', data = df,
+                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                       control.predictor = list(compute = TRUE))
+st_inla_STRATres <- getINLA_res(st_inla_STRAT)
+
+
+# MODIFIED EFFECT: How does the seasonal impact of flooding depend on treatment?(I think this makes most sense)
+st_inla4_STRAT <- inla(dd10r_min_m ~ season_flood + season_flood:Flood_1Lag*treatment +
+                         temp_mean + evap_mean + ndvi_mean +
+                         ramadan + preg + wdiet_wt+ dd10r_score_m_BL +
+                         g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                         communication_BL + quint2_BL + woman_edu_cat__BL + 
+                         mobility_BL + decision_BL + know_score_BL + 
+                         # f(season_flood, model = 'iid') + # Control for seasonal effects on diet
+                         f(wcode, model = 'iid') + # control for women random effect on DD
+                         f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
+                           group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
+                           hyper = prec.prior),
+                       family ='logistic', data = df,
+                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                       control.predictor = list(compute = TRUE))
+st_inla4_STRATres <- getINLA_res(st_inla4_STRAT)
+st_inla4_STRATres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season', 
                                  'Jul/Aug season', 'Sep/Oct season', 'Nov/Dec season', 
                                  'Jan/Feb season', 'Treatment',
                                  'Temperature', 'Evapotranspiration', 'NDVI', 'Ramadan',
-                                 'Pregnancy', 'DD BL', 'Religion BL', 'Dependency Ratio BL',
+                                 'Pregnancy', 'wdiet_wt', 'DD BL', 'Religion BL', 'Dependency Ratio BL',
                                  'Land Owned BL', 'HFIAS BL', 'Communication BL',
                                  'Wealth BL', 'Education BL', 'Mobility BL', 
                                  'Decision BL', 'Knowledge BL', 'Mar/Apr season : Flooding Extent (Control)',
@@ -245,13 +309,85 @@ st_inla3_STRATres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season',
                                  'May/Jun season : Flooding Extent (Treatment)', 'Jul/Aug season : Flooding Extent (Treatment)',
                                  'Sep/Oct season : Flooding Extent (Treatment)', 'Nov/Dec season : Flooding Extent (Treatment)',
                                  'Jan/Feb season : Flooding Extent (Treatment)')
-plotResults(st_inla3_STRATres)
-st_inla3_STRATres$OR <- exp(st_inla3_STRATres$Mean)
+plotResults(st_inla4_STRATres)
+st_inla4_STRATres$Mean <- exp(st_inla4_STRATres$Mean)
+st_inla4_STRATres$Lower_CI <- exp(st_inla4_STRATres$Lower_CI)
+st_inla4_STRATres$Upper_CI <- exp(st_inla4_STRATres$Upper_CI)
+plotResults(st_inla4_STRATres, 1)
 
 
-# Compare
-# comp <- selINLA_mod(list('st_inla3_SLOPE', 'st_inla3_INT', 'st_inla3_STRAT'))
-# comp[order(comp$DIC), ]
+# TEST INTERACTION (Overall)
+testINLA_Interact(st_inla4_STRAT, st_inla_STRAT)
+selINLA_mod(list('st_inla4_STRAT', 'st_inla_STRAT'))
+
+# TEST INTERACTION (Contrasts) - not sure 
+
+samples_A <- st_inla4_STRAT[["marginals.fixed"]][["season_floodMar/Apr:Flood_1Lag"]]
+samples_B <- st_inla4_STRAT[["marginals.fixed"]][["season_floodMay/Jun:Flood_1Lag"]]
+contrast_samples <- samples_A - samples_B
+summary(contrast_samples)
+
+# Function to compare R-INLA models in table
+testINLA_Interact <- function(model1, model2){
+  # Make sure MODEL1 has interactions and MODEL2 is the null model
+  
+  # Get marginal log-likelihood
+  log_ml1 <- summary(model1)$mlik[2]
+  log_ml2 <- summary(model2)$mlik[2]
+  
+  # Get the logarithm of the Bayesian Factor
+  log_BF <- log_ml1 - log_ml2
+  
+  # Get Bayesian Factor
+  BF <- exp(0.5 * (log_ml1 - log_ml2))
+  
+  # Create Table
+  x <- as.data.frame(rbind(cbind("Bayesian Factor", BF), 
+                           cbind('Log Bayesian Factor', log_BF)))
+  colnames(x) = c('Measure of Evidence', "Results") # 'CPO'
+  x
+  
+}
+
+#### FOOD GROUPS ####
+
+# MODIFIED EFFECT: How does the seasonal impact of flooding depend on treatment?(I think this makes most sense)
+st_inla_FOOD <- inla(dd10r_othv ~ season_flood + season_flood:Flood_1Lag*treatment +
+                         temp_mean + evap_mean + ndvi_mean +
+                         ramadan + preg + wdiet_wt+ dd10r_score_m_BL +
+                         g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+                         communication_BL + quint2_BL + woman_edu_cat__BL + 
+                         mobility_BL + decision_BL + know_score_BL + 
+                         # f(season_flood, model = 'iid') + # Control for seasonal effects on diet
+                         f(wcode, model = 'iid') + # control for women random effect on DD
+                         f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
+                           group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
+                           hyper = prec.prior),
+                       family ='logistic', data = df,
+                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                       control.predictor = list(compute = TRUE),
+                       verbose = TRUE)
+st_inla_FOODres <- getINLA_res(st_inla_FOOD)
+st_inla_FOODres$Variables <- c('(Intercept) Mar/Apr season', 'May/Jun season', 
+                                 'Jul/Aug season', 'Sep/Oct season', 'Nov/Dec season', 
+                                 'Jan/Feb season', 'Treatment',
+                                 'Temperature', 'Evapotranspiration', 'NDVI', 'Ramadan',
+                                 'Pregnancy', 'wdiet_wt', 'DD BL', 'Religion BL', 'Dependency Ratio BL',
+                                 'Land Owned BL', 'HFIAS BL', 'Communication BL',
+                                 'Wealth BL', 'Education BL', 'Mobility BL', 
+                                 'Decision BL', 'Knowledge BL', 'Mar/Apr season : Flooding Extent (Control)',
+                                 'May/Jun season : Flooding Extent (Control)', 'Jul/Aug season : Flooding Extent (Control)',
+                                 'Sep/Oct season : Flooding Extent (Control)', 'Nov/Dec season : Flooding Extent (Control)',
+                                 'Jan/Feb season : Flooding Extent (Control)', 'Mar/Apr season : Flooding Extent (Treatment)',
+                                 'May/Jun season : Flooding Extent (Treatment)', 'Jul/Aug season : Flooding Extent (Treatment)',
+                                 'Sep/Oct season : Flooding Extent (Treatment)', 'Nov/Dec season : Flooding Extent (Treatment)',
+                                 'Jan/Feb season : Flooding Extent (Treatment)')
+plotResults(st_inla_FOODres)
+st_inla_FOODres$Mean <- exp(st_inla_FOODres$Mean)
+st_inla_FOODres$Lower_CI <- exp(st_inla_FOODres$Lower_CI)
+st_inla_FOODres$Upper_CI <- exp(st_inla_FOODres$Upper_CI)
+plotResults(st_inla_FOODres, 1)
+
 
 #### 3. VISUALS ####
 

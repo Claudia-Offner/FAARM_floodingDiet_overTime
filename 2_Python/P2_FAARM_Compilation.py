@@ -30,7 +30,7 @@ def lagger(cols, df, lag):
     return df
 
 # IMPORTANT - set file path to data folder location
-data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
+data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/' \
             '- DD-Flooding TimeSeries - CO/4. Data/Final'
 os.chdir(data_path)
 
@@ -52,9 +52,13 @@ gee_df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 # df_name = 'Cluster100_10mflood_diet_df'
 
 # Read diet data from new csv (DF 2) - w/ weights
-bi = pd.read_csv('FAARM/JW_CompiledDD_Apr22.csv', low_memory=False)
-bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd10r_score', 'dd10r_min', 'dd10r_score_m', 'dd10r_min_m',
-                    'ramadan', 'preg', 'wdiet_wt')]
+bi = pd.read_csv('FAARM/JW_All_DD_women_Apr-10-2023.csv', low_memory=False)
+
+
+bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts',
+                    'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv',
+                    'dd10r_score_m', 'dd10r_min_m', 'dd10r_score', 'dd10r_min', 'ramadan', 'preg', 'wdiet_wt')]
+
 
 # Data organising & cleaning
 bi_org = Organiser(bi_sub[:]).format()  # wcodes already unnested
@@ -101,6 +105,7 @@ RESULT = pd.merge(x, bi_Diet, how='left', on=['wcode', 'c_code', 'year_month'])
 RESULT = RESULT.drop(['month_y', 'year_y', 'dov_bi_Diet'], axis=1)
 RESULT.rename(columns={'panel_x': 'panel', 'year_x': 'year', 'month_x': 'month'}, inplace=True)
 
+
 # ====================================================================================
 # DATA CLEANING
 # ====================================================================================
@@ -123,17 +128,22 @@ RESULT['season_DD'] = RESULT['season_DD'].replace(season_DD)
 RESULT['season'] = RESULT['season_DD']
 RESULT['season'] = RESULT['season'].replace(season_nums)
 
-# Dummy code binary DD
+# Dummy code binary DD variables
 RESULT['dd10r_min_m'] = RESULT['dd10r_min_m'].map({'Inadequate diet': 0, 'Diet diverse': 1})
 RESULT['dd10r_min'] = RESULT['dd10r_min'].map({'Inadequate diet': 0, 'Diet diverse': 1})
-RESULT['preg'] = RESULT['preg'].map({'0)no': 0, '1)yes': 1})
+other = ['dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv',
+         'dd10r_vita', 'dd10r_othf']
+for g in other:
+    RESULT[g] = RESULT[g].map({'0)no': 0, '1)yes': 1})
 
 # Drop string columns
 RESULT.drop(['year_month', 'panel'], axis=1)
 
 # Aggregate dataset so mean is taken for numeric values and mode is taken for all else
 RESULT = RESULT.groupby(['c_code', 'wcode', 'year', 'season'], as_index=False).mean()
-col = ['month', 'treatment', 'dd10r_min', 'dd10r_min_m', 'ramadan', 'preg']
+col = ['month', 'treatment', 'dd_elig', 'dd10r_starch',  'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh',
+       'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv', 'dd10r_min', 'dd10r_min_m', 'ramadan',
+       'preg']
 for c in col:
     RESULT[c] = RESULT[c] + 0.01
     RESULT[c] = round(RESULT[c])
@@ -153,6 +163,7 @@ RESULT = RESULT.sort_values(by=['wcode', 'year_month']).reset_index().drop(['ind
 # RESULT.isnull().sum()
 # RESULT['year_season'].value_counts()
 # len(pd.unique(RESULT['year_season']))
+
 
 # ====================================================================================
 # GET BASELINE CHARACTERISTICS
@@ -207,6 +218,6 @@ for c in cols:
 # Check NA values
 # RESULT.columns[RESULT.isnull().any()]
 
-
+#%%
 # Save to CSV
-RESULT.to_csv('2_FAARM_GEE_df.csv', index=False)
+RESULT.to_csv('2_FAARM_GEE_df2.csv', index=False)

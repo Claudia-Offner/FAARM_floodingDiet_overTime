@@ -25,6 +25,15 @@ ggplot(df,aes(x=season_flood2,y=perc_flooded))+
   geom_boxplot(fill="#6699FF",outlier.color="black")+
   labs(x = "Season", y = "Flooding (Cluster %)", title = "Central Tendancy of Flooding by Season")
 
+# One Way ANOVA for baseline
+# base<-df[df$year_season=='2015-5',]
+# aov(dd10r_score_m ~ 
+#       treatment + ramadan + preg + dd10r_score_m_BL +
+#       g_2h_BL + dep_ratio + wi_land_BL + hfias_BL + 
+#       communication_BL + quint2_BL + woman_edu_cat__BL + 
+#       mobility_BL + decision_BL + know_score_BL + (1|wcode), base)
+
+
 #### ** Spatial-temporal Formatting ** ####
 
 # Moran's Local I Function

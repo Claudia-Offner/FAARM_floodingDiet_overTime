@@ -18,7 +18,7 @@ library(lme4) # R4_Results
 inla.setOption("num.threads", 4)
 
 #### IMPORTANT - set file path to data folder location
-setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
+setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
 
 # write.csv(df, "C:/Users/ClaudiaOffner/Downloads/CLEAN", row.names=FALSE)
 
@@ -44,12 +44,14 @@ bound@data$c_code <- as.numeric(bound@data$c_code)
 
 # Load FAARM data
 # df <- read.csv(file='2_FAARM_GEE_df.csv', fileEncoding='UTF-8-BOM')
-df <- read.csv(file='3_FloodMetrics.csv', fileEncoding='UTF-8-BOM')
+df <- read.csv(file='3_FloodMetrics2.csv', fileEncoding='UTF-8-BOM')
+
 
 # Select relevant variables
 df <- df %>% select(c_code, wcode, year_season, year, season, season_DD, season_flood,
-                    perc_flooded, Flood_1Lag,
-                    flooded_diff, flooded_anom_w_lag, flooded_anom_lag, flooded_weight_lag,
+                    perc_flooded, Flood_1Lag, flooded_diff, flooded_anom_w_lag, flooded_anom_lag, flooded_weight_lag,
+                    dd_elig, dd10r_starch, dd10r_legume, dd10r_nuts,	dd10r_dairy,	dd10r_flesh,	
+                    dd10r_eggs,	dd10r_dglv,	dd10r_vita,	dd10r_othf,	dd10r_othv,	
                     dd10r_score, dd10r_min, dd10r_score_m, dd10r_min_m, wdiet_wt,
                     temp_mean, temp_min, temp_max, temp_mean_lag,
                     evap_mean, evap_min, evap_max, evap_mean_lag,
@@ -68,7 +70,7 @@ df <- df %>% select(c_code, wcode, year_season, year, season, season_DD, season_
 
 # Check outcome distribution over time
 y <- df %>%
-  group_by(year_season) %>%
+  group_by(year_season, treatment) %>%
   summarise(count=n(),
             diet=sum(!is.na(dd10r_score_m)),
             flood=sum(!is.na(perc_flooded)),
@@ -82,6 +84,14 @@ for (i in ys_elim) {
   df<-df[!(df$year_season==i),]
 }
 
+#Check sample numbers
+sum(y$diet) # total
+sum(y[y$treatment==1, ]$diet) # treatment
+sum(y[y$treatment==0, ]$diet) # control
+
+# Remove pregnancy samples
+# indices <- which(df$dd_elig == 0)
+# df <- df[-indices, ]
 
 # Merge to get OBJCTID_1 for spatial effects
 df <- as.data.frame(dplyr::left_join(df, cluster_shp, by = c('c_code')))
@@ -93,7 +103,7 @@ adj.mat <- poly2nb(cluster_shp)
 W.adj.mat <- nb2mat(adj.mat, style = "B", zero.policy=T) 
 
 # Re-factor Season codes so Mar/Apr is used as the reference level (dry season)
-df$season_flood <- factor(df$season_flood, levels=c("Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec", "Jan/Feb"))
+df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec"))
 # levels(df$season_DD) # Check levels
 
 # Reset index
@@ -120,6 +130,7 @@ df$flooded_anom_w_lag <- scale(df$flooded_anom_w_lag)
 sd(df$Flood_1Lag) # SD is approx 1% flood coverage
 df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
 # df$Flood_1Lag  <- (df$Flood_1Lag - min(df$Flood_1Lag))/(max(df$Flood_1Lag) - min(df$Flood_1Lag)) # normalise?
+
 
 
 #### 3. Functions ####
@@ -204,7 +215,7 @@ getINLA_res <- function(model) {
 }
 
 # Function to plot R-INLA results in forest plot; NOTE: use round_df function on df
-plotResults <- function(res1) {
+plotResults <- function(res1, x=0) {
   
   res <- round_df(res1, 3)
   
@@ -221,10 +232,11 @@ plotResults <- function(res1) {
     geom_errorbarh(height=.3) +
     scale_y_continuous(breaks=1:nrow(res), labels=res$Variables) +
     labs(title=paste('Effect Size by Variable - ', result_name), x='Effect Size', y = 'Variable') +
-    geom_vline(xintercept=0, color='black', linetype='dashed', alpha=.5) +
+    geom_vline(xintercept=x, color='black', linetype='dashed', alpha=.5) +
     theme_minimal()
   
 }
+
 
 # Function to compare R-INLA models in table
 selINLA_mod <- function(models){
@@ -247,6 +259,28 @@ selINLA_mod <- function(models){
   
 }
 
+
+# Function to compare R-INLA models in table
+testINLA_Interact <- function(model1, model2){
+  # Make sure MODEL1 has interactions and MODEL2 is the null model
+  
+  # Get marginal log-likelihood
+  log_ml1 <- summary(model1)$mlik[2]
+  log_ml2 <- summary(model2)$mlik[2]
+  
+  # Get the logarithm of the Bayesian Factor
+  log_BF <- log_ml1 - log_ml2
+  
+  # Get Bayesian Factor
+  BF <- exp(0.5 * (log_ml1 - log_ml2))
+  
+  # Create Table
+  x <- as.data.frame(rbind(cbind("Bayesian Factor", BF), 
+                           cbind('Log Bayesian Factor', log_BF)))
+  colnames(x) = c('Measure of Evidence', "Results") # 'CPO'
+  x
+  
+}
 
 
 #### Other ####

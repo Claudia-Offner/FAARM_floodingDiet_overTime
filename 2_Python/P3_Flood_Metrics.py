@@ -24,7 +24,7 @@ def lagger(cols, df, lag):
 
 
 # IMPORTANT - set file path to data folder location
-data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/C. FAARM/' \
+data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/' \
             '- DD-Flooding TimeSeries - CO/4. Data/Final'
 os.chdir(data_path)
 
@@ -54,21 +54,20 @@ def seasonal_weight(d, var):
     d['flooded_weight'] = d['weight'] * d[var]
 
     return d
-#%%
+
 # ====================================================================================
 # CODE
 # ====================================================================================
 
 
-df = pd.read_csv('2_FAARM_GEE_df.csv', low_memory=False)
+df = pd.read_csv('2_FAARM_GEE_df2.csv', low_memory=False)
 # df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 
 
 # FOCUS on clusters & regional flooding (do not need wcode data)
 # df['r_Areakm2'] = 12298  # add sylhet division total km2
 # df['r_code'] = 'Sylhet'
-sub = df.drop(['wcode'], axis=1).groupby(['c_code', 'year_season', 'year', 'season', 'month'],
-                                         as_index=False).mean()
+sub = df.drop(['wcode'], axis=1).groupby(['c_code', 'year_season', 'year', 'season', 'month'], as_index=False).mean()
 sub = sub[['c_code', 'year_season', 'year', 'season', 'month', 'c_Areakm2', 'c_floodedAreakm2',
            'perc_flooded', 'r_floodedAreakm2']]
 # sub['r_perc_flooded'] = sub['r_floodedAreakm2'] / sub['r_Areakm2']
@@ -90,7 +89,7 @@ sstat_c = sstat_c.add_prefix('avSeason_').rename(columns={'avSeason_season': 'se
 # mstat = mstat.add_prefix('avMonthly_').rename(columns={'avMonthly_month': 'month'})
 # stats_c = Statistics(df).general_stats().drop(['count'], axis=0)
 
-#%%
+
 # ====================================================================================
 # TEST: Weighted Metric & Anomaly Metric
 # ====================================================================================
@@ -152,6 +151,8 @@ RESULT['flooded_anom_w'] = RESULT['flooded_weight']-RESULT['avSeason_mean']  # W
 # Create 1 seasonal time lag for every metric
 RESULT = lagger(['flooded_weight', 'flooded_anom', 'flooded_anom_w'], RESULT, 1)
 
+#%%
 # Save
-RESULT.to_csv('3_FloodMetrics.csv', index=False)
+RESULT.to_csv('3_FloodMetrics2.csv', index=False)
+
 

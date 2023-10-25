@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/FAARM_floodingDiet_overTime.iml" filepath="$PROJECT_DIR$/.idea/FAARM_floodingDiet_overTime.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../BIHS/BIHS_Python/.idea/Python.iml" filepath="$PROJECT_DIR$/../BIHS/BIHS_Python/.idea/Python.iml" />
     </modules>
   </component>
 </project>
