@@ -1,109 +1,68 @@
 
-write.csv(inla_non_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-non.csv", row.names=FALSE)
-# write.csv(inla_treat_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-treat.csv", row.names=FALSE)
-write.csv(inla_seas_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-seas.csv", row.names=FALSE)
-write.csv(test, "C:/Users/ClaudiaOffner/Downloads/testt.csv", row.names=FALSE)
+# write.csv(inla_non_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-non.csv", row.names=FALSE)
+# # write.csv(inla_treat_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-treat.csv", row.names=FALSE)
+# write.csv(inla_seas_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-seas.csv", row.names=FALSE)
+# write.csv(test, "C:/Users/ClaudiaOffner/Downloads/testt.csv", row.names=FALSE)
 
 #### Variables ####
-var1 <- c('(Intercept)', 'Flood Extent', 'Treatment','DD BL', 'Ramadan', 'Religion BL', 'Wealth BL')
-var2 <- c('(Intercept) Jan/Feb season', 'Mar/Apr season', 
-          'May/Jun season', 'Jul/Aug season', 
-          'Sep/Oct season', 'Nov/Dec season', 
-          'Treatment','WDDS BL', 'Ramadan', 'Religion BL', 'Wealth BL', 
-          'Jan/Feb season : Flood Extent',
-          'Mar/Apr season : Flood Extent',
-          'May/Jun season : Flood Extent', 
-          'Jul/Aug season : Flood Extent',
-          'Sep/Oct season : Flood Extent', 
-          'Nov/Dec season : Flood Extent')
-var3 <- c('(Intercept) Jan/Feb season', 'Mar/Apr season', 
-         'May/Jun season', 'Jul/Aug season', 
-         'Sep/Oct season', 'Nov/Dec season', 
-         'Treatment','WDDS BL', 'Ramadan', 'Religion BL', 'Wealth BL', 
-         'Jan/Feb season : Flood Extent (Control)',
-         'Mar/Apr season : Flood Extent (Control)',
-         'May/Jun season : Flood Extent (Control)', 
-         'Jul/Aug season : Flood Extent (Control)',
-         'Sep/Oct season : Flood Extent (Control)', 
-         'Nov/Dec season : Flood Extent (Control)',
-         'Jan/Feb season : Flood Extent (Treatment)',
-         'Mar/Apr season : Flood Extent (Treatment)',
-         'May/Jun season : Flood Extent (Treatment)', 
-         'Jul/Aug season : Flood Extent (Treatment)',
-         'Sep/Oct season : Flood Extent (Treatment)', 
-         'Nov/Dec season : Flood Extent (Treatment)')
+# var1 <- c('(Intercept)', 'Flood Extent', 'Treatment','DD BL', 'Ramadan', 'Religion BL', 'Wealth BL')
+# var2 <- c('(Intercept) Jan/Feb season', 'Mar/Apr season', 
+#           'May/Jun season', 'Jul/Aug season', 
+#           'Sep/Oct season', 'Nov/Dec season', 
+#           'Treatment','WDDS BL', 'Ramadan', 'Religion BL', 'Wealth BL', 
+#           'Jan/Feb season : Flood Extent',
+#           'Mar/Apr season : Flood Extent',
+#           'May/Jun season : Flood Extent', 
+#           'Jul/Aug season : Flood Extent',
+#           'Sep/Oct season : Flood Extent', 
+#           'Nov/Dec season : Flood Extent')
+# var3 <- c('(Intercept) Jan/Feb season', 'Mar/Apr season', 
+#          'May/Jun season', 'Jul/Aug season', 
+#          'Sep/Oct season', 'Nov/Dec season', 
+#          'Treatment','WDDS BL', 'Ramadan', 'Religion BL', 'Wealth BL', 
+#          'Jan/Feb season : Flood Extent (Control)',
+#          'Mar/Apr season : Flood Extent (Control)',
+#          'May/Jun season : Flood Extent (Control)', 
+#          'Jul/Aug season : Flood Extent (Control)',
+#          'Sep/Oct season : Flood Extent (Control)', 
+#          'Nov/Dec season : Flood Extent (Control)',
+#          'Jan/Feb season : Flood Extent (Treatment)',
+#          'Mar/Apr season : Flood Extent (Treatment)',
+#          'May/Jun season : Flood Extent (Treatment)', 
+#          'Jul/Aug season : Flood Extent (Treatment)',
+#          'Sep/Oct season : Flood Extent (Treatment)', 
+#          'Nov/Dec season : Flood Extent (Treatment)')
 
 #### 1. Dietary Diversity ####
 
-# Continuous: Dietary Diversity Scores (no interaction)
-inla_non_WDDS <- inla(dd10r_score_m ~ Flood_1Lag + treatment +
+
+# Continuous: Dietary Diversity Scores (3-way interaction with season)
+inla_WDDS <- inla(dd10r_score_m ~ season_flood*Flood_1Lag*treatment +
                     dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + 
                     f(wcode, model = 'iid') + # control for women random effect on DD
                     f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
                       group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
                       hyper = prec.prior),
                   family ='gaussian', data = df, weights = wdiet_wt,
-                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE, config=TRUE),
                   control.predictor = list(compute = TRUE))
 
-# # Continuous: Dietary Diversity Scores (2-way interaction with treatment)
-# inla_treat_WDDS <- inla(dd10r_score_m ~ Flood_1Lag*treatment +
-#                         dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + 
-#                         f(wcode, model = 'iid') + # control for women random effect on DD
-#                         f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
-#                           group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
-#                           hyper = prec.prior),
-#                       family ='gaussian', data = df, weights = wdiet_wt,
-#                       control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-#                       control.predictor = list(compute = TRUE))
 
-# Continuous: Dietary Diversity Scores (2-way interaction with season)
-inla_seas_WDDS <- inla(dd10r_score_m ~ season_flood + season_flood:Flood_1Lag*treatment +
+# Continuous: Dietary Diversity Scores (3-way interaction with season)
+inla_WDDS <- inla(dd10r_score_m ~ season_flood + season_flood:Flood_1Lag*treatment +
                     dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + 
                     f(wcode, model = 'iid') + # control for women random effect on DD
                     f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
                       group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
                       hyper = prec.prior),
                   family ='gaussian', data = df, weights = wdiet_wt,
-                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
+                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE, config=TRUE),
                   control.predictor = list(compute = TRUE))
 
-# Continuous: Dietary Diversity Scores
-inla_WDDS <- inla(dd10r_score_m ~ season_flood*Flood_1Lag*treatment +  
-                    dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + #wi_land_BL +
-                    f(wcode, model = 'iid') + # control for women random effect on DD
-                    f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
-                      group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
-                      hyper = prec.prior),
-                  family ='gaussian', data = df, weights = wdiet_wt,
-                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE),
-                  control.predictor = list(compute = TRUE))
-
-
-# Visuals
-inla_non_WDDSres <- getINLA_res(inla_treat_WDDS)
-inla_non_WDDSres$Variables <- var1
-plotResults(inla_non_WDDSres)
-
-inla_seas_WDDSres <- getINLA_res(inla_seas_WDDS)
-# inla_seas_WDDSres$Variables <- var2
-plotResults(inla_seas_WDDSres)
-
+# Quick visual
 inla_WDDSres <- getINLA_res(inla_WDDS)
-# inla_WDDSres$Variables <- var3
+inla_WDDSres$Variables <- var3
 plotResults(inla_WDDSres)
-
-
-# Run Bayesian Factor tests
-test <- testINLA_Interact(inla_seas_WDDS, inla_non_WDDS) # Favors model with seasonal interactions
-test <- testINLA_Interact(inla_seas_WDDS, inla_WDDS) # Favors model without treatment interactions
-
-
-# Compare
-comp <- selINLA_mod(list('inla_non_WDDS', 'inla_seas_WDDS', 'inla_WDDS'))
-comp[order(comp$DIC), ] # lower values are better fit - suggests 2-way interaction
-comp[order(comp$WAIC), ] # lower values are better fit - suggests 3-way interaction
-test <- comp[order(comp$MLIK), ] # higher values are better fit - suggests 2-way interaction
 
 
 #### 2. Minimum Dietary Diversity  ####
@@ -131,7 +90,7 @@ inla_non_MDD <- inla(dd10r_min_m ~ Flood_1Lag+ treatment +
 #                       control.predictor = list(compute = TRUE))
 
 # Binary: Minimum dietary diversity (2-way interaction with season)
-inla_seas_MDD <- inla(dd10r_min_m ~ season_flood + season_flood:Flood_1Lag+ treatment +
+inla_seas_MDD <- inla(dd10r_min_m ~ season_flood + season_flood:Flood_1Lag + treatment +
                         dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + 
                          f(wcode, model = 'iid') + # control for women random effect on DD
                          f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
