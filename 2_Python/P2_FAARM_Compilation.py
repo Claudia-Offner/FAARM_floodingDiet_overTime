@@ -55,6 +55,7 @@ gee_df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 bi = pd.read_csv('FAARM/JW_All_DD_women_Apr-10-2023.csv', low_memory=False)
 
 
+#%%
 bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts',
                     'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv',
                     'dd10r_score_m', 'dd10r_min_m', 'dd10r_score', 'dd10r_min', 'ramadan', 'preg', 'wdiet_wt')]
