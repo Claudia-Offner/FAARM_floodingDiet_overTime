@@ -31,7 +31,7 @@ setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical M
 cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
 cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
 cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
-cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("lon","lat"))
+cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
 cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
 
 # Load shape data (as spatial polygon df)
