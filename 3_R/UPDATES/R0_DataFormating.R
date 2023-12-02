@@ -122,7 +122,7 @@ prec.prior <- list(prec = list(param = c(0.001, 0.001)))
 # df$flooded_anom_w_lag <- scale(df$flooded_anom_w_lag)
 # # Scale main flood exp
 sd(df$Flood_1Lag) # SD is approx 1% flood coverage
-df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
+# df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
 # df$Flood_1Lag  <- (df$Flood_1Lag - min(df$Flood_1Lag))/(max(df$Flood_1Lag) - min(df$Flood_1Lag)) # normalise?
 
 

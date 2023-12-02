@@ -1,23 +1,28 @@
 # RUN 3-WAY INTERACTION (FREQUENTIST)
 
-#### Detatch packages & clear environment/plots
-# lapply(paste('package:',names(sessionInfo()$otherPkgs),sep=""),detach,character.only=TRUE,unload=TRUE)
-# rm(list = ls())
+## Detatch packages & clear environment/plots
+### lapply(paste('package:',names(sessionInfo()$otherPkgs),sep=""),detach,character.only=TRUE,unload=TRUE)
+### rm(list = ls())
 
-#### Load packages
+## IMPORTANT - set file path to data folder location
+setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
+
+# 0. PACKAGES & FUNCTIONS ####
+
+# Load packages
 library(dplyr)
 library(spdep)
 library(nlme) 
+library(lme4)
+library(ggplot2)
 library(margins) # https://www.rdocumentation.org/packages/margins/versions/0.3.26
-library(emmeans) # https://www.rdocumentation.org/packages/emmeans/versions/1.8.8/topics/emmeans
+library(emmeans) 
 
-#### IMPORTANT - set file path to data folder location
-setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding TimeSeries - CO/4. Data/Final')
+# HELPFUL RESOURCES
+# https://rdrr.io/cran/emmeans/f/vignettes/basics.Rmd
+# https://cran.r-project.org/web/packages/emmeans/vignettes/AQuickStart.html
+# https://stats.stackexchange.com/questions/592518/average-marginal-means-with-marginaleffects?rq=1
 
-# write.csv(marg, "C:/Users/ClaudiaOffner/Downloads/test.csv", row.names=FALSE)
-
-
-#### FUNCTIONS ####
 
 # Function to round numeric columns of data frame
 round_df <- function(x, digits) {
@@ -84,30 +89,8 @@ plotResults <- function(res1, x=0) {
   
 }
 
-# Variable Names
-var <- c('(Intercept) Jan/Feb season', 
-          'Flood Extent: Jan/Feb season', 
-          'Mar/Apr season', 'May/Jun season', 'Jul/Aug season',
-          'Sep/Oct season', 'Nov/Dec season', 
-          'Jan/Feb season : Treatment',
-          'Flood Extent : Mar/Apr season',
-          'Flood Extent : May/Jun season',
-          'Flood Extent : Jul/Aug season',
-          'Flood Extent : Sep/Oct season',
-          'Flood Extent : Nov/Dec season',
-          'Mar/Apr season : Treatment',
-          'May/Jun season : Treatment',
-          'Jul/Aug season : Treatment',
-          'Sep/Oct season : Treatment',
-          'Nov/Dec season : Treatment',
-          'Flood Extent : Jan/Feb season : Treatment',
-          'Flood Extent : Mar/Apr season : Treatment',
-          'Flood Extent : May/Jun season : Treatment',
-          'Flood Extent : Jul/Aug season : Treatment',
-          'Flood Extent : Sep/Oct season : Treatment',
-          'Flood Extent : Nov/Dec season : Treatment')
 
-#### 0. Example Interaction model for VanderWeele ####
+# 1. Example Interaction model for VanderWeele ####
 
 # Example of interactionR package
 # library(interactionR)
@@ -121,7 +104,7 @@ var <- c('(Intercept) Jan/Feb season',
 # interactionR_table(table_object)
 
 
-#### 1. Load & Clean Data ####
+# 2. Load & Clean Data ####
 
 # Load FAARM data
 # df <- read.csv(file='2_FAARM_GEE_df.csv', fileEncoding='UTF-8-BOM')
@@ -175,19 +158,52 @@ df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Ju
 # Reset index
 rownames(df) <- NULL
 
-# Scale main flood exp
-sd(df$Flood_1Lag) # SD is approx 1% flood coverage
+# Scale flood exposure to improve interpret ability of the model
+mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
+sd_value <- sd(df$Flood_1Lag, na.rm = TRUE)
 df$Flood_1Lag  <- (df$Flood_1Lag - mean(df$Flood_1Lag))/sd(df$Flood_1Lag)
-# df$Flood_1Lag  <- (df$Flood_1Lag - min(df$Flood_1Lag))/(max(df$Flood_1Lag) - min(df$Flood_1Lag)) # normalise?
+range(df$Flood_1Lag)
 
 
+# MODEL INTERPRETABILITY 
 
-#### 2. Run Model ####
+## Set flood levels (reference the "real" values here)
+## levels <- c(0, 0.001, 0.005, 0.01, 0.05, 0.1) # ORIGINAL %
+levels <- c(-0.5326523, -0.4730199, -0.2344902, 0.0636719, 2.448969, 5.43059) # SCALED %
+
+## Model Variable Names
+var <- c('(Intercept) Jan/Feb season', 
+         'Flood Extent: Jan/Feb season', 
+         'Mar/Apr season', 'May/Jun season', 'Jul/Aug season',
+         'Sep/Oct season', 'Nov/Dec season', 
+         'Jan/Feb season : Treatment',
+         'WDDS (BL)', 'Ramadan', 'Religion', 'Wealth',
+         'Flood Extent : Mar/Apr season',
+         'Flood Extent : May/Jun season',
+         'Flood Extent : Jul/Aug season',
+         'Flood Extent : Sep/Oct season',
+         'Flood Extent : Nov/Dec season',
+         'Mar/Apr season : Treatment',
+         'May/Jun season : Treatment',
+         'Jul/Aug season : Treatment',
+         'Sep/Oct season : Treatment',
+         'Nov/Dec season : Treatment',
+         'Flood Extent : Jan/Feb season : Treatment',
+         'Flood Extent : Mar/Apr season : Treatment',
+         'Flood Extent : May/Jun season : Treatment',
+         'Flood Extent : Jul/Aug season : Treatment',
+         'Flood Extent : Sep/Oct season : Treatment',
+         'Flood Extent : Nov/Dec season : Treatment')
+
+
+# 3. INTERACTION ANALYSIS: Continuous Outcome ####
+
 
 # Model (Temporal - no spatial)
 lme_mod <- lme(
-  fixed = dd10r_score_m ~ Flood_1Lag*season_flood*treatment, # Flood_1Lag + season_flood:Flood_1Lag + treatment:Flood_1Lag + 
-  random = ~1 | wcode,
+  fixed = dd10r_score_m ~ Flood_1Lag * season_flood * treatment 
+           + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL,  # Controls
+  random = list(wcode = pdDiag(~1), c_code = pdDiag(~1)),
   weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
   correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
   data = df,
@@ -197,30 +213,111 @@ lme_mod <- lme(
 # Get results
 lme_res <- getLME_res(lme_mod)
 lme_res$Variables <- var
-
-# Get marginal effects by subgroup
-marg <- summary(margins(lme_mod, at = list(treatment=c(0, 1), season_flood=c('Jan/Feb', 'Mar/Apr', 'May/Jun', 'Jul/Aug', 'Sept/Oct', 'Nov/Dec')), variables = "Flood_1Lag"))
-main_marg <- summary(margins(lme_mod))
-
-# Compare difference in seasonal flooding between trreat groups (equiv. to stata contrasts)
-cont <- emmeans(lme_mod, pairwise ~ Flood_1Lag*season_flood*treatment,simple = c("treatment"))
-
-# Print the result tables
-plotResults(lme_res)
 print(lme_res)
-print(marg)
-print(main_marg)
-print(cont$contrasts)
+plotResults(lme_res)
 
-##### EXAMPLE MANUAL CHECKS #####
+#  Check ANOVA for statistically strong interactions (marginal evidence)
+anova(lme_mod)
 
--0.1263 # Flood:Cont:Jan/Feb (flood(Jan/Feb))
--0.1263 + -0.2936 # Flood:Cont:Mar/Apr (flood(Jan/Feb)  + flood:season(Mar/Apr))
--0.1263 + 0.1787 # Flood:Cont:Jul/Aug (flood(Jan/Feb)  + flood:season(Jul/Aug ))
-# etc.
--0.1263 + -0.1002 # Flood:Treat:Jan/Feb (flood + flood:treat)
--0.1263 + -0.1002 + -0.2936 + -0.4745 # Flood:Treat:Mar/Apr (flood(Jan/Feb) + treat:season(Mar/Apr) + flood:season(Mar/Apr) + flood:season:treat(Mar/Apr))
--0.1263 + -0.1002 + 0.2762 + 0.0028 # Flood:Treat:May/Jun (flood(Jan/Feb) + treat:season(Jan/Feb) + flood:season(May/Jun) + flood:season:treat(May/Jun))
--0.1263 + -0.1002 + 0.1787 + 0.1084 # Flood:Treat:Jul/Aug  (flood(Jan/Feb) + treat:season(Jan/Feb) + flood:season(Jul/Aug ) + flood:season:treat(Jul/Aug ))
-# etc.
+## 3A. Average Marginal Effects (slopes) ####
+### EMTRENDS: Estimates the slope of coefficients, accounting for reference groups.
 
+ame1 <- emtrends(lme_mod, pairwise ~ Flood_1Lag*season_flood*treatment, var = 1)$emtrends
+ame1_res <- summary(ame1,  infer = c(TRUE, TRUE))
+# ame2 <- emtrends(lme_mod, pairwise ~ Flood_1Lag*season_flood*treatment, var = 1, at = list(Flood_1Lag = levels))$emtrends
+# ame2 # NOTE that there is no difference when flood inundation changes (because flooding has a fixed slope)
+
+# Summary of relevant contrasts, including CIs
+ame1_cont <- summary(contrast(ame1, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE))
+print(ame1_cont)
+
+# write.csv(ame1_res, "C:/Users/ClaudiaOffner/Downloads/ame1_res.csv", row.names=FALSE)
+# write.csv(ame1_cont, "C:/Users/ClaudiaOffner/Downloads/ame1_cont.csv", row.names=FALSE)
+
+# # EXAMPLE MANUAL CHECKS
+# -0.0946 # Flood:Cont:Jan/Feb [flood(Jan/Feb)]
+# -0.0946 + -0.5741 # Flood:Cont:Mar/Apr [flood(Jan/Feb)  + flood:season(Mar/Apr)]
+# -0.0946 +  0.2578 # Flood:Cont:May/Jun [flood(Jan/Feb)  + flood:season(May/Jun)]
+# # etc.
+# -0.0946 + -0.1219 # Flood:Treat:Jan/Feb [flood + flood:treat]
+-0.0946 + -0.1219 + -0.5741 + -0.2799 # Flood:Treat:Mar/Apr [flood(Jan/Feb) + treat:season(Mar/Apr)) + flood:season(Mar/Apr) + flood:season:treat(Mar/Apr)]
+# -0.0946 + -0.1219 + 0.2578 + 0.0135 # Flood:Treat:May/Jun [flood(Jan/Feb) + treat:season(Jan/Feb)) + flood:season(May/Jun) + flood:season:treat(May/Jun)]
+# # etc.
+
+
+## 3B. Estimated Marginal Means (predictions) ####
+
+### EMMEANS: Estimates the predicted value of WDDS for difference coef values, accounting for reference groups.
+
+# AVERAGE LEVEL OF INUNDATON
+emm_1 <- emmeans(lme_mod, ~ Flood_1Lag*season_flood*treatment)
+summary(emm_1)
+
+### Summary of contrasts, including CIs
+contr_emm1A <- summary(contrast(emm_1, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE))
+print(contr_emm1A)
+contr_emm1B <- summary(contrast(emm_1, "pairwise", by = c("Flood_1Lag", "treatment")), infer = c(TRUE, TRUE))
+print(contr_emm1B)
+contr_emm1C <- summary(contrast(emm_1, "pairwise", by = c("season_flood", "treatment")), infer = c(TRUE, TRUE))
+print(contr_emm1C)
+
+write.csv(summary(emm_1, infer = c(TRUE, TRUE)), "C:/Users/ClaudiaOffner/Downloads/emm_1.csv", row.names=FALSE)
+write.csv(contr_emm1A, "C:/Users/ClaudiaOffner/Downloads/contr_emm1A.csv", row.names=FALSE)
+write.csv(contr_emm1B, "C:/Users/ClaudiaOffner/Downloads/contr_emm1B.csv", row.names=FALSE)
+
+
+# MULTIPLE LEVELS OF INUNDATON
+emm_2 <- emmeans(lme_mod, ~ Flood_1Lag*season_flood*treatment, at = list(Flood_1Lag = levels)) # levels
+summary(emm_2)
+### Summary of contrasts, including CIs
+contr_emm2A <- summary(contrast(emm_2, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE))
+print(contr_emm2A)
+contr_emm2B <- summary(contrast(emm_2, "pairwise", by = c("Flood_1Lag", "treatment")), infer = c(TRUE, TRUE))
+print(contr_emm2B)
+contr_emm2C <- summary(contrast(emm_2, "pairwise", by = c("season_flood", "treatment")), infer = c(TRUE, TRUE))
+print(contr_emm2C)
+
+write.csv(summary(emm_2, infer = c(TRUE, TRUE)), "C:/Users/ClaudiaOffner/Downloads/emm_2.csv", row.names=FALSE)
+write.csv(contr_emm2A, "C:/Users/ClaudiaOffner/Downloads/contr_emm2A.csv", row.names=FALSE)
+write.csv(contr_emm2B, "C:/Users/ClaudiaOffner/Downloads/contr_emm2B.csv", row.names=FALSE)
+write.csv(contr_emm2C, "C:/Users/ClaudiaOffner/Downloads/contr_emm2C.csv", row.names=FALSE)
+
+
+
+# EXAMPLE MANUAL CHECKS (???)
+# emm_1@linfct # linfct shows combinations of regression coefficients used for the mean
+# # # pairs(emm_1)@linfct # shows what was used to get pairs
+
+# Proportions of levels within season_flood variable
+# df |> 
+#   group_by(season_flood, treatment) |> 
+#   na.omit(season_flood) |> 
+#   summarise(n = n()) |> 
+#   mutate(prop = sprintf("%0.5f", n / sum(n)))
+
+# Simple model (no controls)
+# 4.2 + (0 * 0.8928) + (0 * 0.1197) + (0 * -0.1209) + (0 * -0.1903 ) + (0 * -0.0973) + # season
+#   (0 * -0.1263) + (0 * -0.2936) + (0 * 0.2762) + (0 * 0.1787) + (0 * 0.3136) + (0 * 0.1081) + # flood:season
+#   (0 * 0.3014) + (0 * -0.1057) + (0 * 0.1515) + (0 * 0.0201) + (0 * 0.0194) + (0 * 0.0046) + # treatment:season
+#   (0 * -0.1002) + (0 * -0.4745) + (0 * 0.0028) + (0 * 0.1084) + (-0.1042) + (0 * 0.1010) #flood:treat:season
+
+
+# # 4.INTERACTION ANALYSIS: Binary Outcome ####
+# 
+# # Model (Temporal - no spatial)
+# glmm_model <- glmer(
+#   dd10r_min_m ~ Flood_1Lag * season_flood * treatment 
+#   + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (season_id | c_code), 
+#   data = df, 
+#   family = binomial(),
+#   weights = wdiet_wt  # Replace 'weight_variable' with the actual variable you want to use as weights
+# )
+# 
+# # Get results
+# lme_res <- getME_res(glmm_model)
+# lme_res$Variables <- var
+# print(lme_res)
+# plotResults(lme_res)
+# summary(glmm_model)
+# #  Check ANOVA for statistically strong interactions (marginal evidence)
+# anova(lme_mod)

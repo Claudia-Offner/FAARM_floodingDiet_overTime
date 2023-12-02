@@ -48,24 +48,9 @@ var <- c('(Intercept) Jan/Feb season',
 
 # CURRENT VERSION WITH FULL MAIN EFFECTS (depends on ability to calculate marginal effects for Bayesian models)
 # Continuous: Dietary Diversity Scores (3-way interaction with season)
+
+
 inla_WDDS <- inla(dd10r_score_m ~ Flood_1Lag*season_flood*treatment +
-                    # dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + 
-                    f(wcode, model = 'iid') + # control for women random effect on DD
-                    f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
-                      group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
-                      hyper = prec.prior),
-                  family ='gaussian', data = df, weights = wdiet_wt,
-                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE, config=TRUE),
-                  control.predictor = list(compute = TRUE))
-
-# Quick visual
-inla_WDDSres <- getINLA_res(inla_WDDS)
-inla_WDDSres$Variables <- var
-plotResults(inla_WDDSres)
-
-# PREVIOUS VERSION WITHOUT SEASON:TREAT TERMS (avoids multi-co linearity)
-# Continuous: Dietary Diversity Scores (3-way interaction with season)
-inla_WDDS1 <- inla(dd10r_score_m ~ season_flood + season_flood:Flood_1Lag*treatment +
                     dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL +
                     f(wcode, model = 'iid') + # control for women random effect on DD
                     f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
@@ -75,11 +60,42 @@ inla_WDDS1 <- inla(dd10r_score_m ~ season_flood + season_flood:Flood_1Lag*treatm
                   control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE, config=TRUE),
                   control.predictor = list(compute = TRUE))
 
+inla_WDDS$marginals.fixed
+
+# Quick visual
+inla_WDDSres <- getINLA_res(inla_WDDS)
+inla_WDDSres$Variables <- var
+plotResults(inla_WDDSres)
+
+0.028552365 + -0.309932866 # Flood:Cont:Mar/Apr -0.2813805 [flood(Jan/Feb)  + flood:season(Mar/Apr)]
+0.028552365 + -0.309932866 + 0.021864205 + -0.843075653 # Flood:Treat:Mar/Apr -1.102592 [flood(Jan/Feb) + treat:season(Mar/Apr) + flood:season(Mar/Apr) + flood:season:treat(Mar/Apr)]
+
+
+# PREVIOUS VERSION WITHOUT SEASON:TREAT TERMS (avoids multi-co linearity)
+# Continuous: Dietary Diversity Scores (3-way interaction with season)
+inla_WDDS1 <- inla(dd10r_score_m ~ season_flood + Flood_1Lag + season_flood:Flood_1Lag*treatment +
+                    dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL +
+                    f(wcode, model = 'iid') + # control for women random effect on DD
+                    f(OBJECTID_1, model = "besagproper", graph = W.adj.mat, # control for spatial effects
+                      group = season_id, control.group = list(model = "ar1"), # grouped by time point on DD
+                      hyper = prec.prior),
+                  family ='gaussian', data = df, weights = wdiet_wt,
+                  control.compute = list(dic = TRUE, waic = TRUE, cpo = TRUE, config=TRUE),
+                  control.predictor = list(compute = TRUE))
+
+predictions <- predict(inla_WDDS1)
+print(predictions_new$mean)
+
 
 # Visuals
 inla_WDDSres1 <- getINLA_res(inla_WDDS1)
 inla_WDDSres1$Variables <- var3
 plotResults(inla_WDDSres1)
+
+# Manual calc. strat
+0.058734846 + -0.743679640 # Flood:Cont:Mar/Apr -0.2813805 [season(Mar/Apr)  + flood:season(Mar/Apr)]
+0.058734846 + -0.148450406  # Flood:Treat:Mar/Apr -1.102592 [season(Mar/Apr) + flood:season(Mar/Apr) + flood:season:treat(Mar/Apr)]
+
 
 #### 2. Minimum Dietary Diversity (binary) ####
 
