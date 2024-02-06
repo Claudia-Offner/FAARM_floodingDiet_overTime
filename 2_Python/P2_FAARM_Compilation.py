@@ -29,9 +29,11 @@ def lagger(cols, df, lag):
 
     return df
 
+
 # IMPORTANT - set file path to data folder location
 data_path = 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/' \
-            '- DD-Flooding TimeSeries - CO/4. Data/Final'
+            '- DD-Flooding Interaction - CO/4. Data'
+
 os.chdir(data_path)
 
 # ====================================================================================
@@ -54,18 +56,15 @@ gee_df = pd.read_csv('1_GEE_df.csv', low_memory=False)
 # Read diet data from new csv (DF 2) - w/ weights
 bi = pd.read_csv('FAARM/JW_All_DD_women_Apr-10-2023.csv', low_memory=False)
 
-
-#%%
 bi_sub = bi.loc[:, ('wcode', 'c_code', 'dov', 'treatment', 'dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts',
                     'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv',
                     'dd10r_score_m', 'dd10r_min_m', 'dd10r_score', 'dd10r_min', 'ramadan', 'preg', 'wdiet_wt')]
-
 
 # Data organising & cleaning
 bi_org = Organiser(bi_sub[:]).format()  # wcodes already unnested
 bi_Diet = Panelist(bi_org[:]).get_panels()
 # bi_Diet.isnull().sum()  # 2 c_codes missing ; 93 panels missing (rounds after endline)
-bi_Diet['panel'] = bi_Diet['panel'].fillna('end')
+# bi_Diet['panel'] = bi_Diet['panel'].fillna('end')
 
 # Add time variables
 bi_Diet = Panelist(bi_Diet).get_dd_mm_yyyy()
@@ -106,7 +105,6 @@ RESULT = pd.merge(x, bi_Diet, how='left', on=['wcode', 'c_code', 'year_month'])
 RESULT = RESULT.drop(['month_y', 'year_y', 'dov_bi_Diet'], axis=1)
 RESULT.rename(columns={'panel_x': 'panel', 'year_x': 'year', 'month_x': 'month'}, inplace=True)
 
-
 # ====================================================================================
 # DATA CLEANING
 # ====================================================================================
@@ -132,7 +130,8 @@ RESULT['season'] = RESULT['season'].replace(season_nums)
 # Dummy code binary DD variables
 RESULT['dd10r_min_m'] = RESULT['dd10r_min_m'].map({'Inadequate diet': 0, 'Diet diverse': 1})
 RESULT['dd10r_min'] = RESULT['dd10r_min'].map({'Inadequate diet': 0, 'Diet diverse': 1})
-other = ['dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs', 'dd10r_dglv',
+other = ['dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh', 'dd10r_eggs',
+         'dd10r_dglv',
          'dd10r_vita', 'dd10r_othf']
 for g in other:
     RESULT[g] = RESULT[g].map({'0)no': 0, '1)yes': 1})
@@ -142,7 +141,7 @@ RESULT.drop(['year_month', 'panel'], axis=1)
 
 # Aggregate dataset so mean is taken for numeric values and mode is taken for all else
 RESULT = RESULT.groupby(['c_code', 'wcode', 'year', 'season'], as_index=False).mean()
-col = ['month', 'treatment', 'dd_elig', 'dd10r_starch',  'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh',
+col = ['month', 'treatment', 'dd_elig', 'dd10r_starch', 'dd10r_legume', 'dd10r_nuts', 'dd10r_dairy', 'dd10r_flesh',
        'dd10r_eggs', 'dd10r_dglv', 'dd10r_vita', 'dd10r_othf', 'dd10r_othv', 'dd10r_min', 'dd10r_min_m', 'ramadan',
        'preg']
 for c in col:
@@ -150,8 +149,8 @@ for c in col:
     RESULT[c] = round(RESULT[c])
 
 # 1 season time lag for flooding & environmental variables
-RESULT = lagger(['season', 'perc_flooded', 'evap_mean', 'prec_mean', 'ndvi_mean', 'temp_mean'], RESULT, 1)
-RESULT.rename(columns={'perc_flooded_lag': 'Flood_1Lag', 'season_lag': 'season_flood'}, inplace=True)
+RESULT = lagger(['season', 'perc_flooded_c', 'evap_mean', 'prec_mean', 'ndvi_mean', 'temp_mean'], RESULT, 1)
+RESULT.rename(columns={'perc_flooded_c_lag': 'Flood_1Lag', 'season_lag': 'season_flood'}, inplace=True)
 
 # Reorganise data
 RESULT['month'] = RESULT['month'].astype(int).apply(lambda f: '{0:0>2}'.format(f))
@@ -187,7 +186,7 @@ base_sub = base.loc[:, ('wcode', 'c_code', 'g_2h_BL', 'fam_type_BL', 'wi_hl_BL',
                         'md_d13_EL_rev', 'num_crops_avg', 'avg_hfias', 'DD_min_sandEl', 'md_d13_BL', 'md_d13_EL',
                         'md_d13_BL_rev', 'md_d13_EL_rev', 'md_d12_BL', 'md_d12_EL', 'md_d12_BL_rev', 'md_d12_EL_rev',
                         'md_d11_BL', 'md_d11_EL', 'md_d11_BL_rev', 'md_d11_EL_rev', 'wealth_BL', 'dec_BL', 'quint_BL',
-                        'terc_BL', 'wealth2_BL', 'dec2_BL', 'quint2_BL', 'terc2_BL')]
+                        'terc_BL', 'wealth2_BL', 'dec2_BL', 'quint2_BL', 'terc2_BL', 'hh1hh_mem_EL')]
 
 # Merge datasets
 RESULT = pd.merge(RESULT, base_sub, how='left', on=['wcode', 'c_code', 'treatment'])
@@ -211,7 +210,7 @@ cols = ['treatment', 'g_2h_BL', 'fam_type_BL', 'wi_hl_BL', 'wi_al_BL', 'wi_land_
         'md_d13_BL', 'md_d13_EL', 'md_d13_BL_rev', 'md_d13_EL_rev', 'md_d12_BL',
         'md_d12_EL', 'md_d12_BL_rev', 'md_d12_EL_rev', 'md_d11_BL', 'md_d11_EL',
         'md_d11_BL_rev', 'md_d11_EL_rev', 'wealth_BL', 'dec_BL', 'quint_BL',
-        'terc_BL', 'wealth2_BL', 'dec2_BL', 'quint2_BL', 'terc2_BL']
+        'terc_BL', 'wealth2_BL', 'dec2_BL', 'quint2_BL', 'terc2_BL', 'hh1hh_mem_EL']
 
 for c in cols:
     RESULT[c] = RESULT.groupby('wcode')[c].ffill().bfill()
@@ -219,6 +218,6 @@ for c in cols:
 # Check NA values
 # RESULT.columns[RESULT.isnull().any()]
 
-#%%
+
 # Save to CSV
-RESULT.to_csv('2_FAARM_GEE_df2.csv', index=False)
+RESULT.to_csv('2_FAARM_GEE_df.csv', index=False)
