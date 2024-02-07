@@ -6,22 +6,19 @@
 
 #### IMPORTANT - set file path to data folder location
 setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/')
-# write.csv(df, "C:/Users/ClaudiaOffner/Downloads/CLEAN", row.names=FALSE)
+options(warn = 0) 
 
 #### 1. Packages & Functions ####
 
 #### Load packages
-library(INLA)
-library(sf)
-library(rgdal)
+# Load packages
+library(openxlsx)
 library(dplyr)
 library(spdep)
+library(nlme) 
 library(ggplot2)
-library(bayestestR)
-library(lme4) # R4_Results
-
-#### Ensure that RINLA can handle big datasets
-inla.setOption("num.threads", 4)
+library(margins) # https://www.rdocumentation.org/packages/margins/versions/0.3.26
+library(emmeans) 
 
 # Function to round numeric columns of data frame
 round_df <- function(x, digits) {
@@ -33,84 +30,160 @@ round_df <- function(x, digits) {
   x
 }
 
-
-# Function to read ME results in table
-getME_res <- function(model){
+# Funciton to calculate odds ratios from Logistic Regressions
+getORs <- function(df, columns) {
   
-  # Get p-values
-  CI <- confint(model) # get CI
-  gme_res <- data.frame(coef(summary(model)))
-  gme_res$Lower_CI <- CI[3:(length(CI)/2),1]
-  gme_res$Higher_CI <- CI[3:(length(CI)/2),2]
-  gme_res$p.z <- round(2 * (1 - pnorm(abs(gme_res$t.value))), 6)
-  gme_res <- gme_res %>% dplyr::select(Estimate, Std..Error,Lower_CI,Higher_CI,p.z)
+  # OR TRANSFORMATION
+  for (c in columns) {
+    df[[c]] <- exp(df[[c]])
+  }
+  
+  return(df)
+}
+
+# Function to calculate probabilities from Logistic Regressions
+getPROBS <- function(df, columns) {
+  
+  # OR TRANSFORMATION
+  for (c in columns) {
+    df[[c]] <- exp(df[[c]])/ (1 + exp(df[[c]]))
+  }
+  
+  return(df)
+}
+
+# Function to read GLMER results in table
+getGLMM <- function(glmm_model, var=0, rep=0) {
+  
+  # Get glmm_results
+  glmm_res <- as.data.frame(summary(glmm_model)$coef)
+  
+  # Calcualte CIs
+  colnames(glmm_res) <- c("Estimate", "Std.Error", "z-value", "p-value") # Rename columns
+  glmm_res$LowerCI <- round(glmm_res[["Estimate"]] - 1.96 * glmm_res[["Std.Error"]], 4)
+  glmm_res$UpperCI <- round(glmm_res[["Estimate"]] + 1.96 * glmm_res[["Std.Error"]], 4)
+  glmm_res$Variable <- rownames(glmm_res)
+  rownames(glmm_res) <- NULL
+  glmm_res <- glmm_res %>% # Re-order columns
+    select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
   
   # Plot
-  gme_plot = tibble::rownames_to_column(gme_res, "variables") # create column for intercepts
-  gme_plot$index <- 1:nrow(gme_plot) # set index
-  names(gme_plot) <- c("Variables","Mean","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  glmm_res$index <- 1:nrow(glmm_res) # set indeglmm_res
+  names(glmm_res) <- c("Variables","Mean","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
   
   # Set significance col (for plotting)
-  gme_plot$P_Value <- as.numeric(gme_plot$P_Value)
-  gme_plot$Importance <- '0_None'
-  gme_plot$Importance[gme_plot$P_Value <= 0.10 & gme_plot$P_Value >= 0.05] <- '1_Weak'
-  gme_plot$Importance[gme_plot$P_Value <= 0.05] <- '2_Strong'
+  glmm_res$P_Value <- as.numeric(glmm_res$P_Value)
+  glmm_res$Importance <- '0_None'
+  glmm_res$Importance[glmm_res$P_Value <= 0.10 & glmm_res$P_Value >= 0.05] <- '1_Weak'
+  glmm_res$Importance[glmm_res$P_Value <= 0.05] <- '2_Strong'
   
-  return(round_df(gme_plot, 5))
+  # Set variable names
+  if (var != 0) {
+    glmm_res$Variables <- var
+  } 
   
-}
-
-
-# Function to read R-INLA results in table
-getINLA_res <- function(model) {
-  # NOTE: Maximum A Posteriori (MAP) is the probability distribution of te parameter haven seen the data
-  # posterior probability distribution tells us the degree of belief we should have for any particular value of the parameter.
-  # https://stats.stackexchange.com/questions/341553/what-is-bayesian-posterior-probability-and-how-is-it-different-to-just-using-a-p
-  
-  # Function to Format INLA results in table
-  result <- rbind(cbind(model[["summary.fixed"]]))      # summary(model)$fixed[,-7])) #, cbind(summary(model)$hyperpar)
-  result <- tibble::rownames_to_column(data.frame(result), "variables") # create column for intercepts
-  result$index <- 1:nrow(result) # set index
-  # Get posterior distribution & Calculate MAP
-  # https://easystats.github.io/bayestestR/reference/p_map.html
-  names <- model$names.fixed
-  posterior = data.frame()
-  for (i in names) {
-    x <- data.frame(model$marginals.fixed[i])[,1]
-    x <- cbind(i, p_map(x)[1])
-    posterior <- rbind(posterior, x)
+  # Set representation of results
+  if (rep=='OR'){
+    # Convert to ORs
+    glmm_res <- getORs(glmm_res, c('Mean', 'Lower_CI','Upper_CI'))
+    return(round_df(glmm_res, 5))
+  } else if (rep=='PROBS') {
+    glmm_res <- getPROBS(glmm_res, c('Mean', 'Lower_CI','Upper_CI'))
+    return(round_df(glmm_res, 5))
+  } else {
+    return(round_df(glmm_res, 5))
   }
-  colnames(posterior) <- c('variables', 'MAP P')
-  result <- as.data.frame(dplyr::left_join(as.data.frame(result), posterior, by = c('variables')))
   
-  # Reorganize data frame
-  colnames(result) <- c("Variables", "Mean","SD", "Lower_CI", "median", "Upper_CI", "mode", "kld", "Index", 'MAP_P') #, "Z_score", "P_Value"
-  result <- as.data.frame(result) %>%
-    dplyr::select(Index, Variables, Mean, SD, Lower_CI, Upper_CI, MAP_P) #%>% #  Z_score, P_Value
-  # mutate_if(is.numeric, round, 5)
-  
-  # Set significance col (for plotting)
-  result$MAP_P <- as.numeric(result$MAP_P)
-  result$Importance[result$Lower_CI > 0 & result$Upper_CI > 0] <- '2_Strong'
-  result$Importance[result$Lower_CI < 0 & result$Upper_CI < 0] <- '2_Strong'
-  result$Importance[result$Lower_CI <= 0 & result$Lower_CI >= -0.01 | result$Lower_CI >= 0 & result$Lower_CI <= 0.01] <- '1_Weak'
-  result$Importance[result$Upper_CI <= 0 & result$Upper_CI >= -0.01 | result$Upper_CI >= 0 & result$Upper_CI <= 0.01] <- '1_Weak'
-  result$Importance[result$Lower_CI < 0 & result$Upper_CI > 0 ] <- '0_None'
-  
-  # result$Importance <- '0_None'
-  # result$Importance[result$MAP_P <= 0.10 & result$MAP_P >= 0.05] <- '1_Weak'
-  # result$Importance[result$MAP_P <= 0.05] <- '2_Strong'
-  
-  return(result)
 }
 
+# Function to read LME results in table
+getLME <- function(lme_model, var=0){
+  
+  # Use the summary function to get a summary of the model
+  summary_table <- summary(lme_model)
+  
+  # Extract relevant information (coefficient estimates, standard errors, p-values, and confidence intervals)
+  lme_res <- round(as.data.frame(summary_table$tTable[, c("Value", "Std.Error", "DF", "t-value", "p-value")]), 4)
+  lme_res$Variable <- rownames(lme_res)
+  rownames(lme_res) <- NULL
+  colnames(lme_res) <- c("Estimate", "Std.Error", "df", "t-Value", "p-value", "Variable") # Rename columns
+  
+  # Calculate confidence intervals
+  lme_res$LowerCI <- round(lme_res$Estimate - qt(0.975, summary_table$tTable[, "DF"]) * lme_res$Std.Error, 4)
+  lme_res$UpperCI <- round(lme_res$Estimate + qt(0.975, summary_table$tTable[, "DF"]) * lme_res$Std.Error, 4)
+  lme_res <- lme_res %>% # Re-order columns
+    select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
+  
+  # Plot
+  lme_res$index <- 1:nrow(lme_res) # set index
+  names(lme_res) <- c("Variables","Mean","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  
+  # Set significance col (for plotting)
+  lme_res$P_Value <- as.numeric(lme_res$P_Value)
+  lme_res$Importance <- '0_None'
+  lme_res$Importance[lme_res$P_Value <= 0.10 & lme_res$P_Value >= 0.05] <- '1_Weak'
+  lme_res$Importance[lme_res$P_Value <= 0.05] <- '2_Strong'
+  
+  # Get results
+  if(var != 0) {
+    
+    lme_res$Variables <- var
+    
+  }
+  
+  return(round_df(lme_res, 5))
+  
+}
 
-# Function to plot R-INLA results in forest plot; NOTE: use round_df function on df
-plotResults <- function(res1, x=0) {
+# Function for formatting contrast and trend tables for forest plotting function (plotResults)
+formatRES <- function(df) {
+  for (c in names(df)) {
+    
+    mean <- c('1.trend', 'estimate', 'emmean')
+    lci <- c('asymp.LCL', 'lower.CL')
+    uci <- c('asymp.UCL', 'upper.CL')
+    if (c %in% mean) {
+      colnames(df)[colnames(df) %in% mean] <- "Mean"
+    } 
+    if (c %in% lci) {
+      colnames(df)[colnames(df) %in% lci] <- "Lower_CI"
+    } 
+    if (c %in% uci) {
+      colnames(df)[colnames(df) %in% uci] <- "Upper_CI"
+    } 
+    if (all('p.value' == c)) {
+      colnames(df)[colnames(df) %in% 'p.value'] <- "P_Value"
+    } 
+    if (all('SE' == c)) {
+      colnames(df)[colnames(df) %in% 'SE'] <- "SD"
+    } 
+  }
+  
+  # Plot
+  df$Index <- 1:nrow(df) # set index
+  df$Variables <- apply(df[, 1:3], 1, paste, collapse = ":") # set variables
+  df <- df[, c("Variables", "Mean", "SD", "Lower_CI", "Upper_CI", "P_Value", "Index")]
+  
+  # Set significance col (for plotting)
+  df$P_Value <- as.numeric(df$P_Value)
+  df$Importance <- '0_None'
+  df$Importance[df$P_Value <= 0.10 & df$P_Value >= 0.05] <- '1_Weak'
+  df$Importance[df$P_Value <= 0.05] <- '2_Strong'
+  
+  return(df)
+}
+
+# Function to plot results in forest plot; NOTE: use round_df function on df
+plotResults <- function(res1, x=0, name=0) {
   
   res <- round_df(res1, 3)
   
-  result_name <- deparse(substitute(res1))
+  if (name != 0) {
+    result_name <- name
+  } else {
+    result_name <- deparse(substitute(res1))
+  }
+  
   cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
   
   # Plot Results
@@ -128,52 +201,29 @@ plotResults <- function(res1, x=0) {
   
 }
 
-
-# Function to compare R-INLA models in table
-selINLA_mod <- function(models){
-  
-  res <- data.frame()
-  
-  for (mod in models) {
-    # Get model name
-    m <- get(mod)
-    # print(deparse(substitute(m)))
-    # Add row to data frame w/ matching col names
-    x <- as.data.frame(cbind(summary(m)$mlik[2], summary(m)$dic$dic, summary(m)$waic$waic)) #sum(log(m$cpo$cpo))
-    colnames(x) = c('MLIK', 'DIC', 'WAIC') # 'CPO'
-    res <- rbind(res, x)
-  }
-  row.names(res) <- models
-  res <- res[order(res$DIC), ]
-  
-  return(res)
-  
-}
-
-
-# Function to compare R-INLA models in table
-testINLA_Interact <- function(model1, model2){
-  # Make sure MODEL1 has interactions and MODEL2 is the null model
-  
-  # Get marginal log-likelihood
-  log_ml1 <- summary(model1)$mlik[2]
-  log_ml2 <- summary(model2)$mlik[2]
-  
-  # Get the logarithm of the Bayesian Factor
-  log_BF <- log_ml1 - log_ml2
-  
-  # Get Bayesian Factor
-  BF <- exp(0.5 * (log_ml1 - log_ml2))
-  
-  # Create Table
-  x <- as.data.frame(rbind(cbind("Bayesian Factor", BF),
-                           cbind('Log Bayesian Factor', log_BF)))
-  colnames(x) = c('Measure of Evidence', "Results") # 'CPO'
-  x
-  
-}
-
-
+# Variable Names for 3-way formulas
+var <- c('(Intercept) Jan/Feb season', 
+         'Flood Extent: Jan/Feb season', 
+         'Mar/Apr season', 'May/Jun season', 'Jul/Aug season',
+         'Sep/Oct season', 'Nov/Dec season', 
+         'Jan/Feb season : Treatment',
+         'WDDS (BL)', 'Ramadan', 'Religion', 'Wealth',
+         'Flood Extent : Mar/Apr season',
+         'Flood Extent : May/Jun season',
+         'Flood Extent : Jul/Aug season',
+         'Flood Extent : Sep/Oct season',
+         'Flood Extent : Nov/Dec season',
+         'Mar/Apr season : Treatment',
+         'May/Jun season : Treatment',
+         'Jul/Aug season : Treatment',
+         'Sep/Oct season : Treatment',
+         'Nov/Dec season : Treatment',
+         'Flood Extent : Jan/Feb season : Treatment',
+         'Flood Extent : Mar/Apr season : Treatment',
+         'Flood Extent : May/Jun season : Treatment',
+         'Flood Extent : Jul/Aug season : Treatment',
+         'Flood Extent : Sep/Oct season : Treatment',
+         'Flood Extent : Nov/Dec season : Treatment')
 
 #### 2. Load & Select Data ####
 
@@ -257,35 +307,69 @@ rownames(df) <- NULL
 # Set generic priors
 prec.prior <- list(prec = list(param = c(0.001, 0.001)))
 
+### CREATE SEASONAL AVERAGE THRESHOLDS ###
+
 # Group by season and calculate the average for each season
 (range(df$Flood_1Lag))
-(season_means <- df %>% group_by(season_flood) %>% summarize(flood_means = mean(Flood_1Lag, na.rm = TRUE)))
+(season_means <- df %>% group_by(season_flood) 
+  %>% summarize(
+    flood_mean = mean(Flood_1Lag, na.rm = TRUE),
+    flood_min = min(Flood_1Lag, na.rm = TRUE),
+    flood_max = max(Flood_1Lag, na.rm = TRUE),
+    flood_sd = sd(Flood_1Lag, na.rm = TRUE)))
 (year_means <- df %>% group_by(year) %>% summarize(flood_means = mean(Flood_1Lag, na.rm = TRUE)))
 
-# MODEL INTERPRETABILITY 
+# Merge seasonal averages back into the original dataframe
+df <- df %>%
+  left_join(season_means, by = "season_flood")
+
+# Add a new variable indicating above, below, or at the seasonal average
+df <- df %>%
+  mutate(seasonal_average_thresh = case_when(
+    Flood_1Lag >= (flood_mean+(flood_sd*2)) ~ 4, # Greater than 2 SD Above Mean
+    (Flood_1Lag > flood_mean+flood_sd*1) & Flood_1Lag <= (flood_mean+flood_sd*2) ~ 3, # Within 2 SD Above Mean
+    (Flood_1Lag > flood_mean) & Flood_1Lag <= (flood_mean+flood_sd*1) ~ 2, # Within 1 SD Above Mean
+    (Flood_1Lag > 0) & (Flood_1Lag <= flood_mean) ~ 1, # Below average
+    Flood_1Lag == 0 ~ 0)) #No difference
+# Check
+df %>%
+  count(seasonal_average_thresh)
+# df <- df %>%
+#   mutate(seasonal_average_thresh = case_when(
+#     Flood_1Lag >= flood_mean+flood_sd*2 ~ 2, # 2 SD above Mean
+#     Flood_1Lag <= flood_mean+flood_sd*2 ~ 1, # 2 SD below Mean
+#     Flood_1Lag == flood_mean ~ 0)) # Average
+
+##### 4. Standardize Flood Exposure ####
 
 ## Scale flood exposure to improve interpret ability of the model
 ## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
+## https://towardsai.net/p/data-science/how-when-and-why-should-you-normalize-standardize-rescale-your-data-3f083def38ff
+
+## NB: The variable needs to be centered because polynomial interactions  
+##     introduce multi-colinearity that need to minimized. 
+##     The flood variable is not normal and also needs to be scale so that we 
+##     interpret results by 1% increases, instead of 100% increases. 
+##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can 
+##     interpret our model as 1% increases.
+
+
 ## sd(df$Flood_1Lag) # SD is approx 1% flood coverage
 range(df$Flood_1Lag)
 
 # Centre the variable
+# sd_value <- sd(df$Flood_1Lag, na.rm = TRUE)
 mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
-sd_value <- sd(df$Flood_1Lag, na.rm = TRUE)
-df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/sd_value # Check what it means when you standardize
-range(df$Flood_1Lag)
-round(mean(df$Flood_1Lag))
-# hist(df$Flood_1Lag)
-
+df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
 
 # ## Set flood levels (reference the "real" values here)
 # levels <- c(0, 0.01, 0.05, 0.1, 0.2) # ORIGINAL CLUSTER PERCENTAGES
-levels <- c((0 - mean_value)/sd_value,
-            (0.01 - mean_value)/sd_value, 
-            (0.05 - mean_value)/sd_value,
-            (0.1 - mean_value)/sd_value,
-            (0.2 - mean_value)/sd_value)
+levels <- c((0 - mean_value)/0.01,
+            (0.01 - mean_value)/0.01, 
+            (0.05 - mean_value)/0.01,
+            (0.1 - mean_value)/0.01,
+            (0.2 - mean_value)/0.01)
 
 # Back calculation
-# round((-0.164 *sd_value) + mean_value, 5)
+# round(( 0.0278 * 0.01) + mean_value, 5)
 

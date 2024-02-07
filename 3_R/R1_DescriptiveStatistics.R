@@ -1,10 +1,9 @@
-# DESCRIPTIVE CHARACTERISTICS OF DATA
+# DESCRIPTIVE CHARACTERISTICS 
 
-# !!!! ATTENTION: THIS FILE IS STILL IN PROGRESS !!!!
-
-# Set working directory
+## IMPORTANT - set file folder to data folder location
 setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/')
 
+# !!!! ATTENTION: THIS FILE IS STILL IN PROGRESS !!!!
 # NB: Need to change count of bin variables to targeted pop of round!!!
 # NB: test statistics need to be checked (not matching up with JW)
 

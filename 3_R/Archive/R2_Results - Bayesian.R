@@ -2,7 +2,155 @@
 
 # write.csv(inla_non_WDDSres, "C:/Users/ClaudiaOffner/Downloads/result-non.csv", row.names=FALSE)
 
-#### Variables ####
+#### 0. Packages & Functions ####
+library(INLA)
+library(sf)
+library(rgdal)
+library(dplyr)
+library(spdep)
+library(ggplot2)
+library(bayestestR)
+library(lme4) # R4_Results
+#### Ensure that RINLA can handle big datasets
+inla.setOption("num.threads", 4)
+
+# Function to read ME results in table
+getME_res <- function(model){
+  
+  # Get p-values
+  CI <- confint(model) # get CI
+  gme_res <- data.frame(coef(summary(model)))
+  gme_res$Lower_CI <- CI[3:(length(CI)/2),1]
+  gme_res$Higher_CI <- CI[3:(length(CI)/2),2]
+  gme_res$p.z <- round(2 * (1 - pnorm(abs(gme_res$t.value))), 6)
+  gme_res <- gme_res %>% dplyr::select(Estimate, Std..Error,Lower_CI,Higher_CI,p.z)
+  
+  # Plot
+  gme_plot = tibble::rownames_to_column(gme_res, "variables") # create column for intercepts
+  gme_plot$index <- 1:nrow(gme_plot) # set index
+  names(gme_plot) <- c("Variables","Mean","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  
+  # Set significance col (for plotting)
+  gme_plot$P_Value <- as.numeric(gme_plot$P_Value)
+  gme_plot$Importance <- '0_None'
+  gme_plot$Importance[gme_plot$P_Value <= 0.10 & gme_plot$P_Value >= 0.05] <- '1_Weak'
+  gme_plot$Importance[gme_plot$P_Value <= 0.05] <- '2_Strong'
+  
+  return(round_df(gme_plot, 5))
+  
+}
+
+# Function to read R-INLA results in table
+getINLA_res <- function(model) {
+  # NOTE: Maximum A Posteriori (MAP) is the probability distribution of te parameter haven seen the data
+  # posterior probability distribution tells us the degree of belief we should have for any particular value of the parameter.
+  # https://stats.stackexchange.com/questions/341553/what-is-bayesian-posterior-probability-and-how-is-it-different-to-just-using-a-p
+  
+  # Function to Format INLA results in table
+  result <- rbind(cbind(model[["summary.fixed"]]))      # summary(model)$fixed[,-7])) #, cbind(summary(model)$hyperpar)
+  result <- tibble::rownames_to_column(data.frame(result), "variables") # create column for intercepts
+  result$index <- 1:nrow(result) # set index
+  # Get posterior distribution & Calculate MAP
+  # https://easystats.github.io/bayestestR/reference/p_map.html
+  names <- model$names.fixed
+  posterior = data.frame()
+  for (i in names) {
+    x <- data.frame(model$marginals.fixed[i])[,1]
+    x <- cbind(i, p_map(x)[1])
+    posterior <- rbind(posterior, x)
+  }
+  colnames(posterior) <- c('variables', 'MAP P')
+  result <- as.data.frame(dplyr::left_join(as.data.frame(result), posterior, by = c('variables')))
+  
+  # Reorganize data frame
+  colnames(result) <- c("Variables", "Mean","SD", "Lower_CI", "median", "Upper_CI", "mode", "kld", "Index", 'MAP_P') #, "Z_score", "P_Value"
+  result <- as.data.frame(result) %>%
+    dplyr::select(Index, Variables, Mean, SD, Lower_CI, Upper_CI, MAP_P) #%>% #  Z_score, P_Value
+  # mutate_if(is.numeric, round, 5)
+  
+  # Set significance col (for plotting)
+  result$MAP_P <- as.numeric(result$MAP_P)
+  result$Importance[result$Lower_CI > 0 & result$Upper_CI > 0] <- '2_Strong'
+  result$Importance[result$Lower_CI < 0 & result$Upper_CI < 0] <- '2_Strong'
+  result$Importance[result$Lower_CI <= 0 & result$Lower_CI >= -0.01 | result$Lower_CI >= 0 & result$Lower_CI <= 0.01] <- '1_Weak'
+  result$Importance[result$Upper_CI <= 0 & result$Upper_CI >= -0.01 | result$Upper_CI >= 0 & result$Upper_CI <= 0.01] <- '1_Weak'
+  result$Importance[result$Lower_CI < 0 & result$Upper_CI > 0 ] <- '0_None'
+  
+  # result$Importance <- '0_None'
+  # result$Importance[result$MAP_P <= 0.10 & result$MAP_P >= 0.05] <- '1_Weak'
+  # result$Importance[result$MAP_P <= 0.05] <- '2_Strong'
+  
+  return(result)
+}
+
+
+# Function to plot R-INLA results in forest plot; NOTE: use round_df function on df
+plotResults <- function(res1, x=0) {
+  
+  res <- round_df(res1, 3)
+  
+  result_name <- deparse(substitute(res1))
+  cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
+  
+  # Plot Results
+  ggplot(data=res, aes(y=Index, x=Mean, xmin=Lower_CI, xmax=Upper_CI)) +
+    geom_point() +
+    geom_text(aes(label = Mean, colour = Importance),
+              size = 3.5, nudge_x = 1.5, nudge_y = 0, check_overlap = FALSE) +
+    scale_colour_manual(values = cols) +
+    theme(legend.position = "bottom") +
+    geom_errorbarh(height=.3) +
+    scale_y_continuous(breaks=1:nrow(res), labels=res$Variables) +
+    labs(title=paste('Effect Size by Variable - ', result_name), x='Effect Size', y = 'Variable') +
+    geom_vline(xintercept=x, color='black', linetype='dashed', alpha=.5) +
+    theme_minimal()
+  
+}
+
+
+# Function to compare R-INLA models in table
+selINLA_mod <- function(models){
+  
+  res <- data.frame()
+  
+  for (mod in models) {
+    # Get model name
+    m <- get(mod)
+    # print(deparse(substitute(m)))
+    # Add row to data frame w/ matching col names
+    x <- as.data.frame(cbind(summary(m)$mlik[2], summary(m)$dic$dic, summary(m)$waic$waic)) #sum(log(m$cpo$cpo))
+    colnames(x) = c('MLIK', 'DIC', 'WAIC') # 'CPO'
+    res <- rbind(res, x)
+  }
+  row.names(res) <- models
+  res <- res[order(res$DIC), ]
+  
+  return(res)
+  
+}
+
+
+# Function to compare R-INLA models in table
+testINLA_Interact <- function(model1, model2){
+  # Make sure MODEL1 has interactions and MODEL2 is the null model
+  
+  # Get marginal log-likelihood
+  log_ml1 <- summary(model1)$mlik[2]
+  log_ml2 <- summary(model2)$mlik[2]
+  
+  # Get the logarithm of the Bayesian Factor
+  log_BF <- log_ml1 - log_ml2
+  
+  # Get Bayesian Factor
+  BF <- exp(0.5 * (log_ml1 - log_ml2))
+  
+  # Create Table
+  x <- as.data.frame(rbind(cbind("Bayesian Factor", BF),
+                           cbind('Log Bayesian Factor', log_BF)))
+  colnames(x) = c('Measure of Evidence', "Results") # 'CPO'
+  x
+  
+}
 
 # For previous version of partial interaction model (season:Flood*Treat)
 var3 <- c('(Intercept) Jan/Feb season', 'Mar/Apr season', 'May/Jun season', 
