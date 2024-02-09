@@ -7,6 +7,14 @@ setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical M
 # NB: Need to change count of bin variables to targeted pop of round!!!
 # NB: test statistics need to be checked (not matching up with JW)
 
+
+# CHECK THE NUMBER OF OBSERVATIONS & RANDOM EFFECTS GROUPINGS IN MODEL 
+# Number of obs: 21561, groups:  wcode, 2620; c_code, 96; season_id, 24
+
+# Descriptive proportions (binary outcomes)
+agg <-aggregate(cbind(dd10r_min_m) ~ seasonal_average_thresh+treatment+season_flood, sum, data = df)
+agg$prop <- agg$dd10r_min_m/2620;agg
+
 #### Load Functions & Packages ####
 
 # Load packages

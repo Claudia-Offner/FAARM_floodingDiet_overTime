@@ -15,7 +15,9 @@ options(warn = 0)
 library(openxlsx)
 library(dplyr)
 library(spdep)
-library(nlme) 
+library(rgdal)
+library(nlme) # lme
+library(lme4) # glmer
 library(ggplot2)
 library(margins) # https://www.rdocumentation.org/packages/margins/versions/0.3.26
 library(emmeans) 
@@ -30,7 +32,7 @@ round_df <- function(x, digits) {
   x
 }
 
-# Funciton to calculate odds ratios from Logistic Regressions
+# Function to calculate odds ratios from Logistic Regressions
 getORs <- function(df, columns) {
   
   # OR TRANSFORMATION
@@ -325,7 +327,7 @@ df <- df %>%
 
 # Add a new variable indicating above, below, or at the seasonal average
 df <- df %>%
-  mutate(seasonal_average_thresh = case_when(
+  mutate(Flood_S_Thresh = case_when(
     Flood_1Lag >= (flood_mean+(flood_sd*2)) ~ 4, # Greater than 2 SD Above Mean
     (Flood_1Lag > flood_mean+flood_sd*1) & Flood_1Lag <= (flood_mean+flood_sd*2) ~ 3, # Within 2 SD Above Mean
     (Flood_1Lag > flood_mean) & Flood_1Lag <= (flood_mean+flood_sd*1) ~ 2, # Within 1 SD Above Mean
@@ -333,9 +335,9 @@ df <- df %>%
     Flood_1Lag == 0 ~ 0)) #No difference
 # Check
 df %>%
-  count(seasonal_average_thresh)
+  count(Flood_S_Thresh)
 # df <- df %>%
-#   mutate(seasonal_average_thresh = case_when(
+#   mutate(Flood_S_Thresh = case_when(
 #     Flood_1Lag >= flood_mean+flood_sd*2 ~ 2, # 2 SD above Mean
 #     Flood_1Lag <= flood_mean+flood_sd*2 ~ 1, # 2 SD below Mean
 #     Flood_1Lag == flood_mean ~ 0)) # Average
