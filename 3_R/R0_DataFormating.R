@@ -311,7 +311,7 @@ rownames(df) <- NULL
 # Set generic priors
 prec.prior <- list(prec = list(param = c(0.001, 0.001)))
 
-# CREATE SEASONAL AVERAGE THRESHOLDS ####
+#### 4. Categorical Exposure: Create Average Seasonal Flood Thresholds ####
 
 # Group by season and calculate the average for each season
 (range(df$Flood_1Lag))
@@ -334,7 +334,10 @@ df <- df %>%
     (Flood_1Lag > flood_mean+flood_sd*1) & Flood_1Lag <= (flood_mean+flood_sd*2) ~ 3, # Within 2 SD Above Mean
     (Flood_1Lag > flood_mean) & Flood_1Lag <= (flood_mean+flood_sd*1) ~ 2, # Within 1 SD Above Mean
     (Flood_1Lag > 0) & (Flood_1Lag <= flood_mean) ~ 1, # Below average
-    Flood_1Lag == 0 ~ 0)) #No difference
+    Flood_1Lag == 0 ~ 0)) # No difference
+# levels <- c('No difference', 'Below average', '1 SD above mean', '2 SD above mean', '> 2 SD above mean')
+# df$Flood_SThresh <- factor(df$Flood_SThresh, levels=levels)
+
 # Check
 df %>%
   count(Flood_SThresh)
@@ -344,7 +347,7 @@ df %>%
 #     Flood_1Lag <= flood_mean+flood_sd*2 ~ 1, # 2 SD below Mean
 #     Flood_1Lag == flood_mean ~ 0)) # Average
 
-##### 4. Standardize Flood Exposure ####
+#### 5. Continuous Exposure: Center & Scale Flooding ####
 
 ## Scale flood exposure to improve interpret ability of the model
 ## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
@@ -357,23 +360,16 @@ df %>%
 ##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can 
 ##     interpret our model as 1% increases.
 
-
-## sd(df$Flood_1Lag) # SD is approx 1% flood coverage
-range(df$Flood_1Lag)
-
-# Centre the variable
-# sd_value <- sd(df$Flood_1Lag, na.rm = TRUE)
+# Center and scale the variable
 mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
 df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
 
-# ## Set flood levels (reference the "real" values here)
-# levels <- c(0, 0.01, 0.05, 0.1, 0.2) # ORIGINAL CLUSTER PERCENTAGES
-levels <- c((0 - mean_value)/0.01,
-            (0.01 - mean_value)/0.01, 
-            (0.05 - mean_value)/0.01,
-            (0.1 - mean_value)/0.01,
-            (0.2 - mean_value)/0.01)
-
-# Back calculation
+# # Scale flood levels (reference the "real" values here)
+# levels <- c((0 - mean_value)/0.01,
+#             (0.01 - mean_value)/0.01, 
+#             (0.05 - mean_value)/0.01,
+#             (0.1 - mean_value)/0.01,
+#             (0.2 - mean_value)/0.01)
+# # Back calculation
 # round(( 0.0278 * 0.01) + mean_value, 5)
 

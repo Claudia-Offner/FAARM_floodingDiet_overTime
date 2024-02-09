@@ -1,7 +1,8 @@
-# RUN 3-WAY INTERACTION (Flood_1Lag - continuous predictor)
+# RUN 3-WAY INTERACTION (Flood_1Lag - continuous exposure)
+# NB: This predictor centered and scaled to represent a 1% increase in cluster flooded (see R0_DataFormating.R)
 
 ## IMPORTANT - set path to data folder location
-path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/'
+path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/Flood_1Lag/'
 
 
 # 0. PACKAGES & FUNCTIONS ####
@@ -15,6 +16,13 @@ path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical
 
 # Store times taken to run all models for each variable
 times <- data.frame(Variable = character(0), Time = numeric(0))
+
+# Identify levels for predictor (based on center & scale)
+levels <- c((0 - mean_value)/0.01,
+            (0.01 - mean_value)/0.01, 
+            (0.05 - mean_value)/0.01,
+            (0.1 - mean_value)/0.01,
+            (0.2 - mean_value)/0.01)
 
 # Folder locations for each model run
 models <- c('m_3/', 'm_2_seas/', 'm_2_treat/', 'm_0/')
@@ -415,12 +423,9 @@ for (v in cont_variables){
 
 # SET PATH & VARIABLES
 setwd(paste0(path, 'Model Outputs - Food Groups/'))
-# bin_variables <- c("dd10r_min_m", "dd10r_vita", "dd10r_legume", "dd10r_nuts",
-#                    "dd10r_dairy", "dd10r_flesh", "dd10r_eggs", "dd10r_dglv",
-#                    "dd10r_othf", "dd10r_othv")
-# 
-bin_variables <- c("dd10r_min_m")
-models <- c('m_3/')
+bin_variables <- c("dd10r_min_m", "dd10r_vita", "dd10r_legume", "dd10r_nuts",
+                   "dd10r_dairy", "dd10r_flesh", "dd10r_eggs", "dd10r_dglv",
+                   "dd10r_othf", "dd10r_othv")
 
 # EXTRACT RESULTS
 for (v in bin_variables){
