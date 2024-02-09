@@ -6,7 +6,9 @@
 
 #### IMPORTANT - set file path to data folder location
 setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/')
-options(warn = 0) 
+# Suppress warnings & turn off scientific notation
+options(warn=-1) # 0 to turn back on
+options(scipen=999)
 
 #### 1. Packages & Functions ####
 
@@ -141,7 +143,7 @@ getLME <- function(lme_model, var=0){
 formatRES <- function(df) {
   for (c in names(df)) {
     
-    mean <- c('1.trend', 'estimate', 'emmean')
+    mean <- c('estimate', '1.trend', 'emmean', 'prob')
     lci <- c('asymp.LCL', 'lower.CL')
     uci <- c('asymp.UCL', 'upper.CL')
     if (c %in% mean) {
@@ -309,7 +311,7 @@ rownames(df) <- NULL
 # Set generic priors
 prec.prior <- list(prec = list(param = c(0.001, 0.001)))
 
-### CREATE SEASONAL AVERAGE THRESHOLDS ###
+# CREATE SEASONAL AVERAGE THRESHOLDS ####
 
 # Group by season and calculate the average for each season
 (range(df$Flood_1Lag))
@@ -327,7 +329,7 @@ df <- df %>%
 
 # Add a new variable indicating above, below, or at the seasonal average
 df <- df %>%
-  mutate(Flood_S_Thresh = case_when(
+  mutate(Flood_SThresh = case_when(
     Flood_1Lag >= (flood_mean+(flood_sd*2)) ~ 4, # Greater than 2 SD Above Mean
     (Flood_1Lag > flood_mean+flood_sd*1) & Flood_1Lag <= (flood_mean+flood_sd*2) ~ 3, # Within 2 SD Above Mean
     (Flood_1Lag > flood_mean) & Flood_1Lag <= (flood_mean+flood_sd*1) ~ 2, # Within 1 SD Above Mean
@@ -335,9 +337,9 @@ df <- df %>%
     Flood_1Lag == 0 ~ 0)) #No difference
 # Check
 df %>%
-  count(Flood_S_Thresh)
+  count(Flood_SThresh)
 # df <- df %>%
-#   mutate(Flood_S_Thresh = case_when(
+#   mutate(Flood_SThresh = case_when(
 #     Flood_1Lag >= flood_mean+flood_sd*2 ~ 2, # 2 SD above Mean
 #     Flood_1Lag <= flood_mean+flood_sd*2 ~ 1, # 2 SD below Mean
 #     Flood_1Lag == flood_mean ~ 0)) # Average
