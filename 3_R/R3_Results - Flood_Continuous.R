@@ -443,7 +443,9 @@ for (v in bin_variables){
 }
 
 # COMPARISON OF RUNNING TIMES
+setwd(path)
 (times)
+write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 
 # # Notes: Interaction model with continuous outcome  ####
 # 

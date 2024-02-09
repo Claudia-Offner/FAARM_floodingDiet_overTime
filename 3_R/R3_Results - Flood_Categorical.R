@@ -419,7 +419,7 @@ for (v in cont_variables){
 
 # SET PATH & VARIABLES
 setwd(paste0(path, 'Model Outputs - Food Groups/'))
-bin_variables <- c("dd10r_min_m", "dd10r_vita", "dd10r_legume", "dd10r_nuts",
+bin_variables <- c("dd10r_vita", "dd10r_legume", "dd10r_nuts", #"dd10r_min_m",
                    "dd10r_dairy", "dd10r_flesh", "dd10r_eggs", "dd10r_dglv",
                    "dd10r_othf", "dd10r_othv")
 
@@ -439,7 +439,9 @@ for (v in bin_variables){
 }
 
 # COMPARISON OF RUNNING TIMES
+setwd(path)
 (times)
+write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 
 # Notes: Ordinal Exposure ####
 
