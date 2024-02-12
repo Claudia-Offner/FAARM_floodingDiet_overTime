@@ -112,7 +112,7 @@ extract_LME <- function(variable, folder) {
   else if (folder == 'm_2_treat/'){
     
     interaction <- '~ Flood_1Lag * treatment'
-    formula <- as.formula(paste0(variable, interaction, "+ season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
+    formula <- as.formula(paste0(variable, interaction, " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
       random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
@@ -148,7 +148,7 @@ extract_LME <- function(variable, folder) {
   } 
   else if (folder == 'm_0/'){
     
-    interaction <- '~ Flood_1Lag '
+    interaction <- '~ Flood_1Lag'
     formula <- as.formula(paste0(variable, interaction, " + season_flood + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
@@ -182,7 +182,7 @@ extract_LME <- function(variable, folder) {
   }
   
   ## Export Tables & Plots
-  assign('lme_mod', lme_mod, envir = .GlobalEnv)
+  # assign('lme_mod', lme_mod, envir = .GlobalEnv)
   
   for(t in tables) {
     
@@ -196,7 +196,7 @@ extract_LME <- function(variable, folder) {
     
     # print(paste0(variable, '-', t, ": tables and plots exported"))
     print(get(t))
-    assign(t, get(t), envir = .GlobalEnv)
+    # assign(t, get(t), envir = .GlobalEnv)
     
   }
   
@@ -211,7 +211,7 @@ extract_GLMER <- function(variable, folder) {
   if (folder == 'm_3/'){
     
     interaction <- '~ Flood_1Lag * season_flood * treatment'
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
+    formula <- as.formula(paste0(variable, interaction, 
                                  " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
@@ -257,8 +257,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_2_seas/'){
     
     interaction <- '~ Flood_1Lag * season_flood'
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+    formula <- as.formula(paste0(variable, interaction, 
+                                 " + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -297,8 +297,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_2_treat/'){
     
     interaction <- '~ Flood_1Lag * treatment'
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+    formula <- as.formula(paste0(variable, interaction, 
+                                 " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -336,9 +336,9 @@ extract_GLMER <- function(variable, folder) {
   } 
   else if (folder == 'm_0/'){
     
-    interaction <- '~ Flood_1Lag '
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+    interaction <- '~ Flood_1Lag'
+    formula <- as.formula(paste0(variable, interaction, 
+                                 " + treatment + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -377,18 +377,17 @@ extract_GLMER <- function(variable, folder) {
   
   path <- paste0(variable, "/", folder)
   for(t in tables) {
-    
-    write.xlsx(get(t), paste0(path, variable, '_', toupper(t) , '_', sub('/', '', folder), '.xlsx'), rowNames=FALSE, fileEncoding = "UTF-8")
+    assign(t, get(t, envir = environment()), envir = .GlobalEnv)
+    write.xlsx(get(t, envir = environment()), paste0(path, variable, '_', toupper(t) , '_', sub('/', '', folder), '.xlsx'), rowNames=FALSE, fileEncoding = "UTF-8")
     
     if(t=='mod_res'){
-      suppressMessages(ggsave(paste0(path , variable, '_', toupper(t) , '_', sub('/', '', folder), '_plot.pdf'), plot = plotResults(get(t), 1)))
+      suppressMessages(ggsave(paste0(path , variable, '_', toupper(t) , '_', sub('/', '', folder), '_plot.pdf'), plot = plotResults(get(t, envir = environment()), 1)))
     } else{
-      suppressMessages(ggsave(paste0(path , variable, '_', toupper(t) , '_', sub('/', '', folder), '_plot.pdf'), plot = plotResults(formatRES(get(t)), 1)))
+      suppressMessages(ggsave(paste0(path , variable, '_', toupper(t) , '_', sub('/', '', folder), '_plot.pdf'), plot = plotResults(formatRES(get(t, envir = environment())), 1)))
     }
     
     # print(paste0(variable, '-', t, ": tables and plots exported"))
     print(get(t))
-    assign(t, get(t), envir = .GlobalEnv)
     
   }
   
@@ -423,9 +422,10 @@ for (v in cont_variables){
 
 # SET PATH & VARIABLES
 setwd(paste0(path, 'Model Outputs - Food Groups/'))
-bin_variables <- c("dd10r_min_m", "dd10r_vita", "dd10r_legume", "dd10r_nuts",
-                   "dd10r_dairy", "dd10r_flesh", "dd10r_eggs", "dd10r_dglv",
-                   "dd10r_othf", "dd10r_othv")
+bin_variables <- c("dd10r_othv", "dd10r_othf") #, "dd10r_legume", "dd10r_nuts",
+                   # "dd10r_dairy", "dd10r_flesh", "dd10r_eggs", "dd10r_dglv",
+                   # "dd10r_othf", "dd10r_vita", "dd10r_min_m")
+models <- c('m_3/')
 
 # EXTRACT RESULTS
 for (v in bin_variables){

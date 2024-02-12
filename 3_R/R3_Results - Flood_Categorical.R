@@ -108,7 +108,7 @@ extract_LME <- function(variable, folder) {
   else if (folder == 'm_2_treat/'){
     
     interaction <- '~ Flood_SThresh * treatment'
-    formula <- as.formula(paste0(variable, interaction, "+ season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
+    formula <- as.formula(paste0(variable, interaction, " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
       random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
@@ -207,7 +207,7 @@ extract_GLMER <- function(variable, folder) {
   if (folder == 'm_3/'){
     
     interaction <- '~ Flood_SThresh * season_flood * treatment'
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
+    formula <- as.formula(paste0(variable, interaction, 
                                  " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
@@ -253,8 +253,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_2_seas/'){
     
     interaction <- '~ Flood_SThresh * season_flood'
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+    formula <- as.formula(paste0(variable, interaction, 
+                                 " + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -293,8 +293,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_2_treat/'){
     
     interaction <- '~ Flood_SThresh * treatment'
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+    formula <- as.formula(paste0(variable, interaction, 
+                                 " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -332,9 +332,9 @@ extract_GLMER <- function(variable, folder) {
   } 
   else if (folder == 'm_0/'){
     
-    interaction <- '~ Flood_SThresh '
-    formula <- as.formula(paste0('dd10r_min_m', interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+    interaction <- '~ Flood_SThresh'
+    formula <- as.formula(paste0(variable, interaction, 
+                                 " + treatment + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
