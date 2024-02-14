@@ -235,17 +235,17 @@ var <- c('(Intercept) Jan/Feb season',
 # cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
 # cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
 # cluster_shp <- cluster_shp %>% select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M)) %>% rename(c_code = cluster_co)
-cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
-cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
-cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
-cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
-cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
-
-# Load shape data (as spatial polygon df)
-bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
-bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
-bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
-bound@data$c_code <- as.numeric(bound@data$c_code)
+# cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
+# cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
+# cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
+# cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
+# cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
+# 
+# # Load shape data (as spatial polygon df)
+# bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
+# bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
+# bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
+# bound@data$c_code <- as.numeric(bound@data$c_code)
 
 
 # Load FAARM data
@@ -292,14 +292,14 @@ for (i in ys_elim) {
   df<-df[!(df$year_season==i),]
 }
 
-# Merge to get OBJCTID_1 for spatial effects
-df <- as.data.frame(dplyr::left_join(df, cluster_shp, by = c('c_code')))
-# Create numeric year-season_DD id for temporal effects
+# # Merge to get OBJCTID_1 for spatial effects
+# df <- as.data.frame(dplyr::left_join(df, cluster_shp, by = c('c_code')))
+# # Create numeric year-season_DD id for temporal effects
 df$season_id <- as.numeric(factor(df$year_season))
 
-# Get spatial weight matrices
-adj.mat <- poly2nb(cluster_shp)
-W.adj.mat <- nb2mat(adj.mat, style = "B", zero.policy=T)
+# # Get spatial weight matrices
+# adj.mat <- poly2nb(cluster_shp)
+# W.adj.mat <- nb2mat(adj.mat, style = "B", zero.policy=T)
 
 # Re-factor Season codes so Mar/Apr is used as the reference level (dry season)
 df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec"))
