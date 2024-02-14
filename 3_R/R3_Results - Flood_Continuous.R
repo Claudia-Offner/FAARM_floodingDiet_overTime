@@ -36,9 +36,8 @@ extract_LME <- function(variable, folder) {
     formula <- as.formula(paste0(variable, interaction, " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
-      random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
+      random = list(wcode = pdDiag(~1|season_id), c_code = pdDiag(~1)),
       weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-      correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
       data = df,
       na.action = na.omit  # Handle missing data using na.omit
     )
@@ -78,9 +77,8 @@ extract_LME <- function(variable, folder) {
     formula <- as.formula(paste0(variable, interaction, " + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
-      random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
+      random = list(wcode = pdDiag(~1|season_id), c_code = pdDiag(~1)),
       weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-      correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
       data = df,
       na.action = na.omit  # Handle missing data 
     )
@@ -115,9 +113,8 @@ extract_LME <- function(variable, folder) {
     formula <- as.formula(paste0(variable, interaction, " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
-      random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
+      random = list(wcode = pdDiag(~1|season_id), c_code = pdDiag(~1)),
       weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-      correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
       data = df,
       na.action = na.omit  # Handle missing data
     )
@@ -152,9 +149,8 @@ extract_LME <- function(variable, folder) {
     formula <- as.formula(paste0(variable, interaction, " + season_flood + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL"))
     lme_mod <- lme(
       fixed = formula,  # Controls
-      random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
+      random = list(wcode = pdDiag(~1|season_id), c_code = pdDiag(~1)),
       weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-      correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
       data = df,
       na.action = na.omit  # Handle missing data using na.omit
     )
@@ -212,7 +208,7 @@ extract_GLMER <- function(variable, folder) {
     
     interaction <- '~ Flood_1Lag * season_flood * treatment'
     formula <- as.formula(paste0(variable, interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -258,7 +254,7 @@ extract_GLMER <- function(variable, folder) {
     
     interaction <- '~ Flood_1Lag * season_flood'
     formula <- as.formula(paste0(variable, interaction, 
-                                 " + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -298,7 +294,7 @@ extract_GLMER <- function(variable, folder) {
     
     interaction <- '~ Flood_1Lag * treatment'
     formula <- as.formula(paste0(variable, interaction, 
-                                 " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -338,7 +334,7 @@ extract_GLMER <- function(variable, folder) {
     
     interaction <- '~ Flood_1Lag'
     formula <- as.formula(paste0(variable, interaction, 
-                                 " + treatment + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -396,6 +392,7 @@ extract_GLMER <- function(variable, folder) {
   
 }
 
+
 # 1. Run models for continuous variables ####
 
 # SET PATH & VARIABLES
@@ -422,10 +419,10 @@ for (v in cont_variables){
 
 # SET PATH & VARIABLES
 setwd(paste0(path, 'Model Outputs - Food Groups/'))
-bin_variables <- c("dd10r_othv", "dd10r_othf") #, "dd10r_legume", "dd10r_nuts",
-                   # "dd10r_dairy", "dd10r_flesh", "dd10r_eggs", "dd10r_dglv",
-                   # "dd10r_othf", "dd10r_vita", "dd10r_min_m")
-models <- c('m_3/')
+bin_variables <- c("dd10r_othv", "dd10r_othf", "dd10r_dglv",
+                   "dd10r_vita", "dd10r_legume", "dd10r_nuts", 
+                   "dd10r_dairy", "dd10r_eggs", "dd10r_flesh",
+                   "dd10r_starch","dd10r_min_m") 
 
 # EXTRACT RESULTS
 for (v in bin_variables){
@@ -449,20 +446,20 @@ write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 
 # # Notes: Interaction model with continuous outcome  ####
 # 
-# formula <- as.formula("dd10r_score_m ~ Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL")
-# 
-# lme_mod <- lme(
-#   fixed = formula,  # Controls
-#   random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)), #, season_id = pdDiag(~1)
-#   weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-#   # correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
-#   data = df,
-#   na.action = na.omit  # Handle missing data using na.omit
-# )
-# 
-# # Get results
-# (mod_res <- getLME(lme_mod))
-# (anova(lme_mod)) # Check interaction significance 
+formula <- as.formula("dd10r_score_m ~ Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL")
+
+lme_mod <- lme(
+  fixed = formula,  # Controls
+  random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)),
+  weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
+  # correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
+  data = df,
+  na.action = na.omit  # Handle missing data using na.omit
+)
+
+# Get results
+(mod_res <- getLME(lme_mod))
+(anova(lme_mod)) # Check interaction significance
 # 
 # ## 3A. Average Marginal Effects (slopes)
 # ## EMTRENDS: Estimates the slope of coefficients, accounting for reference groups.
@@ -526,7 +523,23 @@ write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 # print(plotResults(mod_res))
 # print(paste0("VARIABLE ", variable, "/", folder, "IS COMPLETE"))
 
-
+# 
+# interaction <- '~ Flood_1Lag * season_flood * treatment'
+# formula <- as.formula(paste0('dd10r_score_m', interaction,
+#                              " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+# glmm_mod <- glmer(
+#   formula=formula,
+#   weights = wdiet_wt,
+#   data = df,
+#   family = gaussian(link = "identity")) # Removes non-convergence warnings
+# 
+# (mod_res <- getGLMM(glmm_mod))
+# summary(glmm_mod, infer = c(TRUE, TRUE))
+# ame1 <- emtrends(glmm_mod, as.formula(paste0('pairwise ', '~ Flood_1Lag * season_flood * treatment')),
+#                  at=list(Flood_1Lag = levels[2]), var = 1, pbkrtest.limit = 21561)$emtrends
+# print(ame1)
+# library(lmerTest)
+#
 
 
 # # Notes: Interaction model with binary outcome  ####
@@ -534,7 +547,7 @@ write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 # # Run model
 # interaction <- '~ Flood_1Lag * season_flood * treatment'
 # formula <- as.formula(paste0('dd10r_min_m', interaction,
-#                              " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 | wcode) + (1 | c_code) + (1 | season_id)"))
+#                              " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
 # glmm_mod <- glmer(
 #   formula=formula,
 #   weights = wdiet_wt,
@@ -572,23 +585,43 @@ write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 # variable <- 'dd10r_min_m'
 # folder <- 'm_3/'
 # 
-# tables <- c('mod_res', 'ame1_res', 'ame1_cont', 'emm_1_res', 
-#             'contr_emm1A', 'contr_emm1B', 'emm_2_res', 
+# tables <- c('mod_res', 'ame1_res', 'ame1_cont', 'emm_1_res',
+#             'contr_emm1A', 'contr_emm1B', 'emm_2_res',
 #             'contr_emm2A', 'contr_emm2B', 'contr_emm2C')
 # 
 # path <- paste0(variable, "/", folder)
 # 
 # for(t in tables) {
-#   
+# 
 #   write.xlsx(get(t), paste0(path, variable, '_', toupper(t) , '_', sub('/', '', folder), '.xlsx'), rowNames=FALSE, fileEncoding = "UTF-8")
-#   
+# 
 #   if(t=='mod_res'){
 #     suppressMessages(ggsave(paste0(path , variable, '_', toupper(t) , '_', sub('/', '', folder), '_plot.pdf'), plot = plotResults(get(t), 1)))
 #   } else{
 #     suppressMessages(ggsave(paste0(path , variable, '_', toupper(t) , '_', sub('/', '', folder), '_plot.pdf'), plot = plotResults(formatRES(get(t)), 1)))
 #   }
-#   
+# 
 #   # print(paste0(variable, '-', t, ": tables and plots exported"))
 #   print(get(t))
 # 
 # }
+# formula <- as.formula("dd10r_min_m ~ Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL")
+# 
+# 
+# library(aomisc)
+# hillfunc <- function(Time, a, b, c) {
+#   1 - ( ( (1-a) * Time^b) / ( 10^c + (Time)^b ) )
+# }
+# gd <- groupedData(dd10r_min_m~season_id|wcode, data=df)
+# 
+# nlme_mod <- nlme(
+#   model=dd10r_score_m ~ hillfunc(Flood_1Lag, season_flood, treatment, dd10r_score_m_BL, ramadan, g_2h_BL, quint2_BL),
+#   fixed=Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL~1,
+#   # random=pdDiag(list(c_code~1)),
+#   # fixed = list(dd10r_score_m_BL = pdDiag(~1), ramadan = pdDiag(~1), g_2h_BL = pdDiag(~1), quint2_BL = pdDiag(~1)),
+#   # random = wcode ~ 1, #list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1))
+#   # weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
+#   # correlation = corAR1(form = ~ season_id ),  # Adding temporal autocorrelation
+#   data = gd,
+#   na.action = na.omit,  # Handle missing data using na.omit
+#   start = c(Flood_1Lag=0, season_flood=0, treatment=0, dd10r_score_m_BL=1, ramadan=1, g_2h_BL=1, quint2_BL=1))
