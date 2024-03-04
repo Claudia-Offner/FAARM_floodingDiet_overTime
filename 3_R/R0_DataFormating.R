@@ -353,20 +353,21 @@ df %>%
 ## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
 ## https://towardsai.net/p/data-science/how-when-and-why-should-you-normalize-standardize-rescale-your-data-3f083def38ff
 
-## NB: The variable needs to be centered because polynomial interactions  
-##     introduce multi-colinearity that need to minimized. 
-##     The flood variable is not normal and also needs to be scale so that we 
-##     interpret results by 1% increases, instead of 100% increases. 
-##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can 
+## NB: The variable needs to be centered because polynomial interactions
+##     introduce multi-colinearity that need to minimized.
+##     The flood variable is not normal and also needs to be scale so that we
+##     interpret results by 1% increases, instead of 100% increases.
+##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can
 ##     interpret our model as 1% increases.
 
+df$Flood_1Lag_norm <- df$Flood_1Lag
 # Center and scale the variable
 mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
 df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
 
 # # Scale flood levels (reference the "real" values here)
 # levels <- c((0 - mean_value)/0.01,
-#             (0.01 - mean_value)/0.01, 
+#             (0.01 - mean_value)/0.01,
 #             (0.05 - mean_value)/0.01,
 #             (0.1 - mean_value)/0.01,
 #             (0.2 - mean_value)/0.01)
