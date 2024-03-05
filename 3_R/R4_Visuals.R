@@ -25,6 +25,8 @@ library(xlsx)
 library(dplyr)
 library(ggplot2)
 library (patchwork)
+library(tidyverse)
+library(gt)
 theme_set(theme_classic())
 
 # Set seasons
@@ -218,7 +220,7 @@ plot_absolute <- function(df, link_colours=c('blue', 'red'), col) {
 #       Fix the text alignment & Title/axes names
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Rel-Diff')
-dd_outcomes <- unique(source_f0$Outcome)[-1]
+dd_outcomes <- unique(source_f0$Outcome)
 
 for(d in dd_outcomes) {
   
@@ -229,9 +231,30 @@ for(d in dd_outcomes) {
   
   # Format data for left & right side of plots
   res_plot <- mf2_plot_format(source_f1)
-
-  # Create forest plots
-  (res <- 
+  # Set color scheme
+  link_colour <- c("#F8766D", "#7CAE00", "#619CFF","#C77CFF")
+  source_f1$mod <- link_colour[1]
+  source_f1$mod[source_f1$Model == 'F2'] <- link_colour[2]
+  source_f1$mod[source_f1$Model == 'F3'] <- link_colour[3]
+  source_f1$mod[source_f1$Model == 'F4'] <- link_colour[4]
+  
+  # Split up the models
+  f1 <- source_f1 %>% filter(Model == 'F1') 
+  f2 <- source_f1 %>% filter(Model == 'F2') 
+  f3 <- source_f1 %>% filter(Model == 'F3') 
+  f4 <- source_f1 %>% filter(Model == 'F4') 
+  
+  # Conditional names for x-axes
+  if(d=='WDDS') {
+    x_ax <- 'Changes in mean'
+    x_lim <- c(-0.3, .25)
+  } else {
+    x_ax <- 'Changes in probability'
+    x_lim <- c(-0.12, .12)
+  }
+  
+  # Get legend
+  (all_plot <- 
       source_f1 |>
       # Make plot
       ggplot(aes(y = Index)) + 
@@ -242,59 +265,141 @@ for(d in dd_outcomes) {
       # Add vertical & horizontal lines
       geom_vline(xintercept = 0, linetype="dashed") +
       geom_hline(yintercept = seq(0.5, length(source_f1$Group)+1, by = 1), color="gray", size=.5, alpha=.5) +
-      labs(title=paste0('Dietary Outcome: ', d), x="Change in probability", y="") + 
-      # Zoom out
-      coord_cartesian(ylim=c(1,22), xlim=c(-0.12, .12)) + 
-      # Add text
-      annotate("text", x = -.08, y = 22, label = "Flooding harmful") +
-      annotate("text", x = .08, y = 22, label = "Flooding protective") + 
+      # Add labels & set color
+      labs(x=x_ax, y="", color="") + 
       scale_y_continuous(breaks=1:nrow(source_f1), labels=rev(source_f1$Group)) +
-      # Centre title
-      theme(plot.title = element_text(hjust = 0.5)))
-      # Change legend position
-      # theme(legend.position = c(0.9, 0.8)) +
-      # Remove axes
-      # theme(axis.line.y = element_blank(),
-      #       axis.ticks.y= element_blank(),
-      #       axis.text.y= element_blank(),
-      #       axis.title.y= element_blank()))
-      
-  # (legend <- get_legend(p_mid))
-  # (p_mid <- p_mid + theme(legend.position="none"))
-  #
-  # # Left side of plot - strata names & relative diff (CIs)
-  # (p_left <-
-  #     res_plot  |>
-  #     # Order model on y-axis
-  #     ggplot(aes(y = Index)) +
-  #     # Add text for strata column
-  #     geom_text(aes(x = 0, label = Group), hjust = 0, fontface = "bold") +
-  #     # Add text for diff (CI)
-  #     # geom_text(aes(x = 1, label = estimate_lab), hjust = 0, fontface = ifelse(res_plot$estimate_lab == "Probability Change (95% CI)", "bold", "plain")) +
-  #     # Remove background and format
-  #     theme_void()) #+
-  #     # coord_cartesian(xlim = c(0, 2.5)))
+      scale_color_manual(values = link_colour) +  
+      # Format
+      coord_cartesian(ylim=c(1,22), xlim=x_lim) + # Zoom out
+      theme(plot.title = element_text(hjust = 0.5), # Center title
+            axis.line.y = element_blank(), # Remove y axes
+            axis.ticks.y= element_blank(),
+            legend.position="bottom")) 
+  legend <- get_legend(all_plot)
+  
+  # Create forest plots
+  (plot_f4 <- 
+      f4 |>
+      # Make plot
+      ggplot(aes(y = Index)) + 
+      theme_classic() +
+      # Add points & error bars
+      geom_point(aes(x=Diff, colour=Model), shape=15, size=3) +
+      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Model)) +
+      # Add vertical & horizontal lines
+      geom_vline(xintercept = 0, linetype="dashed") +
+      geom_hline(yintercept = seq(0.5, length(f4$Group)+1, by = 1), color="gray", size=.5, alpha=.5) +
+      # Add labels & set color
+      labs(x=x_ax, y="") + 
+      scale_y_continuous(breaks=1:nrow(f4), labels=rev(f4$Group)) +
+      scale_color_manual(values = f4$mod) +  
+      # Format
+      coord_cartesian(ylim=c(1,12), xlim=x_lim) + # Zoom out
+      theme(plot.title = element_text(hjust = 0.5), # Center title
+            axis.line.y = element_blank(), # Remove y axes
+            axis.ticks.y= element_blank(),
+            legend.position="none")) 
+  
+  (plot_f3 <- 
+      f3 |>
+      # Make plot
+      ggplot(aes(y = seq(1, 6))) + 
+      theme_classic() +
+      # Add points & error bars
+      geom_point(aes(x=Diff, colour=Model), shape=15, size=3) +
+      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Model)) +
+      # Add vertical & horizontal lines
+      geom_vline(xintercept = 0, linetype="dashed") +
+      geom_hline(yintercept = seq(1.5, length(f3$Group)+1, by = 1), color="gray", size=.5, alpha=.5) +
+      # Add labels & set color
+      labs(x="", y="") + 
+      scale_y_continuous(breaks=1:nrow(f3), labels=rev(f3$Group)) +
+      scale_color_manual(values = f3$mod) +  
+      # Format
+      coord_cartesian(ylim=c(0.5, 7), xlim=x_lim) + # Zoom out
+      theme(plot.title = element_text(hjust = 0.5), # Center title
+            axis.line.y = element_blank(), # Remove y axes
+            axis.ticks.y= element_blank(),
+            axis.line.x = element_line(color = "gray"),
+            axis.ticks.x=element_blank(),
+            axis.text.x= element_blank(),
+            legend.position="none")) 
+  
+  (plot_f2 <- 
+      f2 |>
+      # Make plot
+      ggplot(aes(y = seq(1, 2))) + 
+      theme_classic() +
+      # Add points & error bars
+      geom_point(aes(x=Diff, colour=Model), shape=15, size=3) +
+      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Model)) +
+      # Add vertical & horizontal lines
+      geom_vline(xintercept = 0, linetype="dashed") +
+      geom_hline(yintercept = seq(1.5, length(f2$Group)+1, by = 1), color="gray", size=.5, alpha=.5) +
+      # Add labels & set color
+      labs(x="", y="") + 
+      scale_y_continuous(breaks=1:nrow(f2), labels=rev(f2$Group)) +
+      scale_color_manual(values = f2$mod) +  
+      # Format
+      coord_cartesian(ylim=c(0.5, 3), xlim=x_lim) + # Zoom out
+      theme(plot.title = element_text(hjust = 0.5), # Center title
+            axis.line.y = element_blank(), # Remove y axes
+            axis.ticks.y= element_blank(),
+            axis.line.x = element_line(color = "gray"),
+            axis.ticks.x=element_blank(),
+            axis.text.x= element_blank(),
+            legend.position="none"))
+  
+  (plot_f1 <- 
+      f1 |>
+      # Make plot
+      ggplot(aes(y = seq(1))) + 
+      theme_classic() +
+      # Add points & error bars
+      geom_point(aes(x=Diff, colour=Model), shape=15, size=3) +
+      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Model)) +
+      # Add vertical & horizontal lines
+      geom_vline(xintercept = 0, linetype="dashed") +
+      geom_hline(yintercept = seq(1.5, length(f1$Group)+1, by = 1), color="gray", size=.5, alpha=.5) +
+      # Add labels & set color
+      labs(x="", y="") + 
+      scale_y_continuous(breaks=1:nrow(f1), labels=rev(f1$Group)) +
+      scale_color_manual(values = f1$mod) +  
+      # Format
+      coord_cartesian(ylim=c(0.5, 2), xlim=x_lim) + # Zoom out
+      theme(plot.title = element_text(hjust = 0.5), # Center title
+            axis.line.y = element_blank(), # Remove y axes
+            axis.ticks.y= element_blank(),
+            axis.line.x = element_line(color = "gray"),
+            axis.ticks.x=element_blank(),
+            axis.text.x= element_blank(),
+            legend.position="none"))
 
-  # # Right side of plot - pvalues
-  # (p_right <-
-  #     res_plot  |>
-  #     # Order model on y-axis
-  #     ggplot(aes(y = Index)) +
-  #     # Add text for strata column
-  #     geom_text(aes(x = 0, y = Index, label = P), hjust = 0, fontface = ifelse(res_plot$P == "p-value", "bold", "plain")) +
-  #     # Remove background and format
-  #     theme_void())
-  # 
-  # # Put plots together
-  # layout <- c(
-  #   area(t = 0, l = 0, b = 25, r = 4), # left plot, starts at the top of the page (0) and goes 30 units down and 3 units to the right
-  #   area(t = 1, l = 5, b = 25, r = 9) # middle plot starts a little lower (t=1) because there's no title. starts 1 unit right of the left plot (l=4, whereas left plot is r=3), goes to the bottom of the page (30 units), and 6 units further over from the left plot (r=9 whereas left plot is r=3)
-  #   # area(t = 0, l = 9, b = 25, r = 11), # right most plot starts at top of page, begins where middle plot ends (l=9, and middle plot is r=9), goes to bottom of page (b=30), and extends two units wide (r=11)
-  #   # area(t = 0, l = 11, b = 25, r = 11) # Legend
-  # )
-  # # Final plot arrangement
-  # res <- p_left + p_mid + plot_layout(design = layout) + plot_annotation(paste0('Dietary Outcome: ', d), theme = theme(plot.title = element_text(size = 16)))
-  ggsave(paste0('MF2_RelativeDiff/', d, "_mf2.png"), res, width=15, height=15, units='cm')
+  # Put plots together
+  layout <- c(
+    area(t = 0, l = 0, b = 2, r = 15), # F1
+    area(t = 3, l = 0, b = 5, r = 15), # F2
+    area(t = 6, l = 0, b = 12, r = 15), # F3
+    area(t = 13, l = 0, b = 25, r = 15), # F4
+    area(t = 26, l = 5, b = 26, r = 10) # Legend
+
+  )
+  
+  # Conditional names for plot title
+  if(d=='MDD') {
+    name <- 'Minimum Dietary Diversity'
+  } else if (d=='WDDS') {
+    name <- 'Dietary Diversity Score'
+  } else {
+    name <- paste0('Food Group: ', d)
+  }
+  
+  # Final plot arrangement
+  (res <- plot_f1 + plot_f2 + plot_f3 + plot_f4 + legend 
+    + plot_layout(design = layout) 
+    + plot_annotation(name, theme = theme(plot.title = element_text(size = 16, hjust = 0.62))))
+
+  ggsave(paste0('MF2_RelativeDiff/', d, "_mf2.png"), res, width=18, height=16, units='cm')
   
 }
 
@@ -390,6 +495,54 @@ for(s in seasons) {
 
 
 ########
+
+# Add text
+# annotate("text", x = -.08, y = 22, label = "Flooding harmful") +
+# annotate("text", x = .08, y = 22, label = "Flooding protective") + 
+
+# Change legend position
+# theme(legend.position = c(0.9, 0.8)) +
+
+
+# (legend <- get_legend(p_mid))
+# (p_mid <- p_mid + theme(legend.position="none"))
+#
+# # Left side of plot - strata names & relative diff (CIs)
+# (p_left <-
+#     res_plot  |>
+#     # Order model on y-axis
+#     ggplot(aes(y = Index)) +
+#     # Add text for strata column
+#     geom_text(aes(x = 0, label = Group), hjust = 0, fontface = "bold") +
+#     # Add text for diff (CI)
+#     # geom_text(aes(x = 1, label = estimate_lab), hjust = 0, fontface = ifelse(res_plot$estimate_lab == "Probability Change (95% CI)", "bold", "plain")) +
+#     # Remove background and format
+#     theme_void()) #+
+#     # coord_cartesian(xlim = c(0, 2.5)))
+
+# # Right side of plot - pvalues
+# (p_right <-
+#     res_plot  |>
+#     # Order model on y-axis
+#     ggplot(aes(y = Index)) +
+#     # Add text for strata column
+#     geom_text(aes(x = 0, y = Index, label = P), hjust = 0, fontface = ifelse(res_plot$P == "p-value", "bold", "plain")) +
+#     # Remove background and format
+#     theme_void())
+# 
+# # Put plots together
+# layout <- c(
+#   area(t = 0, l = 0, b = 25, r = 4), # left plot, starts at the top of the page (0) and goes 30 units down and 3 units to the right
+#   area(t = 1, l = 5, b = 25, r = 9) # middle plot starts a little lower (t=1) because there's no title. starts 1 unit right of the left plot (l=4, whereas left plot is r=3), goes to the bottom of the page (30 units), and 6 units further over from the left plot (r=9 whereas left plot is r=3)
+#   # area(t = 0, l = 9, b = 25, r = 11), # right most plot starts at top of page, begins where middle plot ends (l=9, and middle plot is r=9), goes to bottom of page (b=30), and extends two units wide (r=11)
+#   # area(t = 0, l = 11, b = 25, r = 11) # Legend
+# )
+# # Final plot arrangement
+# res <- p_left + p_mid + plot_layout(design = layout) + plot_annotation(paste0('Dietary Outcome: ', d), theme = theme(plot.title = element_text(size = 16)))
+
+
+
+
 # Set significance col (for plotting)
 # source_f1$Importance <- '0_None'
 # source_f1$Importance[source_f1$P <= 0.10 & source_f1$P >= 0.05] <- '1_Weak'
