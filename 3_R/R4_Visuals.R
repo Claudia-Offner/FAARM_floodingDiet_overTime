@@ -393,6 +393,9 @@ for(d in dd_outcomes) {
   } else {
     name <- paste0('Food Group: ', d)
   }
+  if(d=='Nuts/seeds'){
+    d <- 'Nuts & seeds'
+  }
   
   # Final plot arrangement
   (res <- plot_f1 + plot_f2 + plot_f3 + plot_f4 + legend 
@@ -414,6 +417,7 @@ for(d in dd_outcomes) {
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Abs-Flood_Levels')
 
 for(s in seasons) {
+  s <- 'Jan/Feb'
   # Prepare data    
   source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Dietary diversity scores*")))
   f1 <- tufte_sort(source_f1, x="increase", y="value", group="group", method="tufte", min.space=0.05, max.space=1)
