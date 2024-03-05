@@ -417,9 +417,9 @@ for(d in dd_outcomes) {
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Abs-Flood_Levels')
 
 for(s in seasons) {
-  s <- 'Jan/Feb'
-  link_colour <- c('darkgreen', 'grey')
   
+  link_colour <- c('darkgreen', 'grey')
+  # s <- 'Nov/Dec'
   # FOOD GROUP PLOT
   source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Minimum dietary diversity", "Dietary diversity scores*")))
   # Prepare data
@@ -433,10 +433,13 @@ for(s in seasons) {
   f1$a <- ifelse(f1$sig == 'p>0.05', link_colour[2], link_colour[1])
   f1_unique <- f1[!duplicated(f1$group), ]
   axes_colours <- f1_unique$a[order(f1_unique$group)] # ggplot interprets by name
+  
+  # Conditional formatting for Nov/Dec
+  if(s=='Nov/Dec'){
+    link_colour <- rev(link_colour)
+  }
+  
   # Plot
-  ylabs <- subset(f1, x==head(x,1))$group
-  yvals <- subset(f1, x==head(x,1))$ypos
-  fontSize <- 3
   (gg_fg <- ggplot(f1,aes(x=x,y=ypos, colour=sig)) +
       geom_line(aes(group=group, colour=sig)) +
       scale_color_manual(values = link_colour) +  # Set line colors manually
@@ -444,8 +447,8 @@ for(s in seasons) {
       xlab("Increase in flooding") +
       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
       geom_point(colour="white",size=8) +
-      geom_text(aes(label=y, colour=sig), size=fontSize, family="Helvetica", show.legend = FALSE) +
-      scale_y_continuous(name="", breaks=yvals, labels=ylabs) + 
+      geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
+      scale_y_continuous(name="", breaks=subset(f1, x==head(x,1))$ypos, labels=subset(f1, x==head(x,1))$group) + 
       theme(axis.ticks = element_blank(),
             plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
             axis.text = element_text(family = "Helvetica", face="bold"),
@@ -465,20 +468,21 @@ for(s in seasons) {
   # Get axes colors
   f2$a <- ifelse(f2$sig == 'p>0.05', link_colour[2], link_colour[1])
   axes_colours <- unique(f2$a)
+  # Conditional formatting for Nov/Dec
+  if(s=='Nov/Dec'){
+    link_colour <- rev(link_colour)
+  }
   # Plot
-  ylabs <- subset(f2, x==head(x,1))$group
-  yvals <- subset(f2, x==head(x,1))$ypos
-  fontSize <- 3
   (gg_mdd <- ggplot(f2,aes(x=x,y=ypos, colour=sig)) +
     geom_line(aes(group=group, colour=sig)) +
-    scale_color_manual(values = rev(link_colour))+  # Set line colors manually
+    scale_color_manual(values = f2$a)+  # Set line colors manually
     geom_point(colour="white",size=8) +
-    geom_text(aes(label=y, colour=sig), size=fontSize, family="Helvetica", show.legend = FALSE) +
-    scale_y_continuous(name="", breaks=yvals, labels=ylabs) + 
-    coord_cartesian(ylim=c(0.4, 0.75)) + # Zoom out
+    geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
+    scale_y_continuous(name="", breaks=subset(f2, x==head(x,1))$ypos, labels=subset(f2, x==head(x,1))$group) + 
+    coord_cartesian(ylim=c(min(f2$y)-0.1, max(f2$y)+0.1)) + # Zoom out
     theme(axis.ticks = element_blank(),
           plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-          axis.text.y = element_text(color = axes_colours, family = "Helvetica", face="bold"),
+          axis.text.y = element_text(color = f2$a, family = "Helvetica", face="bold"),
           axis.line.x = element_blank(),
           axis.text.x=element_blank(),
           axis.title.x= element_blank(),
@@ -497,20 +501,17 @@ for(s in seasons) {
   f3$a <- ifelse(f3$sig == 'p>0.05', link_colour[2], link_colour[1])
   axes_colours <- unique(f3$a)
   # Plot
-  ylabs <- subset(f3, x==head(x,1))$group
-  yvals <- subset(f3, x==head(x,1))$ypos
-  fontSize <- 3
   (gg_wdds <- ggplot(f3,aes(x=x,y=ypos, colour=sig)) +
       geom_line(aes(group=group, colour=sig)) +
-      scale_color_manual(values = rev(link_colour))+  # Set line colors manually
+      scale_color_manual(values = f3$a)+  # Set line colors manually
       geom_point(colour="white",size=8) +
-      geom_text(aes(label=y, colour=sig), size=fontSize, family="Helvetica", show.legend = FALSE) +
-      scale_y_continuous(name="", breaks=yvals, labels=ylabs) + 
+      geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
+      scale_y_continuous(name="", breaks=subset(f3, x==head(x,1))$ypos, labels=subset(f3, x==head(x,1))$group) + 
       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
-      coord_cartesian(ylim=c(4.35, 4.65)) + # Zoom out
+      coord_cartesian(ylim=c(min(f3$y)-0.1, max(f3$y)+0.1)) + # Zoom out
       theme(axis.ticks = element_blank(),
             plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-            axis.text.y = element_text(color = axes_colours, family = "Helvetica", face="bold"),
+            axis.text.y = element_text(color = f3$a, family = "Helvetica", face="bold"),
             axis.line.x = element_blank(),
             axis.text.x=element_blank(),
             axis.title.x= element_blank(),
@@ -519,9 +520,9 @@ for(s in seasons) {
 
   # Put plots together
   layout <- c(
-    area(t = 0, l = 0, b = 2, r = 15), # WDDS
-    area(t = 3, l = 0, b = 4, r = 15), # MDD
-    area(t = 5, l = 0, b = 25, r = 15) # Food groups
+    area(t = 0, l = 0, b = 3, r = 15), # WDDS
+    area(t = 4, l = 0, b = 6, r = 15), # MDD
+    area(t = 7, l = 0, b = 30, r = 15) # Food groups
   )
 
   # Final plot arrangement
@@ -530,10 +531,9 @@ for(s in seasons) {
     + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.62))))
   
   
-  # labs(title=paste0("Predicted probabilities of achieving subsequent dietary outcomes \nin ", s, " for different % of cluster flooded")) +
-    
   # Export image
-  ggsave(paste0('MF3_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_mf3.png"), res, width=15, height=25, units='cm')
+  ggsave(paste0('MF3_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_mf3.png"), 
+         res, width=15, height=20, units='cm')
   
 }
 
