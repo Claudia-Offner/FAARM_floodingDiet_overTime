@@ -418,8 +418,11 @@ source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Abs-Flood_Levels')
 
 for(s in seasons) {
   s <- 'Jan/Feb'
-  # Prepare data    
-  source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Dietary diversity scores*")))
+  link_colour <- c('darkgreen', 'grey')
+  
+  # FOOD GROUP PLOT
+  source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Minimum dietary diversity", "Dietary diversity scores*")))
+  # Prepare data
   f1 <- tufte_sort(source_f1, x="increase", y="value", group="group", method="tufte", min.space=0.05, max.space=1)
   f1 <- transform(f1, x=factor(x, levels=c(0, 1, 5, 10), labels=c("0%","1%","5%","10%")), y=round(y, 2))
   # Add sig back in
@@ -427,7 +430,6 @@ for(s in seasons) {
   f1 <- f1[order(f1$group, f1$x), ]
   f1$sig <- source_f1$sig
   # Get axes colors
-  link_colour <- c('darkgreen', 'grey')
   f1$a <- ifelse(f1$sig == 'p>0.05', link_colour[2], link_colour[1])
   f1_unique <- f1[!duplicated(f1$group), ]
   axes_colours <- f1_unique$a[order(f1_unique$group)] # ggplot interprets by name
@@ -435,21 +437,103 @@ for(s in seasons) {
   ylabs <- subset(f1, x==head(x,1))$group
   yvals <- subset(f1, x==head(x,1))$ypos
   fontSize <- 3
-  (gg_mf3 <- ggplot(f1,aes(x=x,y=ypos, colour=sig)) +
+  (gg_fg <- ggplot(f1,aes(x=x,y=ypos, colour=sig)) +
       geom_line(aes(group=group, colour=sig)) +
-      scale_color_manual(values = link_colour)+  # Set line colors manually
+      scale_color_manual(values = link_colour) +  # Set line colors manually
       labs(color = "95% Confidence") +  # Modify legend label
+      xlab("Increase in flooding") +
+      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
       geom_point(colour="white",size=8) +
       geom_text(aes(label=y, colour=sig), size=fontSize, family="Helvetica", show.legend = FALSE) +
       scale_y_continuous(name="", breaks=yvals, labels=ylabs) + 
       theme(axis.ticks = element_blank(),
             plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
             axis.text = element_text(family = "Helvetica", face="bold"),
-            axis.text.y = element_text(color = axes_colours)) + 
-      labs(title=paste0("Predicted probabilities of achieving subsequent dietary outcomes \nin ", s, " for different % of cluster flooded")) +
-      xlab("Increase in flooding"))
+            axis.text.y = element_text(color = axes_colours),
+            plot.margin=unit(c(0.5,2.5,0.5,0), 'cm'),
+            legend.position="bottom")
+    )
+  
+  # MDD PLOT
+  source_f2 <- source_f0 %>% filter(season == s) %>% filter(group =="Minimum dietary diversity")
+  # Prepare data
+  f2 <- source_f2 %>%
+    rename(x = increase, y = value) %>%
+    mutate(yshift=0.000, ypos=yshift+y) %>%
+    select(group, yshift, x, y, ypos, sig)
+  f2 <- transform(f2, x=factor(x, levels=c(0, 1, 5, 10), labels=c("0%","1%","5%","10%")), y=round(y, 2))
+  # Get axes colors
+  f2$a <- ifelse(f2$sig == 'p>0.05', link_colour[2], link_colour[1])
+  axes_colours <- unique(f2$a)
+  # Plot
+  ylabs <- subset(f2, x==head(x,1))$group
+  yvals <- subset(f2, x==head(x,1))$ypos
+  fontSize <- 3
+  (gg_mdd <- ggplot(f2,aes(x=x,y=ypos, colour=sig)) +
+    geom_line(aes(group=group, colour=sig)) +
+    scale_color_manual(values = rev(link_colour))+  # Set line colors manually
+    geom_point(colour="white",size=8) +
+    geom_text(aes(label=y, colour=sig), size=fontSize, family="Helvetica", show.legend = FALSE) +
+    scale_y_continuous(name="", breaks=yvals, labels=ylabs) + 
+    coord_cartesian(ylim=c(0.4, 0.75)) + # Zoom out
+    theme(axis.ticks = element_blank(),
+          plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
+          axis.text.y = element_text(color = axes_colours, family = "Helvetica", face="bold"),
+          axis.line.x = element_blank(),
+          axis.text.x=element_blank(),
+          axis.title.x= element_blank(),
+          plot.margin=unit(c(0.5,2.5,0.5,0), 'cm'),
+          legend.position="none")) 
+  
+  # WDDS PLOT
+  source_f3 <- source_f0 %>% filter(season == s) %>% filter(group =="Dietary diversity scores*")
+  # Prepare data
+  f3 <- source_f3 %>%
+    rename(x = increase, y = value) %>%
+    mutate(yshift=0.000, ypos=yshift+y) %>%
+    select(group, yshift, x, y, ypos, sig)
+  f3 <- transform(f3, x=factor(x, levels=c(0, 1, 5, 10), labels=c("0%","1%","5%","10%")), y=round(y, 2))
+  # Get axes colors
+  f3$a <- ifelse(f3$sig == 'p>0.05', link_colour[2], link_colour[1])
+  axes_colours <- unique(f3$a)
+  # Plot
+  ylabs <- subset(f3, x==head(x,1))$group
+  yvals <- subset(f3, x==head(x,1))$ypos
+  fontSize <- 3
+  (gg_wdds <- ggplot(f3,aes(x=x,y=ypos, colour=sig)) +
+      geom_line(aes(group=group, colour=sig)) +
+      scale_color_manual(values = rev(link_colour))+  # Set line colors manually
+      geom_point(colour="white",size=8) +
+      geom_text(aes(label=y, colour=sig), size=fontSize, family="Helvetica", show.legend = FALSE) +
+      scale_y_continuous(name="", breaks=yvals, labels=ylabs) + 
+      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
+      coord_cartesian(ylim=c(4.35, 4.65)) + # Zoom out
+      theme(axis.ticks = element_blank(),
+            plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
+            axis.text.y = element_text(color = axes_colours, family = "Helvetica", face="bold"),
+            axis.line.x = element_blank(),
+            axis.text.x=element_blank(),
+            axis.title.x= element_blank(),
+            plot.margin=unit(c(0.5,2.5,0.5,0), 'cm'),
+            legend.position="none")) 
+
+  # Put plots together
+  layout <- c(
+    area(t = 0, l = 0, b = 2, r = 15), # WDDS
+    area(t = 3, l = 0, b = 4, r = 15), # MDD
+    area(t = 5, l = 0, b = 25, r = 15) # Food groups
+  )
+
+  # Final plot arrangement
+  (res <- gg_wdds + gg_mdd + gg_fg  
+    + plot_layout(design = layout) 
+    + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.62))))
+  
+  
+  # labs(title=paste0("Predicted probabilities of achieving subsequent dietary outcomes \nin ", s, " for different % of cluster flooded")) +
+    
   # Export image
-  ggsave(paste0('MF3_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_mf3.png"), gg_mf3, width=15, height=15, units='cm')
+  ggsave(paste0('MF3_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_mf3.png"), res, width=15, height=25, units='cm')
   
 }
 
