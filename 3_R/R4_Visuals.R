@@ -101,6 +101,102 @@ tufte_sort <- function(df, x="year", y="value", group="group", method="tufte", m
   
 }
 
+# GG plotter for SF (rel diff flood all groups)
+Rel_flood_Treat <- function(df, d, m, legend='Yes', x_axes='Yes', custom_colors, custom_shapes){
+  
+  # Select & format data
+  source_f0 <- df
+  source_f1 <- source_f0 %>% filter(Outcome == d) %>%
+    mutate(Seas = factor(Seas, levels = c('Overall', 'Jan/Feb', 'Mar/Apr', 'May/Jun', 'Jul/Aug', 'Sep/Oct', 'Nov/Dec')),
+           Treat = factor(Treat, levels = c('Overall', 'Control', 'HFP'))) %>%
+    arrange(Model, Seas, Treat)
+  source_f1$Index <- 1:nrow(source_f1)
+  source_f1$Index <- source_f1$Index[rev(1:length(source_f1$Index))]
+  
+  # Split up models & formatting as needed
+  if (m=="All"){
+    f1 <- source_f1
+    hz_line <- 1
+    y_lim <- c(0.5, 21.5)
+    
+  } else if (m=="F4") {
+    f1 <- source_f1 %>% filter(Model == m) 
+    hz_line <- 2
+    y_lim <- c(0.5,12.5)
+    
+  } else if(m=="F3"){
+    f1 <- source_f1 %>% filter(Model == m) 
+    hz_line <- 1
+    y_lim <- c(0.5, 6.5)
+    
+  } else if(m=="F2"){
+    f1 <- source_f1 %>% filter(Model == m) 
+    hz_line <- 1
+    y_lim <- c(0.5, 2.5)
+    
+  } else if(m=='F1') {
+    f1 <- source_f1 %>% filter(Model == m) 
+    hz_line <- 1
+    y_lim <- c(0.5, 1.5)
+  } 
+  
+  # Conditional names for x-axes
+  if(d=='WDDS') {
+    x_ax <- 'Changes in mean'
+    x_lim <- c(-0.35, .35)
+    x_breaks <- seq(-0.35, 0.35, 0.1)
+  } else {
+    x_ax <- 'Changes in probability'
+    x_lim <- c(-0.20, 0.20)
+    x_breaks <- seq(-0.20, 0.20, 0.05)
+  }
+  
+  # Initial Plot
+  (gg <- 
+      f1 |>
+      # Make plot
+      ggplot(aes(y = rev(1:nrow(f1)))) + 
+      theme_classic() +
+      # Add points & error bars
+      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
+      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
+      # Add vertical & horizontal lines
+      geom_vline(xintercept = 0, linetype="dashed") +
+      geom_hline(yintercept = seq(0.5, length(f1$Index), by = hz_line), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
+      # Add labels & set color
+      labs(x=x_ax, y=unique(f1$Model), color="Season", shape="Trial-arm") + 
+      scale_x_continuous(breaks=x_breaks) +
+      scale_color_manual(values = custom_colors) +
+      scale_shape_manual(values = custom_shapes) +
+      # Format
+      coord_cartesian(ylim=y_lim, xlim=x_lim, expand=FALSE) + # Zoom out
+      guides(shape = guide_legend(order = 1), color = guide_legend(order = 2)) + # Legend order
+      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
+      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
+      theme(plot.title = element_text(hjust = 0.5), # Center title
+            axis.text.y = element_blank(),
+            axis.ticks.y= element_blank(),
+            legend.position="right")) 
+  
+  # Conditional Plot
+  if (legend=='No'){
+    (gg <- gg +
+       theme(legend.position="none"))
+  }
+  if (x_axes == 'No'){
+    (gg <- gg +
+       # Update labels
+       labs(x="", y=unique(f1$Model)) + 
+       scale_y_continuous(breaks=1:nrow(f1), labels=rev(f1$Group)) +
+       # Update format
+       theme(axis.ticks.x=element_blank(),
+             axis.text.x= element_blank()))
+  }
+  
+  
+  return(gg)
+}
+
 # GG plotter for MF (abs diff flood levels)
 Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgreen', 'grey')){
   
@@ -340,171 +436,18 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 # 
 # SF2: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####
 
-# NEED: Group the y-axes by Model & add segment lines accordingly
-#       Fix the text alignment & Title/axes names
-
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Rel-Diff')
 dd_outcomes <- unique(source_f0$Outcome)
 
 for(d in dd_outcomes) {
   
-  # Select data
-  source_f1 <- source_f0 %>% filter(Outcome == d) %>%
-    mutate(Seas = factor(Seas, levels = c('Overall', 'Jan/Feb', 'Mar/Apr', 'May/Jun', 'Jul/Aug', 'Sep/Oct', 'Nov/Dec')),
-           Treat = factor(Treat, levels = c('Overall', 'Control', 'HFP'))) %>%
-    arrange(Model, Seas, Treat)
-  source_f1$Index <- 1:nrow(source_f1)
-  source_f1$Index <- source_f1$Index[rev(1:length(source_f1$Index))]
-
-  # Split up the models
-  f1 <- source_f1 %>% filter(Model == 'F1') 
-  f2 <- source_f1 %>% filter(Model == 'F2') 
-  f3 <- source_f1 %>% filter(Model == 'F3') 
-  f4 <- source_f1 %>% filter(Model == 'F4') 
+  f0 <- Rel_flood_Treat(source_f0, d, 'All', legend='Yes', x_axes='Yes', custom_colors, custom_shapes)
+  legend <- get_legend(f0)
+  f1 <- Rel_flood_Treat(source_f0, d, 'F1', legend='No', x_axes='No', custom_colors, custom_shapes)
+  f2 <- Rel_flood_Treat(source_f0, d, 'F2', legend='No', x_axes='No', custom_colors, custom_shapes)
+  f3 <- Rel_flood_Treat(source_f0, d, 'F3', legend='No', x_axes='No', custom_colors, custom_shapes)
+  f4 <- Rel_flood_Treat(source_f0, d, 'F4', legend='No', x_axes='Yes', custom_colors, custom_shapes)
   
-  # Conditional names for x-axes
-  if(d=='WDDS') {
-    x_ax <- 'Changes in mean'
-    x_lim <- c(-0.35, .35)
-    x_breaks <- seq(-0.35, 0.35, 0.1)
-  } else {
-    x_ax <- 'Changes in probability'
-    x_lim <- c(-0.20, 0.20)
-    x_breaks <- seq(-0.20, 0.20, 0.05)
-  }
-  
-  # Get legend
-  (all_plot <- 
-      source_f1 |>
-      # Make plot
-      ggplot(aes(y = Index)) + 
-      theme_classic() +
-      # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + ##
-      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + ##
-      # Add vertical & horizontal lines
-      geom_vline(xintercept = 0, linetype="dashed") +
-      # Add labels, color & shape
-      labs(x=x_ax, y="", color="Season", shape="Trial-arm") + 
-      scale_y_continuous(breaks=1:nrow(source_f1), labels=rev(source_f1$Group)) +
-      scale_x_continuous(breaks=x_breaks) +
-      scale_color_manual(values = custom_colors) +
-      scale_shape_manual(values = custom_shapes) +
-      # Format
-      coord_cartesian(ylim=c(1,22), xlim=x_lim) + # Zoom out
-      guides(shape = guide_legend(order = 1), color = guide_legend(order = 2)) + # Legend order
-      theme(plot.title = element_text(hjust = 0.5), # Center title
-            axis.line.y = element_blank(), # Remove y axes
-            axis.ticks.y= element_blank())) 
-  legend <- get_legend(all_plot)
-  
-  # Create forest plots
-  (plot_f4 <- 
-      f4 |>
-      # Make plot
-      ggplot(aes(y = rev(1:nrow(f4)))) + 
-      theme_classic() +
-      # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
-      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
-      # Add vertical & horizontal lines
-      geom_vline(xintercept = 0, linetype="dashed") +
-      geom_hline(yintercept = seq(0.5, length(source_f1$Index), by = 2), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
-      # Add labels & set color
-      scale_x_continuous(breaks=x_breaks) +
-      labs(x=x_ax, y=unique(f4$Model)) + 
-      scale_color_manual(values = custom_colors) +
-      scale_shape_manual(values = custom_shapes) +
-      # Format
-      coord_cartesian(ylim=c(0.5,12.5), xlim=x_lim, expand=FALSE) + # Zoom out
-      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
-      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
-      theme(plot.title = element_text(hjust = 0.5), # Center title
-            axis.text.y = element_blank(),
-            axis.ticks.y= element_blank(),
-            legend.position="none")) 
-  
-  (plot_f3 <- 
-      f3 |>
-      # Make plot
-      ggplot(aes(y = rev(1:nrow(f3)))) + 
-      theme_classic() +
-      # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
-      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
-      # Add vertical & horizontal lines
-      geom_vline(xintercept = 0, linetype="dashed") +
-      geom_hline(yintercept = seq(0.5, length(source_f1$Index), by = 1), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
-      # Add labels & set color
-      labs(x="", y=unique(f3$Model)) + 
-      scale_y_continuous(breaks=1:nrow(f3), labels=rev(f3$Group)) +
-      scale_color_manual(values = custom_colors) +
-      scale_shape_manual(values = custom_shapes) +
-      # Format
-      coord_cartesian(ylim=c(0.5, 6.5), xlim=x_lim, expand=FALSE) + # Zoom out
-      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
-      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
-      theme(plot.title = element_text(hjust = 0.5), # Center title
-            axis.text.y = element_blank(),
-            axis.ticks.y= element_blank(),
-            axis.ticks.x=element_blank(),
-            axis.text.x= element_blank(),
-            legend.position="none")) 
-  
-  (plot_f2 <- 
-      f2 |>
-      # Make plot
-      ggplot(aes(y = rev(1:nrow(f2)))) + 
-      theme_classic() +
-      # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
-      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
-      # Add vertical & horizontal lines
-      geom_vline(xintercept = 0, linetype="dashed") +
-      geom_hline(yintercept = seq(0.5, length(source_f1$Index), by = 1), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
-      # Add labels & set color
-      labs(x="", y=unique(f2$Model)) + 
-      scale_y_continuous(breaks=1:nrow(f2), labels=rev(f2$Group)) +
-      scale_color_manual(values = custom_colors) +
-      scale_shape_manual(values = custom_shapes) +
-      # Format
-      coord_cartesian(ylim=c(0.5, 2.5), xlim=x_lim, expand=FALSE) + # Zoom out
-      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
-      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
-      theme(plot.title = element_text(hjust = 0.5), # Center title
-            axis.text.y = element_blank(),
-            axis.ticks.y= element_blank(),
-            axis.ticks.x=element_blank(),
-            axis.text.x= element_blank(),
-            legend.position="none"))
-  
-  (plot_f1 <- 
-      f1 |>
-      # Make plot
-      ggplot(aes(y = rev(1:nrow(f1)))) + 
-      theme_classic() +
-      # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
-      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
-      # Add vertical & horizontal lines
-      geom_vline(xintercept = 0, linetype="dashed") +
-      geom_hline(yintercept = seq(0.5, length(source_f1$Index), by = 1), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
-      # Add labels & set color
-      labs(x="", y=unique(f1$Model)) + 
-      scale_y_continuous(breaks=1:nrow(f1), labels=rev(f1$Group)) +
-      scale_color_manual(values = custom_colors) +
-      scale_shape_manual(values = custom_shapes) +
-      # Format
-      coord_cartesian(ylim=c(0.5, 1.5), xlim=x_lim, expand=FALSE) + # Zoom out
-      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
-      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
-      theme(plot.title = element_text(hjust = 0.5), # Center title
-            axis.text.y = element_blank(),
-            axis.ticks.y= element_blank(),
-            axis.ticks.x=element_blank(),
-            axis.text.x= element_blank(),
-            legend.position="none"))
-
   # Put plots together
   layout <- c(
     area(t = 0, l = 0, b = 2, r = 15), # F1
@@ -528,7 +471,7 @@ for(d in dd_outcomes) {
   }
   
   # Final plot arrangement
-  (res <- plot_f1 + plot_f2 + plot_f3 + plot_f4 + legend 
+  (res <- f1 + f2 + f3 + f4 + legend 
     + plot_layout(design = layout) 
     + plot_annotation(name, theme = theme(plot.title = element_text(size = 16, hjust = 0.4))))
 
@@ -655,224 +598,4 @@ ggsave(paste0('MF4_AbsDiff - Trial-Levels/', str_replace(outcome, "/", "-"), "_m
 
 
 
-
-# # OPTION MF4 : Absolute differences in probability of DD outcomes for different trial-arms for each season (1% flood) ####
-# 
-# source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Abs-Treat_Levels')
-# 
-# for(s in seasons) {
-#   
-#   link_colour <- c('darkgreen', 'grey')
-#   s <- 'Jan/Feb'
-#   # FOOD GROUP PLOT
-#   source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Minimum dietary diversity", "Dietary diversity scores*")))
-#   # Prepare data
-#   f1 <- tufte_sort(source_f1, x="increase", y="value", group="group", method="tufte", min.space=0.05, max.space=0.15)
-#   f1 <- transform(f1, x=factor(x, levels=c(0, 1), labels=c("Control","HFP")), y=round(y, 2))
-#   # Add sig back in
-#   source_f1 <- source_f1[order(source_f1$group, source_f1$increase), ]
-#   f1 <- f1[order(f1$group, f1$x), ]
-#   f1$sig <- source_f1$sig
-#   # Get axes colors
-#   f1$a <- ifelse(f1$sig == 'p>0.05', link_colour[2], link_colour[1])
-#   f1_unique <- f1[!duplicated(f1$group), ]
-#   axes_colours <- f1_unique$a[order(f1_unique$group)] # ggplot interprets by name
-#   
-#   # Plot
-#   (gg_fg <- ggplot(f1,aes(x=x,y=ypos, colour=sig)) +
-#       geom_line(aes(group=group, colour=sig)) +
-#       scale_color_manual(values = rev(link_colour), limits=c('p>0.05', 'p<0.05')) +  # Set line colors manually
-#       labs(color = "95% Confidence") +  # Modify legend label
-#       xlab("Trial-arm") +
-#       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
-#       annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
-#       geom_point(colour="white",size=8) +
-#       geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
-#       scale_y_continuous(name="", breaks=subset(f1, x==head(x,1))$ypos, labels=subset(f1, x==head(x,1))$group) + 
-#       theme(axis.ticks = element_blank(),
-#             plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-#             axis.text = element_text(family = "Helvetica", face="bold"),
-#             axis.text.y = element_text(color = axes_colours),
-#             plot.margin=unit(c(0,2.5,0,0), 'cm'),
-#             legend.position="bottom"))
-#   
-#   # DD PLOT
-#   source_f2 <- source_f0 %>% filter(season == s) %>% filter(group %in% c("Minimum dietary diversity", "Dietary diversity scores*"))
-#   # Prepare data
-#   f2 <- source_f2 %>%
-#     rename(x = increase, y = value) %>%
-#     mutate(yshift = if_else(group == "Minimum dietary diversity", 0, 0.1), ypos=yshift+y) %>%
-#     select(group, yshift, x, y, ypos, sig)
-#   f2 <- transform(f2, x=factor(x, levels=c(0, 1), labels=c("Control","HFP")), y=round(y, 2))
-#   # Get axes colors
-#   f2$a <- ifelse(f2$sig == 'p>0.05', link_colour[2], link_colour[1])
-#   # Plot
-#   (gg_dd <- ggplot(f2,aes(x=x,y=ypos, colour=sig)) +
-#       geom_line(aes(group=group, colour=sig)) +
-#       scale_color_manual(values = f2$a)+  # Set line colors manually
-#       geom_point(colour="white",size=8) +
-#       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
-#       annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
-#       geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
-#       scale_y_continuous(name="", breaks=subset(f2, x==head(x,1))$ypos, labels=subset(f2, x==head(x,1))$group) + 
-#       coord_cartesian(ylim=c(min(f2$ypos)-1, max(f2$ypos)+1)) + # Zoom out
-#       theme(axis.ticks = element_blank(),
-#             plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-#             axis.text.y = element_text(color = f2$a, family = "Helvetica", face="bold"),
-#             # axis.line.x = element_blank(),
-#             axis.text.x=element_blank(),
-#             axis.title.x= element_blank(),
-#             plot.margin=unit(c(0,2.5,0,0), 'cm'),
-#             legend.position="none")) 
-#   
-#   # Put plots together
-#   layout <- c(
-#     area(t = 0, l = 0, b = 6, r = 15), # DD
-#     area(t = 8, l = 0, b = 30, r = 15) # Food groups
-#   )
-#   
-#   # Final plot arrangement
-#   (res <- gg_dd + gg_fg  
-#     + plot_layout(design = layout) 
-#     + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.62))))
-#   
-#   # Export image
-#   ggsave(paste0('MF4_AbsDiff - Trial-arm/', str_replace(s, "/", "-"), "_mf4.png"), 
-#          res, width=15, height=20, units='cm')
-#   
-# }
-# 
-# 
-# 
-# 
-# 
-# Other #######
-
-
-# # MDD PLOT
-# source_f2 <- source_f0 %>% filter(season == s) %>% filter(group =="Minimum dietary diversity")
-# # Prepare data
-# f2 <- source_f2 %>%
-#   rename(x = increase, y = value) %>%
-#   mutate(yshift=0.000, ypos=yshift+y) %>%
-#   select(group, yshift, x, y, ypos, sig)
-# f2 <- transform(f2, x=factor(x, levels=c(0, 1, 5, 10), labels=c("0%","1%","5%","10%")), y=round(y, 2))
-# # Get axes colors
-# f2$a <- ifelse(f2$sig == 'p>0.05', link_colour[2], link_colour[1])
-# # Plot
-# (gg_mdd <- ggplot(f2,aes(x=x,y=ypos, colour=sig)) +
-#   geom_line(aes(group=group, colour=sig)) +
-#   scale_color_manual(values = f2$a)+  # Set line colors manually
-#   geom_point(colour="white",size=8) +
-#   annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
-#   geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
-#   scale_y_continuous(name="", breaks=subset(f2, x==head(x,1))$ypos, labels=subset(f2, x==head(x,1))$group) + 
-#   coord_cartesian(ylim=c(min(f2$y)-0.1, max(f2$y)+0.1)) + # Zoom out
-#   theme(axis.ticks = element_blank(),
-#         plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-#         axis.text.y = element_text(color = f2$a, family = "Helvetica", face="bold"),
-#         # axis.line.x = element_blank(),
-#         axis.text.x=element_blank(),
-#         axis.title.x= element_blank(),
-#         plot.margin=unit(c(0.5,2.5,0.5,0), 'cm'),
-#         legend.position="none")) 
-# 
-# # WDDS PLOT
-# source_f3 <- source_f0 %>% filter(season == s) %>% filter(group =="Dietary diversity scores*")
-# # Prepare data
-# f3 <- source_f3 %>% 
-#   rename(x = increase, y = value) %>% 
-#   mutate(yshift=0.05, ypos=yshift+y) %>% 
-#   select(group, yshift, x, y, ypos, sig)
-# f3 <- transform(f3, x=factor(x, levels=c(0, 1, 5, 10), labels=c("0%","1%","5%","10%")), y=round(y, 2))
-# # Get axes colors
-# f3$a <- ifelse(f3$sig == 'p>0.05', link_colour[2], link_colour[1])
-# # Plot
-# (gg_wdds <- ggplot(f3,aes(x=x,y=ypos, colour=sig)) +
-#     geom_line(aes(group=group, colour=sig)) +
-#     scale_color_manual(values = f3$a)+  # Set line colors manually
-#     geom_point(colour="white",size=8) +
-#     geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
-#     scale_y_continuous(name="", breaks=subset(f3, x==head(x,1))$ypos, labels=subset(f3, x==head(x,1))$group) + 
-#     annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
-#     annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
-#     coord_cartesian(ylim=c(min(f3$y)-0.1, max(f3$y)+0.1)) + # Zoom out
-#     theme(axis.ticks = element_blank(),
-#           plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-#           axis.text.y = element_text(color = f3$a, family = "Helvetica", face="bold"),
-#           axis.line.x = element_blank(),
-#           axis.text.x=element_blank(),
-#           axis.title.x= element_blank(),
-#           plot.margin=unit(c(0.5,2.5,0.5,0), 'cm'),
-#           legend.position="none")) 
-
-# Add text
-# annotate("text", x = -.08, y = 22, label = "Flooding harmful") +
-# annotate("text", x = .08, y = 22, label = "Flooding protective") + 
-
-# Change legend position
-# theme(legend.position = c(0.9, 0.8)) +
-
-
-# (legend <- get_legend(p_mid))
-# (p_mid <- p_mid + theme(legend.position="none"))
-#
-# # Left side of plot - strata names & relative diff (CIs)
-# (p_left <-
-#     res_plot  |>
-#     # Order model on y-axis
-#     ggplot(aes(y = Index)) +
-#     # Add text for strata column
-#     geom_text(aes(x = 0, label = Group), hjust = 0, fontface = "bold") +
-#     # Add text for diff (CI)
-#     # geom_text(aes(x = 1, label = estimate_lab), hjust = 0, fontface = ifelse(res_plot$estimate_lab == "Probability Change (95% CI)", "bold", "plain")) +
-#     # Remove background and format
-#     theme_void()) #+
-#     # coord_cartesian(xlim = c(0, 2.5)))
-
-# # Right side of plot - pvalues
-# (p_right <-
-#     res_plot  |>
-#     # Order model on y-axis
-#     ggplot(aes(y = Index)) +
-#     # Add text for strata column
-#     geom_text(aes(x = 0, y = Index, label = P), hjust = 0, fontface = ifelse(res_plot$P == "p-value", "bold", "plain")) +
-#     # Remove background and format
-#     theme_void())
-# 
-# # Put plots together
-# layout <- c(
-#   area(t = 0, l = 0, b = 25, r = 4), # left plot, starts at the top of the page (0) and goes 30 units down and 3 units to the right
-#   area(t = 1, l = 5, b = 25, r = 9) # middle plot starts a little lower (t=1) because there's no title. starts 1 unit right of the left plot (l=4, whereas left plot is r=3), goes to the bottom of the page (30 units), and 6 units further over from the left plot (r=9 whereas left plot is r=3)
-#   # area(t = 0, l = 9, b = 25, r = 11), # right most plot starts at top of page, begins where middle plot ends (l=9, and middle plot is r=9), goes to bottom of page (b=30), and extends two units wide (r=11)
-#   # area(t = 0, l = 11, b = 25, r = 11) # Legend
-# )
-# # Final plot arrangement
-# res <- p_left + p_mid + plot_layout(design = layout) + plot_annotation(paste0('Dietary Outcome: ', d), theme = theme(plot.title = element_text(size = 16)))
-
-
-
-
-# Set significance col (for plotting)
-# source_f1$Importance <- '0_None'
-# source_f1$Importance[source_f1$P <= 0.10 & source_f1$P >= 0.05] <- '1_Weak'
-# source_f1$Importance[source_f1$P <= 0.05] <- '2_Strong'
-# cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
-
-# source_f1 <- round_df(source_f1, 3)
-
-# Plot Results
-# ggplot(data=source_f1, aes(y=Index, x=Diff, xmin=Lower.CI, xmax=Upper.CI)) +
-#   geom_point() + # aes(colour=Model)
-#   # geom_text(aes(label = Diff, colour = Importance),
-#             # size = 3.5, nudge_x = 0.1, nudge_y = 0, check_overlap = FALSE) +
-#   scale_colour_manual(values = cols) +
-#   theme(legend.position = "bottom") +
-#   geom_errorbarh(height=.3) +
-#   scale_y_continuous(breaks=1:nrow(source_f1), labels=source_f1$Group) +
-#   labs(title=paste('Effect Size by Variable - ', outcome), x='Marginal Effects', y = 'Strata') +
-#   geom_vline(xintercept=0, color='black', linetype='dashed', alpha=.5) +
-#   # geom_hline(yintercept = seq(0.5, length(source_f1$Model), by = 1), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
-#   theme_classic()
-# 
 
