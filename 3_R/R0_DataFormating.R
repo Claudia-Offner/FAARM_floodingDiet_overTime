@@ -10,6 +10,13 @@ setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical M
 options(warn=-1) # 0 to turn back on
 options(scipen=999)
 
+# Get citations
+options(citation.bibtex.max=999)
+citation('nlme')
+citation('lme4')
+citation('emmeans')
+citation('INLA')
+
 #### 1. Packages & Functions ####
 
 #### Load packages

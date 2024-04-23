@@ -28,6 +28,8 @@ levels <- c((0 - mean_value)/0.01,
 models <- c('m_3/', 'm_2_seas/', 'm_2_treat/', 'm_0/')
 
 # Function to run models that extract results for continuous outcomes
+
+
 extract_LME <- function(variable, folder) {
   
   if (folder == 'm_3/'){

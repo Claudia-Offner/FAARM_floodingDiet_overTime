@@ -1,7 +1,7 @@
 # EXTRACT VISUALS
 
 #### IMPORTANT - set file path to data folder location
-path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING'
+path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/- Figures/'
 setwd(path)
 # Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
@@ -434,7 +434,7 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 # 
 # 
 # 
-# SF2: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####
+# SF4: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Rel-Diff')
 dd_outcomes <- unique(source_f0$Outcome)
@@ -475,20 +475,20 @@ for(d in dd_outcomes) {
     + plot_layout(design = layout) 
     + plot_annotation(name, theme = theme(plot.title = element_text(size = 16, hjust = 0.4))))
 
-  ggsave(paste0('MF2_RelativeDiff/', d, "_sf2.png"), res, width=18, height=16, units='cm')
+  ggsave(paste0('SF4_RelativeDiff/', d, "_sf4.png"), res, width=18, height=16, units='cm')
   
 }
 
 
-# MF: Absolute differences in probability of DD outcomes for different % flooding for each season (both trial-arms) ####
+# MF2: Absolute differences in probability of DD outcomes for different % flooding for each season (both trial-arms) ####
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName='R_Abs-Flood_Levels')
 
 
 for(s in seasons) {
   
-  (fg <- Abs_flood(df=source_f0, s='Jan/Feb', binary='Yes', x_labs='Yes'))
-  (dd <- Abs_flood(df=source_f0, s='Jan/Feb', binary='No', x_labs='No'))
+  (fg <- Abs_flood(df=source_f0, s=s, binary='Yes', x_labs='Yes'))
+  (dd <- Abs_flood(df=source_f0, s=s, binary='No', x_labs='No'))
 
   # Put plots together
   layout <- c(
@@ -502,32 +502,32 @@ for(s in seasons) {
     + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.62))))
   
   # Export image
-  ggsave(paste0('MF3_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_sf3.png"), 
+  ggsave(paste0('MF2_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_mf2.png"), 
          res, width=15, height=20, units='cm')
   
 }
 
 
-# SF4: Contrasting absolute differences in flood impact on DD outcomes between trial-arms for different levels of flooding across seasons #######
+# SF5: Contrasting absolute differences in flood impact on DD outcomes between trial-arms for different levels of flooding across seasons #######
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R-Abs-Flood-Treat_Levels')
 
 for(s in seasons) {
   
-  p0 <- Abs_flood_Treat(source_f0, s, 'Dietary diversity scores*', x_labs='Yes', legend='Yes', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p0 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dietary diversity scores*', x_labs='Yes', legend='Yes', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
   legend <- get_legend(p0)
-  p1 <- Abs_flood_Treat(source_f0, s, 'Dietary diversity scores*', x_labs='No', legend='No', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p2 <- Abs_flood_Treat(source_f0, s, 'Minimum dietary diversity', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p3 <- Abs_flood_Treat(source_f0, s, 'Starchy staples', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
-  p4 <- Abs_flood_Treat(source_f0, s, 'Flesh foods', x_labs='No', legend='No', binary='Yes',y_labs='None',  custom_colors, custom_lines, custom_shapes)
-  p5 <- Abs_flood_Treat(source_f0, s, 'Dairy', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p6 <- Abs_flood_Treat(source_f0, s, 'Eggs', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
-  p7 <- Abs_flood_Treat(source_f0, s, 'Dark green leafy vegetables', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
-  p8 <- Abs_flood_Treat(source_f0, s, 'Vitamin A-rich foods', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
-  p9<- Abs_flood_Treat(source_f0, s, 'Other vegetables', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
-  p10 <- Abs_flood_Treat(source_f0, s, 'Other fruits', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
-  p11 <- Abs_flood_Treat(source_f0, s, 'Legumes', x_labs='Yes', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p12 <- Abs_flood_Treat(source_f0, s, 'Nuts/seeds', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p1 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dietary diversity scores*', x_labs='No', legend='No', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p2 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Minimum dietary diversity', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p3 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Starchy staples', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Flesh foods', x_labs='No', legend='No', binary='Yes',y_labs='None',  custom_colors, custom_lines, custom_shapes)
+  p5 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dairy', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p6 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Eggs', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p7 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dark green leafy vegetables', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p8 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Vitamin A-rich foods', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p9 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Other vegetables', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p10 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Other fruits', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p11 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Legumes', x_labs='Yes', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p12 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Nuts/seeds', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
   
   # Put plots together
   layout <- c(
@@ -554,12 +554,12 @@ for(s in seasons) {
     + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.5))))
   
   # Export image
-  ggsave(paste0('MF4_AbsDiff - Trial-Levels/', str_replace(s, "/", "-"), "_sf4.png"), 
+  ggsave(paste0('SF5_AbsDiff - Trial-Levels/', str_replace(s, "/", "-"), "_sf5.png"), 
          res, width=30, height=20, units='cm')
   
 }
 
-# MF: Contrasting absolute differences in flood impact on WDDS ONLY ####
+# MF3: Contrasting absolute differences in flood impact on WDDS ONLY ####
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R-Abs-Flood-Treat_Levels')
 outcome <- 'Dietary diversity scores*'
@@ -593,7 +593,7 @@ layout <- c(
   + plot_annotation("Dietary Diversity Scores", theme = theme(plot.title = element_text(size = 16, hjust = 0.5))))
 
 # Export image
-ggsave(paste0('MF4_AbsDiff - Trial-Levels/', str_replace(outcome, "/", "-"), "_mf.png"), 
+ggsave(paste0('MF3_AbsDiff - Trial-Levels/wdds_mf3.png'), 
        res, width=30, height=20, units='cm')
 
 
