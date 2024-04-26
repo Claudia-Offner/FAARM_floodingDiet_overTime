@@ -11,11 +11,11 @@ options(warn=-1) # 0 to turn back on
 options(scipen=999)
 
 # Get citations
-options(citation.bibtex.max=999)
-citation('nlme')
-citation('lme4')
-citation('emmeans')
-citation('INLA')
+# options(citation.bibtex.max=999)
+# citation('nlme')
+# citation('lme4')
+# citation('emmeans')
+# citation('INLA')
 
 #### 1. Packages & Functions ####
 
@@ -247,12 +247,12 @@ var <- c('(Intercept) Jan/Feb season',
 # cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
 # cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
 # cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
-# 
-# # Load shape data (as spatial polygon df)
-# bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
-# bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
-# bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
-# bound@data$c_code <- as.numeric(bound@data$c_code)
+
+# Load shape data (as spatial polygon df)
+bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
+bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
+bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
+bound@data$c_code <- as.numeric(bound@data$c_code)
 
 
 # Load FAARM data

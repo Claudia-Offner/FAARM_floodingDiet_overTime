@@ -209,8 +209,8 @@ extract_GLMER <- function(variable, folder) {
   if (folder == 'm_3/'){
     
     interaction <- '~ Flood_1Lag * season_flood * treatment'
-    formula <- as.formula(paste0(variable, interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
+    covar <- " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"
+    formula <- as.formula(paste0(variable, interaction, covar))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -255,8 +255,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_2_seas/'){
     
     interaction <- '~ Flood_1Lag * season_flood'
-    formula <- as.formula(paste0(variable, interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
+    covar <- " + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"
+    formula <- as.formula(paste0(variable, interaction, covar))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -295,8 +295,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_2_treat/'){
     
     interaction <- '~ Flood_1Lag * treatment'
-    formula <- as.formula(paste0(variable, interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
+    covar <- " + season_flood + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"
+    formula <- as.formula(paste0(variable, interaction, covar))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -335,8 +335,8 @@ extract_GLMER <- function(variable, folder) {
   else if (folder == 'm_0/'){
     
     interaction <- '~ Flood_1Lag'
-    formula <- as.formula(paste0(variable, interaction, 
-                                 " + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"))
+    covar <- " + season_flood + treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL + (1 + wcode|season_id) + (1 | c_code)"
+    formula <- as.formula(paste0(variable, interaction, covar))
     glmm_mod <- glmer(
       formula=formula,
       weights = wdiet_wt,
@@ -424,7 +424,7 @@ setwd(paste0(path, 'Model Outputs - Food Groups/'))
 bin_variables <- c("dd10r_othv", "dd10r_othf", "dd10r_dglv",
                    "dd10r_vita", "dd10r_legume", "dd10r_nuts", 
                    "dd10r_dairy", "dd10r_eggs", "dd10r_flesh",
-                   "dd10r_starch","dd10r_min_m") 
+                   "dd10r_min_m", "dd10r_starch") 
 
 # EXTRACT RESULTS
 for (v in bin_variables){
@@ -448,20 +448,20 @@ write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 
 # # Notes: Interaction model with continuous outcome  ####
 # 
-formula <- as.formula("dd10r_score_m ~ Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL")
-
-lme_mod <- lme(
-  fixed = formula,  # Controls
-  random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)),
-  weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-  # correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
-  data = df,
-  na.action = na.omit  # Handle missing data using na.omit
-)
-
-# Get results
-(mod_res <- getLME(lme_mod))
-(anova(lme_mod)) # Check interaction significance
+# formula <- as.formula("dd10r_score_m ~ Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL")
+# 
+# lme_mod <- lme(
+#   fixed = formula,  # Controls
+#   random = list(wcode = pdDiag(~1), c_code = pdDiag(~1), season_id = pdDiag(~1)),
+#   weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
+#   # correlation = corAR1(form = ~ season_id | wcode),  # Adding temporal autocorrelation
+#   data = df,
+#   na.action = na.omit  # Handle missing data using na.omit
+# )
+# 
+# # Get results
+# (mod_res <- getLME(lme_mod))
+# (anova(lme_mod)) # Check interaction significance
 # 
 # ## 3A. Average Marginal Effects (slopes)
 # ## EMTRENDS: Estimates the slope of coefficients, accounting for reference groups.

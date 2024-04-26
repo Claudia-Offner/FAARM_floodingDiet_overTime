@@ -434,6 +434,115 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 # 
 # 
 # 
+# MF: Flooding distribution by cluster
+
+library(tmap)
+library(reshape)
+
+tmap_mode("plot")
+
+# Cast to wide form (not long form) - Flooding
+flood_MEAN <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = mean) #  pooled
+flood_MAX <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = max) #  pooled
+flood_MEAN_season <-cast(df, c_code+treatment~season_DD, mean, value = "perc_flooded_c") # by season
+flood_MAX_season <-cast(df, c_code+treatment~season_DD, max, value = "perc_flooded_c") # by season
+# Set to matrix
+# MTX_flood_MEAN <- data.matrix(flood_MEAN[,3:ncol(flood_MEAN)]) # set to matrix
+# MTX_flood_MAX <- data.matrix(flood_MAX[,3:ncol(flood_MAX)]) # set to matrix
+# MTX_flood_MEAN_season <- as.matrix(flood_MEAN_season[,3:ncol(flood_MEAN_season)]) # set to matrix
+# MTX_flood_MAX_season <- as.matrix(flood_MAX_season[,3:ncol(flood_MAX_season)]) # set to matrix
+# 
+
+install.packages('cartography')
+tmaptools::palette_explorer() # see brewer options
+library(tmaptools)
+blue_palette <- get_brewer_pal("Blues", n = 5, contrast = c(0.0, 1))
+
+cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
+cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
+cluster_shp <- cluster_shp %>% select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M)) %>% rename(c_code = cluster_co)
+cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
+cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
+cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
+cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
+cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
+
+#### Spatial distribution over annual average (FLOOD)
+library(ggmap)
+# NEED GOOGLE API (https://www.appsilon.com/post/r-ggmap)
+## Use at own risk, it is connected to billing address
+ggmap::register_google(key = "AIzaSyCVzPwqMVzz-f374mq0b-6UfsLXmMCFIU8", write = TRUE)
+
+
+basemap <- get_map(getbb(cluster_shp), source="osm", map_type = "topographic")
+ggmap(basemap)
+
+
+
+# set defaults for the basemap
+set_defaults(map_service = "osm", map_type = "topographic")
+
+
+install.packages(c("ggmap", "osmdata", "devtools"))
+library(ggmap)
+library(osmdata) 
+library(devtools)
+
+mad_map <- get_map(getbb("Limete, Kinshasa"), maptype = "terrain", source = "osm")
+ggmap(mad_map)
+
+
+ggmap::register_google()
+
+
+# Get a basemap
+basemap <- get_stamenmap(bbox = c(left = min(cluster_shp$lat),
+                                  bottom = min(cluster_shp$long),
+                                  right = max(cluster_shp$lat),
+                                  top = max(cluster_shp$long)),
+                         zoom = 10, maptype = "toner-lite")
+
+df2 <- merge(cluster_shp, flood_MEAN, by='c_code') 
+
+ggplot() +
+  geom_sf(data = df2, aes(fill = 'perc_flooded_c'))+
+  scale_fill_manual(values = blue_palette) +
+  geom_sf(data = df2, aes(), color = 'red') +
+  labs(title = "Shapefile with Legend") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggplot() +
+  geom_sf(data = df2, aes(fill = variable_with_color)) +
+  scale_fill_manual(values = polygon_fill_color) +
+  geom_sf(data = shapefile, aes(), color = border_color) +
+  labs(title = "Shapefile with Legend") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+(map <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
+    tm_shape(df2) +
+    tm_polygons('perc_flooded_c', title=" % increase in water extent", palette=blue_palette)+ # palette=c("#ff5050")
+    tm_compass(position=c("left","top"))+
+    tm_scale_bar())
+
+(m2 <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
+    tm_shape(df2) +
+    tm_polygons('treatment', title=" % increase in water extent", palette=none, border.col= 'red')+ # palette=c("#ff5050")
+    tm_compass(position=c("left","top"))+
+    tm_scale_bar())
+
+(map_borders <- tm_shape(df2) +
+  tm_borders(col = ifelse(df2$treatment == "treated", "red", "blue")) +  # Use red for treated and blue for untreated
+  tm_layout(frame = FALSE))
+  
+
+(lf <- tmap_leaflet(map))
+
+
+
+
+
 # SF4: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Rel-Diff')
