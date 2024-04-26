@@ -1,11 +1,8 @@
 # EXTRACT VISUALS
 
 #### IMPORTANT - set file path to data folder location
-path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/- Figures/'
+path <- 'C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/- Figures/'
 setwd(path)
-# Suppress warnings & turn off scientific notation
-options(warn=-1) # 0 to turn back on
-options(scipen=999)
 
 # 0. Packages & Functions ######
 # Define functions. Source: https://github.com/jkeirstead/r-slopegraph
@@ -427,120 +424,67 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 # ggplot(df,aes(x=treat2,y=Flood_1Lag_norm))+
 #   geom_boxplot(fill="#ff5050",outlier.color="black")+
 #   labs(x = "Intervention", y = "Flooding (Cluster %)", title = "Central Tendancy of Flooding by Intervention")
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# MF: Flooding distribution by cluster
 
-library(tmap)
+#### MF: Flooding distribution by cluster ####
+
+library(ggmap)
 library(reshape)
+# NEED API's (https://www.appsilon.com/post/r-ggmap)
+ggmap::register_google(key = "AIzaSyCVzPwqMVzz-f374mq0b-6UfsLXmMCFIU8", write = TRUE) # Use at own risk, it is connected to billing address
+ggmap::register_stadiamaps(key="f2f7765b-7259-42c9-a46d-fc1a61dc4375")
 
-tmap_mode("plot")
-
-# Cast to wide form (not long form) - Flooding
+### DATA
+# Clean flood data for visualising
 flood_MEAN <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = mean) #  pooled
 flood_MAX <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = max) #  pooled
 flood_MEAN_season <-cast(df, c_code+treatment~season_DD, mean, value = "perc_flooded_c") # by season
 flood_MAX_season <-cast(df, c_code+treatment~season_DD, max, value = "perc_flooded_c") # by season
-# Set to matrix
-# MTX_flood_MEAN <- data.matrix(flood_MEAN[,3:ncol(flood_MEAN)]) # set to matrix
-# MTX_flood_MAX <- data.matrix(flood_MAX[,3:ncol(flood_MAX)]) # set to matrix
-# MTX_flood_MEAN_season <- as.matrix(flood_MEAN_season[,3:ncol(flood_MEAN_season)]) # set to matrix
-# MTX_flood_MAX_season <- as.matrix(flood_MAX_season[,3:ncol(flood_MAX_season)]) # set to matrix
-# 
 
-install.packages('cartography')
-tmaptools::palette_explorer() # see brewer options
-library(tmaptools)
-blue_palette <- get_brewer_pal("Blues", n = 5, contrast = c(0.0, 1))
-
-cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
-cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
-cluster_shp <- cluster_shp %>% select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M)) %>% rename(c_code = cluster_co)
+# Open spatial data
 cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
 cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
 cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
-cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
-cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
+cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
+cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, OBJECTID_1, Shape_Area, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
 
-#### Spatial distribution over annual average (FLOOD)
-library(ggmap)
-# NEED GOOGLE API (https://www.appsilon.com/post/r-ggmap)
-## Use at own risk, it is connected to billing address
-ggmap::register_google(key = "AIzaSyCVzPwqMVzz-f374mq0b-6UfsLXmMCFIU8", write = TRUE)
+# Get a buffered bounding box for the basemap
+poly_box <- st_as_sfc(st_bbox(cluster_shp))
+buffered_polygon <- st_buffer(poly_box, dist = 1000)  # 1km = 1000 meters
+bbox <- as.list(st_bbox(buffered_polygon))
 
-
-basemap <- get_map(getbb(cluster_shp), source="osm", map_type = "topographic")
-ggmap(basemap)
-
-
-
-# set defaults for the basemap
-set_defaults(map_service = "osm", map_type = "topographic")
+# Merge datasets
+df_spatial <- merge(cluster_shp, flood_MEAN, by='c_code') 
+df_tre <- df_spatial[df_spatial$treatment==1, ]
+df_con <- df_spatial[df_spatial$treatment==0, ]
 
 
-install.packages(c("ggmap", "osmdata", "devtools"))
-library(ggmap)
-library(osmdata) 
-library(devtools)
+### MAP
 
-mad_map <- get_map(getbb("Limete, Kinshasa"), maptype = "terrain", source = "osm")
-ggmap(mad_map)
+# NB: ggmap uses long/lat (NOT lat/long)
+basemap <- get_map(c(left = bbox$xmin, 
+                     bottom = bbox$ymin, 
+                     right = bbox$xmax, 
+                     top = bbox$ymax), 
+                   source="stadia", maptype='stamen_terrain_background') 
 
-
-ggmap::register_google()
-
-
-# Get a basemap
-basemap <- get_stamenmap(bbox = c(left = min(cluster_shp$lat),
-                                  bottom = min(cluster_shp$long),
-                                  right = max(cluster_shp$lat),
-                                  top = max(cluster_shp$long)),
-                         zoom = 10, maptype = "toner-lite")
-
-df2 <- merge(cluster_shp, flood_MEAN, by='c_code') 
-
-ggplot() +
-  geom_sf(data = df2, aes(fill = 'perc_flooded_c'))+
-  scale_fill_manual(values = blue_palette) +
-  geom_sf(data = df2, aes(), color = 'red') +
+ggmap(basemap) +
+  geom_sf(data = df_spatial, aes(fill = perc_flooded_c))+ #color='blue'
+  scale_fill_gradient(low = "lightblue", high = "#132B43", limits = c(0, 0.1)) +
+  geom_sf(data = df_tre, aes(color = 'red'), fill=NA, size=1) + #, linetype = "dashed"
+  # geom_sf(data = df_con, aes(color = 'blue'), fill=NA, size=1) + #, linetype = "dashed"
   labs(title = "Shapefile with Legend") +
   theme_minimal() +
-  theme(legend.position = "bottom")
-
-ggplot() +
-  geom_sf(data = df2, aes(fill = variable_with_color)) +
-  scale_fill_manual(values = polygon_fill_color) +
-  geom_sf(data = shapefile, aes(), color = border_color) +
-  labs(title = "Shapefile with Legend") +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-(map <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
-    tm_shape(df2) +
-    tm_polygons('perc_flooded_c', title=" % increase in water extent", palette=blue_palette)+ # palette=c("#ff5050")
-    tm_compass(position=c("left","top"))+
-    tm_scale_bar())
-
-(m2 <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) + 
-    tm_shape(df2) +
-    tm_polygons('treatment', title=" % increase in water extent", palette=none, border.col= 'red')+ # palette=c("#ff5050")
-    tm_compass(position=c("left","top"))+
-    tm_scale_bar())
-
-(map_borders <- tm_shape(df2) +
-  tm_borders(col = ifelse(df2$treatment == "treated", "red", "blue")) +  # Use red for treated and blue for untreated
-  tm_layout(frame = FALSE))
-  
-
-(lf <- tmap_leaflet(map))
-
-
-
+  theme(legend.position = "bottom") +
+  theme(axis.title.x = element_blank(),  # Remove x-axis title
+        axis.title.y = element_blank(),  # Remove y-axis title
+        axis.text.x = element_blank(),   # Remove x-axis labels
+        axis.text.y = element_blank(),   # Remove y-axis labels
+        axis.line = element_blank(),     # Remove axis lines
+        axis.ticks = element_blank(),    # Remove axis ticks
+        panel.grid = element_blank(),    # Remove grid lines
+        panel.border = element_blank(),  # Remove panel borders
+        panel.background = element_blank() # Remove panel background
+    )
 
 
 # SF4: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####

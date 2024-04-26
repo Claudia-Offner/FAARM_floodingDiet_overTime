@@ -1,35 +1,38 @@
-# FORMAT MAIN DATA FOR PROCESSING
+#### FORMAT MAIN DATA FOR PROCESSING #### 
 
-#### Detatch packages & clear environment/plots
-# lapply(paste('package:',names(sessionInfo()$otherPkgs),sep=""),detach,character.only=TRUE,unload=TRUE)
-# rm(list = ls())
+#### IMPORTANT - set github credentials
+# gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file path to data folder location
-setwd('C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/')
-# Suppress warnings & turn off scientific notation
+setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/')
+
+## Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
 options(scipen=999)
 
-# Get citations
+# 1. Packages & Functions ####
+
+#### OTHER SETTINGS
+#### Detatch packages & clear environment/plots
+# lapply(paste('package:',names(sessionInfo()$otherPkgs),sep=""),detach,character.only=TRUE,unload=TRUE)
+# rm(list = ls())
+## Get citations
 # options(citation.bibtex.max=999)
 # citation('nlme')
-# citation('lme4')
-# citation('emmeans')
-# citation('INLA')
-
-#### 1. Packages & Functions ####
+## Check which packages were used
+# sessionInfo() 
 
 #### Load packages
 # Load packages
 library(openxlsx)
 library(dplyr)
 library(spdep)
-library(rgdal)
 library(nlme) # lme
 library(lme4) # glmer
 library(ggplot2)
-library(margins) # https://www.rdocumentation.org/packages/margins/versions/0.3.26
 library(emmeans) 
+# library(rgdal)
+# library(margins) # https://www.rdocumentation.org/packages/margins/versions/0.3.26.1
 
 # Function to round numeric columns of data frame
 round_df <- function(x, digits) {
@@ -236,7 +239,7 @@ var <- c('(Intercept) Jan/Feb season',
          'Flood Extent : Sep/Oct season : Treatment',
          'Flood Extent : Nov/Dec season : Treatment')
 
-#### 2. Load & Select Data ####
+# 2. Load & Select Data ####
 
 # Load shape data (as spatial vector df)
 # cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
@@ -249,10 +252,10 @@ var <- c('(Intercept) Jan/Feb season',
 # cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
 
 # Load shape data (as spatial polygon df)
-bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
-bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
-bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
-bound@data$c_code <- as.numeric(bound@data$c_code)
+# bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
+# bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
+# bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
+# bound@data$c_code <- as.numeric(bound@data$c_code)
 
 
 # Load FAARM data
@@ -276,7 +279,7 @@ df <- data %>% select(c_code, wcode, year_season, year, season, season_DD, seaso
                       dep_ratio, md_score_BL, wealth_BL, dec_BL, quint_BL,
                       terc_BL, wealth2_BL, dec2_BL, quint2_BL, terc2_BL, hh1hh_mem_EL)
 
-#### 3. Cleaning ####
+# 3. Cleaning ####
 
 # Check outcome distribution over time
 y <- df %>%
@@ -318,7 +321,7 @@ rownames(df) <- NULL
 # Set generic priors
 prec.prior <- list(prec = list(param = c(0.001, 0.001)))
 
-#### 4. Categorical Exposure: Create Average Seasonal Flood Thresholds ####
+# 4. Categorical Exposure: Create Average Seasonal Flood Thresholds ####
 
 # Group by season and calculate the average for each season
 (range(df$Flood_1Lag))
@@ -354,7 +357,7 @@ df %>%
 #     Flood_1Lag <= flood_mean+flood_sd*2 ~ 1, # 2 SD below Mean
 #     Flood_1Lag == flood_mean ~ 0)) # Average
 
-#### 5. Continuous Exposure: Center & Scale Flooding ####
+# 5. Continuous Exposure: Center & Scale Flooding ####
 
 ## Scale flood exposure to improve interpret ability of the model
 ## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
