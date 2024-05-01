@@ -4,6 +4,9 @@
 ## IMPORTANT - set path to data folder location
 path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/Flood_1Lag/'
 
+# !!!! TEST !!!!
+# interaction <- '~ (Flood_1Lag + I(Flood_1Lag^2)) * season_flood * treatment'
+# https://stats.stackexchange.com/questions/287006/interpreting-interactions-in-a-linear-model-vs-quadratic-model
 
 # 0. PACKAGES & FUNCTIONS ####
 

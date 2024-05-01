@@ -98,6 +98,60 @@ tufte_sort <- function(df, x="year", y="value", group="group", method="tufte", m
   
 }
 
+# GG mapper for flood levels, by season and cluster (highlighting trial-arms)
+mapper <- function(basemap, df_spatial, season=NA, legend='yes') {
+  
+  if(is.na(season)) {
+    
+    title <- 'Average flood levels across all time points, by cluster'
+    
+  } else {
+    
+    df_spatial <- df_spatial[, c('c_code', 'lon', 'lat', 'treatment', season), drop = FALSE]
+    colnames(df_spatial)[colnames(df_spatial) == season] <- "perc_flooded_c"
+    title <- season    
+    
+  }
+  
+  (ggmap <- ggmap(basemap) + 
+      # Add geometry
+      geom_sf(data = df_spatial, aes(fill=perc_flooded_c, color=treatment, linetype=treatment), size=0.5) +
+      # Set fill, color & line types
+      scale_fill_gradientn(name = 'Increased flood coverage', 
+                           colours = c("#ffffff", "#49C1ADFF", "#357BA2FF", "#3E356BFF", "#0B0405FF"), #rev(mako(5)) - library(viridis)
+                           limits = c(0, 0.35),  # Set limits for the legend
+                           breaks = c(0, 0.04, 0.15, 0.25, 0.35),  # Specify breaks
+                           labels = c("0%", "5%", "15%", "25%", "35%")) +  # Custom labels
+      scale_linetype_manual(name='Trial-arm', values=c('dashed', 'solid'), ) +
+      scale_color_manual(name='Trial-arm', values=c('black', 'red'), limits=c('Control', 'HFP')) +
+      # Set legend 
+      labs(title=title,  color = "", shape="", linetype="") +  
+      guides(fill=guide_legend(order=1)) + 
+      # Set axes
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5),  # center title
+            legend.position = "right",       # position legend
+            axis.title.x = element_blank(),  # Remove x-axis title
+            axis.title.y = element_blank(),  # Remove y-axis title
+            axis.text.x = element_blank(),   # Remove x-axis labels
+            axis.text.y = element_blank(),   # Remove y-axis labels
+            axis.line = element_blank(),     # Remove axis lines
+            axis.ticks = element_blank(),    # Remove axis ticks
+            panel.grid = element_blank(),    # Remove grid lines
+            panel.border = element_blank(),  # Remove panel borders
+            panel.background = element_blank() # Remove panel background
+      ))
+  
+  if(legend=='no'){
+    
+    ggmap <- ggmap + theme(legend.position = "none")
+    
+  } 
+  
+  return(ggmap)
+  
+}
+
 # GG plotter for SF (rel diff flood all groups)
 Rel_flood_Treat <- function(df, d, m, legend='Yes', x_axes='Yes', custom_colors, custom_shapes){
   
@@ -430,61 +484,53 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 library(ggmap)
 library(reshape)
 # NEED API's (https://www.appsilon.com/post/r-ggmap)
-ggmap::register_google(key = "AIzaSyCVzPwqMVzz-f374mq0b-6UfsLXmMCFIU8", write = TRUE) # Use at own risk, it is connected to billing address
+# ggmap::register_google(key = "AIzaSyCVzPwqMVzz-f374mq0b-6UfsLXmMCFIU8", write = TRUE) # Use at own risk, it is connected to billing address
 ggmap::register_stadiamaps(key="f2f7765b-7259-42c9-a46d-fc1a61dc4375")
 
-### DATA
-# Clean flood data for visualising
-flood_MEAN <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = mean) #  pooled
-flood_MAX <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = max) #  pooled
-flood_MEAN_season <-cast(df, c_code+treatment~season_DD, mean, value = "perc_flooded_c") # by season
-flood_MAX_season <-cast(df, c_code+treatment~season_DD, max, value = "perc_flooded_c") # by season
 
-# Open spatial data
-cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
-cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
-cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
-cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
-cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, OBJECTID_1, Shape_Area, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
+### DATA
+
+# Clean flood data for visualizing
+df[df$season_DD == "Sept/Oct", "season_DD"] <- "Sep/Oct"
+df[df$treatment == 0, "treatment"] <- 'Control'
+df[df$treatment == 1, "treatment"] <- 'HFP'
+flood_ALL <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = mean) #  pooled
+flood_SEASON <-cast(df, c_code+treatment~season_DD, mean, value = "perc_flooded_c") # by season
+# Merge datasets
+sdf_all <- merge(cluster_shp, flood_ALL, by='c_code') 
+sdf_season <- merge(cluster_shp, flood_SEASON, by='c_code') 
+# NB: Fiddle with the mapper flood limits based on min, max, etc.
+summary(sdf_season)
 
 # Get a buffered bounding box for the basemap
 poly_box <- st_as_sfc(st_bbox(cluster_shp))
 buffered_polygon <- st_buffer(poly_box, dist = 1000)  # 1km = 1000 meters
 bbox <- as.list(st_bbox(buffered_polygon))
-
-# Merge datasets
-df_spatial <- merge(cluster_shp, flood_MEAN, by='c_code') 
-df_tre <- df_spatial[df_spatial$treatment==1, ]
-df_con <- df_spatial[df_spatial$treatment==0, ]
-
-
-### MAP
-
 # NB: ggmap uses long/lat (NOT lat/long)
 basemap <- get_map(c(left = bbox$xmin, 
                      bottom = bbox$ymin, 
                      right = bbox$xmax, 
                      top = bbox$ymax), 
-                   source="stadia", maptype='stamen_terrain_background') 
+                   source="stadia", maptype='stamen_terrain') #_background
 
-ggmap(basemap) +
-  geom_sf(data = df_spatial, aes(fill = perc_flooded_c))+ #color='blue'
-  scale_fill_gradient(low = "lightblue", high = "#132B43", limits = c(0, 0.1)) +
-  geom_sf(data = df_tre, aes(color = 'red'), fill=NA, size=1) + #, linetype = "dashed"
-  # geom_sf(data = df_con, aes(color = 'blue'), fill=NA, size=1) + #, linetype = "dashed"
-  labs(title = "Shapefile with Legend") +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  theme(axis.title.x = element_blank(),  # Remove x-axis title
-        axis.title.y = element_blank(),  # Remove y-axis title
-        axis.text.x = element_blank(),   # Remove x-axis labels
-        axis.text.y = element_blank(),   # Remove y-axis labels
-        axis.line = element_blank(),     # Remove axis lines
-        axis.ticks = element_blank(),    # Remove axis ticks
-        panel.grid = element_blank(),    # Remove grid lines
-        panel.border = element_blank(),  # Remove panel borders
-        panel.background = element_blank() # Remove panel background
-    )
+### MAP
+
+(m0 <- mapper(basemap, sdf_all, season=NA, legend='yes'))
+
+ggsave(paste0('MF_ClusDesc - Flood-Season/Overall_mf.png'), 
+       m0, width=15, height=20, units='cm')
+
+for (s in seasons) {
+  
+  (m1 <- mapper(basemap, sdf_season, season=s, legend='no'))
+  
+  # Export image
+  ggsave(paste0('MF_ClusDesc - Flood-Season/', str_replace(s, "/", "-"), "_mf.png"), 
+         m1, width=15, height=20, units='cm')
+  
+  
+}
+
 
 
 # SF4: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####

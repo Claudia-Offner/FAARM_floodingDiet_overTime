@@ -242,21 +242,11 @@ var <- c('(Intercept) Jan/Feb season',
 # 2. Load & Select Data ####
 
 # Load shape data (as spatial vector df)
-# cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
-# cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
-# cluster_shp <- cluster_shp %>% select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M)) %>% rename(c_code = cluster_co)
-# cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
-# cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
-# cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
-# cluster_shp[c('lat', 'long')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
-# cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
-
-# Load shape data (as spatial polygon df)
-# bound <- readOGR(dsn="FAARM/96_Cluster_final.shp")
-# bound <- spTransform(bound, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
-# bound@data <- bound@data %>% dplyr::select(c(cluster_co)) %>% dplyr::rename(c_code = cluster_co)
-# bound@data$c_code <- as.numeric(bound@data$c_code)
-
+cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
+cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
+cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
+cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
+cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, OBJECTID_1, Shape_Area, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
 
 # Load FAARM data
 data <- read.csv(file='3_FloodMetrics.csv', fileEncoding='UTF-8-BOM')
