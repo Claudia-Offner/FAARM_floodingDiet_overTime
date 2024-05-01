@@ -4,7 +4,7 @@
 # gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file path to data folder location
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/')
+setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/2. Data/')
 
 ## Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
@@ -242,7 +242,7 @@ var <- c('(Intercept) Jan/Feb season',
 # 2. Load & Select Data ####
 
 # Load shape data (as spatial vector df)
-cluster_shp <- st_read(dsn="FAARM/96_Cluster_final.shp")
+cluster_shp <- st_read(dsn="96_Cluster_final.shp")
 cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
 cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
 cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
