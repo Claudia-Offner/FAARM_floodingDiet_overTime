@@ -1,9 +1,11 @@
+################################################################################
 #### FORMAT MAIN DATA FOR PROCESSING #### 
+################################################################################
 
 #### IMPORTANT - set github credentials
 # gitcreds::gitcreds_set()
 
-#### IMPORTANT - set file path to data folder location
+#### IMPORTANT - set file paths to folder locations
 setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/2. Data/')
 
 ## Suppress warnings & turn off scientific notation
