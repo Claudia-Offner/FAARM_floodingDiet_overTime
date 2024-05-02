@@ -367,12 +367,10 @@ df$Flood_1Lag_norm <- df$Flood_1Lag
 mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
 df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
 
-# # Scale flood levels (reference the "real" values here)
-# levels <- c((0 - mean_value)/0.01,
-#             (0.01 - mean_value)/0.01,
-#             (0.05 - mean_value)/0.01,
-#             (0.1 - mean_value)/0.01,
-#             (0.2 - mean_value)/0.01)
-# # Back calculation
-# round(( 0.0278 * 0.01) + mean_value, 5)
+# Identify levels for predictor (based on center & scale)
+levels <- c((0 - mean_value)/0.01,
+            (0.01 - mean_value)/0.01, 
+            (0.05 - mean_value)/0.01,
+            (0.1 - mean_value)/0.01,
+            (0.2 - mean_value)/0.01)
 
