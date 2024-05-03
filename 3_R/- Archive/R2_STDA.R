@@ -239,7 +239,6 @@ adf.test(colMeans(exp_matrix_ys))
 adf.test(diff(colMeans(exp_matrix_ys), lag=6))
 
 # Check Temporal Dependency
-
 bacf <- acf(timeMean, lag.max=50, plot = FALSE)
 bacfdf <- with(bacf, data.frame(lag, acf))
 ggplot(data = bacfdf, mapping = aes(x = lag, y = acf)) +

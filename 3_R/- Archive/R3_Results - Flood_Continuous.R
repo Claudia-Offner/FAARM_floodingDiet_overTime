@@ -20,13 +20,6 @@ path <- 'C:/Users/ClaudiaOffner/OneDrive - London School of Hygiene and Tropical
 # Store times taken to run all models for each variable
 times <- data.frame(Variable = character(0), Time = numeric(0))
 
-# Identify levels for predictor (based on center & scale)
-levels <- c((0 - mean_value)/0.01,
-            (0.01 - mean_value)/0.01, 
-            (0.05 - mean_value)/0.01,
-            (0.1 - mean_value)/0.01,
-            (0.2 - mean_value)/0.01)
-
 # Folder locations for each model run
 models <- c('m_3/', 'm_2_seas/', 'm_2_treat/', 'm_0/')
 
