@@ -42,7 +42,7 @@ round_df <- function(x, digits) {
   # x: data frame
   # digits: number of digits to round
   numeric_columns <- sapply(x, mode) == 'numeric'
-  x[numeric_columns] <-  round(x[numeric_columns], digits)
+  x[numeric_columns] <- round(x[numeric_columns], digits)
   x
 }
 
@@ -85,7 +85,7 @@ getGLMM <- function(glmm_model, var=0, rep=0) {
   
   # Plot
   glmm_res$index <- 1:nrow(glmm_res) # set indeglmm_res
-  names(glmm_res) <- c("Variables","Mean","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  names(glmm_res) <- c("Variables","Estimate","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
   
   # Set significance col (for plotting)
   glmm_res$P_Value <- as.numeric(glmm_res$P_Value)
@@ -101,10 +101,10 @@ getGLMM <- function(glmm_model, var=0, rep=0) {
   # Set representation of results
   if (rep=='OR'){
     # Convert to ORs
-    glmm_res <- getORs(glmm_res, c('Mean', 'Lower_CI','Upper_CI'))
+    glmm_res <- getORs(glmm_res, c('Estimate', 'Lower_CI','Upper_CI'))
     return(round_df(glmm_res, 5))
   } else if (rep=='PROBS') {
-    glmm_res <- getPROBS(glmm_res, c('Mean', 'Lower_CI','Upper_CI'))
+    glmm_res <- getPROBS(glmm_res, c('Estimate', 'Lower_CI','Upper_CI'))
     return(round_df(glmm_res, 5))
   } else {
     return(round_df(glmm_res, 5))
@@ -132,7 +132,7 @@ getLME <- function(lme_model, var=0){
   
   # Plot
   lme_res$index <- 1:nrow(lme_res) # set index
-  names(lme_res) <- c("Variables","Mean","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  names(lme_res) <- c("Variables","Estimate","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
   
   # Set significance col (for plotting)
   lme_res$P_Value <- as.numeric(lme_res$P_Value)
@@ -155,11 +155,11 @@ getLME <- function(lme_model, var=0){
 formatRES <- function(df) {
   for (c in names(df)) {
     
-    mean <- c('estimate', '1.trend', 'emmean', 'prob')
+    est <- c('estimate', '1.trend', 'emmean', 'prob')
     lci <- c('asymp.LCL', 'lower.CL')
     uci <- c('asymp.UCL', 'upper.CL')
-    if (c %in% mean) {
-      colnames(df)[colnames(df) %in% mean] <- "Mean"
+    if (c %in% est) {
+      colnames(df)[colnames(df) %in% est] <- "Estimate"
     } 
     if (c %in% lci) {
       colnames(df)[colnames(df) %in% lci] <- "Lower_CI"
@@ -178,7 +178,7 @@ formatRES <- function(df) {
   # Plot
   df$Index <- 1:nrow(df) # set index
   df$Variables <- apply(df[, 1:3], 1, paste, collapse = ":") # set variables
-  df <- df[, c("Variables", "Mean", "SD", "Lower_CI", "Upper_CI", "P_Value", "Index")]
+  df <- df[, c("Variables", "Estimate", "SD", "Lower_CI", "Upper_CI", "P_Value", "Index")]
   
   # Set significance col (for plotting)
   df$P_Value <- as.numeric(df$P_Value)
@@ -203,9 +203,9 @@ plotResults <- function(res1, x=0, name=0) {
   cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
   
   # Plot Results
-  ggplot(data=res, aes(y=Index, x=Mean, xmin=Lower_CI, xmax=Upper_CI)) +
+  ggplot(data=res, aes(y=Index, x=Estimate, xmin=Lower_CI, xmax=Upper_CI)) +
     geom_point() +
-    geom_text(aes(label = Mean, colour = Importance),
+    geom_text(aes(label = Estimate, colour = Importance),
               size = 3.5, nudge_x = 1.5, nudge_y = 0, check_overlap = FALSE) +
     scale_colour_manual(values = cols) +
     theme(legend.position = "bottom") +
