@@ -294,24 +294,18 @@ for (i in ys_elim) {
   df<-df[!(df$year_season==i),]
 }
 
-# # Merge to get OBJCTID_1 for spatial effects
-# df <- as.data.frame(dplyr::left_join(df, cluster_shp, by = c('c_code')))
-# # Create numeric year-season_DD id for temporal effects
+# Create numeric year-season_DD id for temporal effects
 df$season_id <- as.numeric(factor(df$year_season))
 
-# # Get spatial weight matrices
-# adj.mat <- poly2nb(cluster_shp)
-# W.adj.mat <- nb2mat(adj.mat, style = "B", zero.policy=T)
-
 # Re-factor Season codes so Mar/Apr is used as the reference level (dry season)
-df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sept/Oct", "Nov/Dec"))
+df$season_flood[df$season_flood == "Sept/Oct"] <- "Sep/Oct"
+df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sep/Oct", "Nov/Dec"))
 # levels(df$season_DD) # Check levels
 
 # Reset index
 rownames(df) <- NULL
 
-# Set generic priors
-prec.prior <- list(prec = list(param = c(0.001, 0.001)))
+
 
 # 4. Categorical Exposure: Create Average Seasonal Flood Thresholds ####
 
@@ -332,45 +326,45 @@ df <- df %>%
 # Add a new variable indicating above, below, or at the seasonal average
 df <- df %>%
   mutate(Flood_SThresh = case_when(
-    Flood_1Lag >= (flood_mean+(flood_sd*2)) ~ 4, # Greater than 2 SD Above Mean
-    (Flood_1Lag > flood_mean+flood_sd*1) & Flood_1Lag <= (flood_mean+flood_sd*2) ~ 3, # Within 2 SD Above Mean
-    (Flood_1Lag > flood_mean) & Flood_1Lag <= (flood_mean+flood_sd*1) ~ 2, # Within 1 SD Above Mean
-    (Flood_1Lag > 0) & (Flood_1Lag <= flood_mean) ~ 1, # Below average
-    Flood_1Lag == 0 ~ 0)) # No difference
-# levels <- c('No difference', 'Below average', '1 SD above mean', '2 SD above mean', '> 2 SD above mean')
+    Flood_1Lag >= (flood_mean+(flood_sd*2)) ~ 3, # Greater than 2 SD Above Mean
+    (Flood_1Lag > flood_mean+flood_sd*1) & Flood_1Lag <= (flood_mean+flood_sd*2) ~ 2, # Within 2 SD Above Mean
+    (Flood_1Lag > flood_mean) & Flood_1Lag <= (flood_mean+flood_sd*1) ~ 1, # Within 1 SD Above Mean
+    (Flood_1Lag <= flood_mean) ~ 0)) # Below average
+    # Flood_1Lag == 0 ~ 0)) # No difference
+
+# Check counts
+df %>% count(Flood_SThresh)
+
+# Set levels
+levels <- c(0, 1, 2, 3)
+
+df$Flood_1Lag <- df$Flood_SThresh
+
+# levels <- c('No difference', '1 SD above mean', '2 SD above mean', '> 2 SD above mean')
 # df$Flood_SThresh <- factor(df$Flood_SThresh, levels=levels)
 
-# Check
-df %>%
-  count(Flood_SThresh)
-# df <- df %>%
-#   mutate(Flood_SThresh = case_when(
-#     Flood_1Lag >= flood_mean+flood_sd*2 ~ 2, # 2 SD above Mean
-#     Flood_1Lag <= flood_mean+flood_sd*2 ~ 1, # 2 SD below Mean
-#     Flood_1Lag == flood_mean ~ 0)) # Average
-
-# 5. Continuous Exposure: Center & Scale Flooding ####
-
-## Scale flood exposure to improve interpret ability of the model
-## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
-## https://towardsai.net/p/data-science/how-when-and-why-should-you-normalize-standardize-rescale-your-data-3f083def38ff
-
-## NB: The variable needs to be centered because polynomial interactions
-##     introduce multi-colinearity that need to minimized.
-##     The flood variable is not normal and also needs to be scale so that we
-##     interpret results by 1% increases, instead of 100% increases.
-##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can
-##     interpret our model as 1% increases.
-
-df$Flood_1Lag_norm <- df$Flood_1Lag
-# Center and scale the variable
-mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
-df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
-
-# Identify levels for predictor (based on center & scale)
-levels <- c((0 - mean_value)/0.01,
-            (0.01 - mean_value)/0.01, 
-            (0.05 - mean_value)/0.01,
-            (0.1 - mean_value)/0.01,
-            (0.2 - mean_value)/0.01)
-
+# # 5. Continuous Exposure: Center & Scale Flooding ####
+# 
+# ## Scale flood exposure to improve interpret ability of the model
+# ## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
+# ## https://towardsai.net/p/data-science/how-when-and-why-should-you-normalize-standardize-rescale-your-data-3f083def38ff
+# 
+# ## NB: The variable needs to be centered because polynomial interactions
+# ##     introduce multi-colinearity that need to minimized.
+# ##     The flood variable is not normal and also needs to be scale so that we
+# ##     interpret results by 1% increases, instead of 100% increases.
+# ##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can
+# ##     interpret our model as 1% increases.
+# 
+# df$Flood_1Lag_norm <- df$Flood_1Lag
+# # Center and scale the variable
+# mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
+# df$Flood_1Lag  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
+# 
+# # Identify levels for predictor (based on center & scale)
+# levels <- c((0 - mean_value)/0.01,
+#             (0.01 - mean_value)/0.01, 
+#             (0.05 - mean_value)/0.01,
+#             (0.1 - mean_value)/0.01,
+#             (0.2 - mean_value)/0.01)
+# 
