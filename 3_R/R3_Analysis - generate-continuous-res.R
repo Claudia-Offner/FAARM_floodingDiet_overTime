@@ -6,7 +6,7 @@
 # gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/- Results')
+setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/I. Results')
 
 #### IMPORTANT - Run R0_Data_formatting first
 
@@ -29,7 +29,7 @@ get_results <- function(model, outcome, dtype, interaction) {
     print(plotResults(mod_res))
     
   } else if (dtype=='bin'){
-    (mod_res <- getGLMM(model, 0, 'OR'))
+    (mod_res <- getGLMM(model, 0, 'PROBS'))
     # Extract as probabilities (i.e. trans = "response")
     ame1 <- emtrends(model, as.formula(paste0('pairwise ', interaction)), at=list(Flood_1Lag = levels[2]), var = 1, trans='response')$emtrends
     emm_1 <- emmeans(model, as.formula(interaction), at=list(Flood_1Lag = levels[2]), trans = "response") # 1% increase
@@ -161,7 +161,6 @@ run_model <- function(outcome, type) {
 
 
 # GENERATE RESULTS FOR ALL OUTCOMES
-
 
 for (c in outcomes_cont){
   
