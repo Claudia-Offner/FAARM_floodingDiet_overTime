@@ -653,9 +653,9 @@ table1 <- rbind(rel_diff_fig('dd10r_score_m', 'WDDS', 'cont'),
                rel_diff_fig('dd10r_nuts', 'Nuts/seeds', 'bin'))
 
 # Create R_Abs-Flood-Levels
-folder <- '/Flood_1Lag-season_flood/'
-table2 <- rbind(abs_val_fig('dd10r_score_m', 'WDDS', 'cont', f), 
-               abs_val_fig('dd10r_min_m', 'MDD', 'bin', f),
+f <- '/Flood_1Lag-season_flood/'
+table2 <- rbind(abs_val_fig('dd10r_score_m', "Dietary diversity scores*", 'cont', f), 
+               abs_val_fig('dd10r_min_m', "Minimum dietary diversity", 'bin', f),
                abs_val_fig('dd10r_flesh', 'Flesh foods', 'bin', f),
                abs_val_fig('dd10r_dairy', 'Dairy', 'bin', f),
                abs_val_fig('dd10r_eggs', 'Eggs', 'bin', f),

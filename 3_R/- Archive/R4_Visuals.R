@@ -1,8 +1,7 @@
 # EXTRACT VISUALS
 
 #### IMPORTANT - set file path to data folder location
-path <- 'C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/- Figures/'
-setwd(path)
+setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/- DD-Flooding Interaction - CO/4. Data/REPORTING/- Figures')
 
 # 0. Packages & Functions ######
 # Define functions. Source: https://github.com/jkeirstead/r-slopegraph
@@ -47,7 +46,6 @@ get_legend <- function(myggplot){
   return(legend)
 }
 
-# Tufte formater for mf3 & mf4
 tufte_sort <- function(df, x="year", y="value", group="group", method="tufte", min.space=0.05, max.space=0.1) {
   ## First rename the columns for consistency
   ids <- match(c(x, y, group), names(df))
@@ -152,100 +150,47 @@ mapper <- function(basemap, df_spatial, season=NA, legend='yes') {
   
 }
 
-# GG plotter for SF (rel diff flood all groups)
-Rel_flood_Treat <- function(df, d, m, legend='Yes', x_axes='Yes', custom_colors, custom_shapes){
+
+# Define functions. Source: https://github.com/jkeirstead/r-slopegraph
+tufte_sort <- function(df, x="year", y="value", group="group", method="tufte", min.space=0.05) {
+  ## First rename the columns for consistency
+  ids <- match(c(x, y, group), names(df))
+  df <- df[,ids]
+  names(df) <- c("x", "y", "group")
   
-  # Select & format data
-  source_f0 <- df
-  source_f1 <- source_f0 %>% filter(Outcome == d) %>%
-    mutate(Seas = factor(Seas, levels = c('Overall', 'Jan/Feb', 'Mar/Apr', 'May/Jun', 'Jul/Aug', 'Sep/Oct', 'Nov/Dec')),
-           Treat = factor(Treat, levels = c('Overall', 'Control', 'HFP'))) %>%
-    arrange(Model, Seas, Treat)
-  source_f1$Index <- 1:nrow(source_f1)
-  source_f1$Index <- source_f1$Index[rev(1:length(source_f1$Index))]
+  ## Expand grid to ensure every combination has a defined value
+  tmp <- expand.grid(x=unique(df$x), group=unique(df$group))
+  tmp <- merge(df, tmp, all.y=TRUE)
+  df <- mutate(tmp, y=ifelse(is.na(y), 0, y))
   
-  # Split up models & formatting as needed
-  if (m=="All"){
-    f1 <- source_f1
-    hz_line <- 1
-    y_lim <- c(0.5, 21.5)
-    
-  } else if (m=="F4") {
-    f1 <- source_f1 %>% filter(Model == m) 
-    hz_line <- 2
-    y_lim <- c(0.5,12.5)
-    
-  } else if(m=="F3"){
-    f1 <- source_f1 %>% filter(Model == m) 
-    hz_line <- 1
-    y_lim <- c(0.5, 6.5)
-    
-  } else if(m=="F2"){
-    f1 <- source_f1 %>% filter(Model == m) 
-    hz_line <- 1
-    y_lim <- c(0.5, 2.5)
-    
-  } else if(m=='F1') {
-    f1 <- source_f1 %>% filter(Model == m) 
-    hz_line <- 1
-    y_lim <- c(0.5, 1.5)
-  } 
+  ## Cast into a matrix shape and arrange by first column
+  require(reshape2)
+  tmp <- dcast(df, group ~ x, value.var="y")
+  ord <- order(tmp[,2])
+  tmp <- tmp[ord,]
   
-  # Conditional names for x-axes
-  if(d=='WDDS') {
-    x_ax <- 'Changes in mean'
-    x_lim <- c(-0.35, .35)
-    x_breaks <- seq(-0.35, 0.35, 0.1)
-  } else {
-    x_ax <- 'Changes in probability'
-    x_lim <- c(-0.20, 0.20)
-    x_breaks <- seq(-0.20, 0.20, 0.05)
-  }
-  
-  # Initial Plot
-  (gg <- 
-      f1 |>
-      # Make plot
-      ggplot(aes(y = rev(1:nrow(f1)))) + 
-      theme_classic() +
-      # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
-      geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
-      # Add vertical & horizontal lines
-      geom_vline(xintercept = 0, linetype="dashed") +
-      geom_hline(yintercept = seq(0.5, length(f1$Index), by = hz_line), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
-      # Add labels & set color
-      labs(x=x_ax, y=unique(f1$Model), color="Season", shape="Trial-arm") + 
-      scale_x_continuous(breaks=x_breaks) +
-      scale_color_manual(values = custom_colors) +
-      scale_shape_manual(values = custom_shapes) +
-      # Format
-      coord_cartesian(ylim=y_lim, xlim=x_lim, expand=FALSE) + # Zoom out
-      guides(shape = guide_legend(order = 1), color = guide_legend(order = 2)) + # Legend order
-      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
-      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
-      theme(plot.title = element_text(hjust = 0.5), # Center title
-            axis.text.y = element_blank(),
-            axis.ticks.y= element_blank(),
-            legend.position="right")) 
-  
-  # Conditional Plot
-  if (legend=='No'){
-    (gg <- gg +
-       theme(legend.position="none"))
-  }
-  if (x_axes == 'No'){
-    (gg <- gg +
-       # Update labels
-       labs(x="", y=unique(f1$Model)) + 
-       scale_y_continuous(breaks=1:nrow(f1), labels=rev(f1$Group)) +
-       # Update format
-       theme(axis.ticks.x=element_blank(),
-             axis.text.x= element_blank()))
+  min.space <- min.space*diff(range(tmp[,-1]))
+  yshift <- numeric(nrow(tmp))
+  ## Start at "bottom" row
+  ## Repeat for rest of the rows until you hit the top
+  for (i in 2:nrow(tmp)) {
+    ## Shift subsequent row up by equal space so gap between
+    ## two entries is >= minimum
+    mat <- as.matrix(tmp[(i-1):i, -1])
+    d.min <- min(diff(mat))
+    yshift[i] <- ifelse(d.min < min.space, min.space - d.min, 0)
   }
   
   
-  return(gg)
+  tmp <- cbind(tmp, yshift=cumsum(yshift))
+  
+  scale <- 1
+  tmp <- melt(tmp, id=c("group", "yshift"), variable.name="x", value.name="y")
+  ## Store these gaps in a separate variable so that they can be scaled ypos = a*yshift + y
+  
+  tmp <- transform(tmp, ypos=y + scale*yshift)
+  return(tmp)
+  
 }
 
 # GG plotter for MF (abs diff flood levels)
@@ -257,7 +202,7 @@ Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgree
     # FOOD GROUP PLOT
     source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Minimum dietary diversity", "Dietary diversity scores*")))
     # Prepare data
-    f1 <- tufte_sort(source_f1, x="increase", y="value", group="group", method="tufte", min.space=0.05, max.space=1)
+    f1 <- tufte_sort(source_f1, x="increase", y="value", group="group", method="tufte", min.space=0.05)
     f1 <- transform(f1, x=factor(x, levels=c(0, 1, 5), labels=c("0%","1%","5%")), y=round(y, 2))
     # Add sig back in
     source_f1 <- source_f1[order(source_f1$group, source_f1$increase), ]
@@ -439,46 +384,6 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 }
 
 
-# # SF3: Box plots ####
-# 
-# hist(df$dd10r_score_m, col="#ff5050", )
-# hist(df$Flood_1Lag_norm, col="#6699FF", )
-# 
-# # Overall 
-# mean(df$Flood_1Lag_norm)
-# sd(df$Flood_1Lag_norm)
-# (range(df$Flood_1Lag_norm))
-# 
-# # Season & Year
-# (season_means <- df %>% group_by(season_flood) 
-#   %>% summarize(
-#     flood_mean = mean(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_min = min(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_max = max(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_sd = sd(Flood_1Lag_norm, na.rm = TRUE)))
-# (year_means <- df %>% group_by(year) 
-#   %>% summarize(
-#     flood_mean = mean(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_min = min(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_max = max(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_sd = sd(Flood_1Lag_norm, na.rm = TRUE)))
-# (treat_means <- df %>% group_by(treatment) 
-#   %>% summarize(
-#     flood_mean = mean(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_min = min(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_max = max(Flood_1Lag_norm, na.rm = TRUE),
-#     flood_sd = sd(Flood_1Lag_norm, na.rm = TRUE)))
-# 
-# # Box plots by group
-# ggplot(df,aes(x=season_flood,y=Flood_1Lag_norm))+
-#   geom_boxplot(fill="#6699FF",outlier.color="black")+
-#   labs(x = "Season", y = "Flooding (Cluster %)", title = "Central Tendancy of Flooding by Season")
-# 
-# df$treat2 <- ifelse(df$treatment == 0, "Control", "HFP")
-# ggplot(df,aes(x=treat2,y=Flood_1Lag_norm))+
-#   geom_boxplot(fill="#ff5050",outlier.color="black")+
-#   labs(x = "Intervention", y = "Flooding (Cluster %)", title = "Central Tendancy of Flooding by Intervention")
-
 #### MF: Flooding distribution by cluster ####
 
 library(ggmap)
@@ -491,7 +396,6 @@ ggmap::register_stadiamaps(key="f2f7765b-7259-42c9-a46d-fc1a61dc4375")
 ### DATA
 
 # Clean flood data for visualizing
-df[df$season_DD == "Sept/Oct", "season_DD"] <- "Sep/Oct"
 df[df$treatment == 0, "treatment"] <- 'Control'
 df[df$treatment == 1, "treatment"] <- 'HFP'
 flood_ALL <- aggregate(perc_flooded_c ~ c_code+treatment, data = df, FUN = mean) #  pooled
@@ -535,8 +439,9 @@ for (s in seasons) {
 
 # SF4: Relative differences in probability of different strata of season & trial-arms for each DD outcome (1% flood) ####
 
-source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R_Rel-Diff')
+source_f0 <- read.xlsx(file='III. Figures/Visuals.xlsx', sheetName = 'R_Rel_Diff')
 dd_outcomes <- unique(source_f0$Outcome)
+d <- 'MDD'
 
 for(d in dd_outcomes) {
   
@@ -583,6 +488,7 @@ for(d in dd_outcomes) {
 
 source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName='R_Abs-Flood_Levels')
 
+s <- 'Jan/Feb'
 
 for(s in seasons) {
   
@@ -609,7 +515,7 @@ for(s in seasons) {
 
 # SF5: Contrasting absolute differences in flood impact on DD outcomes between trial-arms for different levels of flooding across seasons #######
 
-source_f0 <- read.xlsx(file='Visuals.xlsx', sheetName = 'R-Abs-Flood-Treat_Levels')
+source_f0 <- read.xlsx(file='III. Figures/Visuals.xlsx', sheetName = 'R_Abs_Flood_Treat_Levels')
 
 for(s in seasons) {
   

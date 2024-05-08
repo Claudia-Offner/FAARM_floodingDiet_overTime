@@ -299,6 +299,7 @@ df$season_id <- as.numeric(factor(df$year_season))
 
 # Re-factor Season codes so Mar/Apr is used as the reference level (dry season)
 df$season_flood[df$season_flood == "Sept/Oct"] <- "Sep/Oct"
+df$season_DD[df$season_DD == "Sept/Oct"] <- "Sep/Oct"
 df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sep/Oct", "Nov/Dec"))
 # levels(df$season_DD) # Check levels
 
