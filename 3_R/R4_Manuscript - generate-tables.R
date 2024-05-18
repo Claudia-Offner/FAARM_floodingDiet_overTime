@@ -8,14 +8,22 @@
 #### IMPORTANT - set file paths to folder locations
 setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/')
 
-
 #### IMPORTANT - Run R0_Data_formatting first
 
-# Load functions, packages & variables ####
+# PACKAGES ####
 
-library(zoo)
-library(tidyr)
-library(reshape2)
+# Required packages & library
+packages <- c('openxlsx', 'zoo', 'cli', 'tidyr', 'dplyr', 'reshape2')
+library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+
+#### Load packages from library
+(.libPaths(library)) # Set library directory
+for (p in packages){
+  library(p, character.only = TRUE, lib.loc = library)
+}
+
+
+# FUNCTIONS ####
 
 outcomes_cont <- "dd10r_score_m"
 outcomes_bin <- c("dd10r_min_m", "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
@@ -250,13 +258,13 @@ abs_diff_table <- function(outcome, dtype){
   }
   
   f <- '/Flood_1Lag-season_flood-treatment/'
-  (Int_3 <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, l_ci, u_ci, p_vl)))
+  (Int_3 <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci, p_vl)))
   f <- '/Flood_1Lag-season_flood/'
-  (Int_2_s <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, l_ci, u_ci, p_vl)))
+  (Int_2_s <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci,  p_vl)))
   f <- '/Flood_1Lag-treatment/'
-  (Int_2_t <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, l_ci, u_ci, p_vl)))
+  (Int_2_t <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci,  p_vl)))
   f <- '/Flood_1Lag/'
-  (Int_0 <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, l_ci, u_ci, p_vl)))
+  (Int_0 <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci,  p_vl)))
   
   # COMBINE ALL MEANS & TESTS
   (top <- cbind(Int_0, Int_2_t))
@@ -336,7 +344,13 @@ rel_diff_fig <- function(outcome, name, dtype){
 }
 
 # Function to get all absolute value outputs for figure creations
-abs_val_fig <- function (outcome, name, dtype, folder) {
+abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
+  
+  # outcome <- 'dd10r_score_m'
+  # name <- 'WDDS'
+  # dtype <- 'cont'
+  # folder <- f
+  # p_vl <- 'p.value' 
   
   if (dtype=='cont'){
     
@@ -351,12 +365,11 @@ abs_val_fig <- function (outcome, name, dtype, folder) {
     l_ci <- 'asymp.LCL'
     u_ci <- 'asymp.UCL'
     val <- 'prob'
-    
   }
   
   # Get means
   (res <- get_emm(outcome, folder, val, l_ci, u_ci, 'p.value'))
-  
+
   if (grepl('treatment', folder)){
     
     (res <- data.frame(pivot_longer(res, cols = everything(), names_to = ".value", names_pattern = paste0(outcome,"_(.*)"))))
@@ -375,11 +388,28 @@ abs_val_fig <- function (outcome, name, dtype, folder) {
   contr <- data.frame(get_contr(outcome, folder, l_ci, u_ci, 'p.value'))
   contr$sig <- as.numeric(gsub("[()]", "", contr[, grepl("_P$", names(contr))]))
   contr$sig <- na.locf(contr$sig, na.rm = FALSE, fromLast = TRUE) # Backfill the column
-  res$sig <- ifelse(contr$sig > 0.05, "p>0.05", 'p<0.05')
+  contr$sig <- ifelse(contr$sig > 0.05, "p>0.05", 'p<0.05')
+  colnames(contr)[1:3] <- c('variables', 'value', 'CI')
   
+  # Store difference tests differently for each folder
+  if (grepl('treatment', folder)){
+    res$sig <- 'None'
+    contr <- contr[,-4]
+    contr$treat <- 'HFP-Control'
+    contr$increase <- c(0, 1, 2, 3)
+    contr$season <- sapply(contr$variables , extract_string)
+    contr$group <- name
+    res <- rbind(res, contr)
+  } else{
+
+    res$sig <- contr$sig
+  }
+  
+  res$value <- as.numeric(res$value)
   # Replace names
   if (grepl('treatment', folder)){
     res <- res[, c('group', 'season', 'treat', 'increase', 'value', 'sig')]
+    res <- res[order(res$treat, res$season),]
   } else {
     res <- res[, c('season', 'group', 'increase', 'value', 'sig')]
   }
@@ -508,7 +538,7 @@ rownames(desc) <- NULL
 master <- cbind(master, desc)
 
 # Export descriptive stats for binary outcomes (+starches)
-for (b in c("dd10r_starch", outcomes_bin)) {
+for (b in c('dd10r_min_m', "dd10r_starch", outcomes_bin[outcomes_bin != 'dd10r_min_m'])) {
   tre <- summary_bin(df_BL_S, g1='year_season', group=1, b) # treat
   con <- summary_bin(df_BL_S, g1='year_season', group=0, b) # control
   (m <- rbind(tre, con)) # combine treat & control by row
