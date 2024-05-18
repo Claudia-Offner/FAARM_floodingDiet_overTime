@@ -14,11 +14,22 @@ options(scipen=999)
 
 #### IMPORTANT - Run R0_Data_formatting first
 
-# LOAD FUNCTIONS & PACKAGES ####
+# PACKAGES ####
+packages <- c('openxlsx', 'reshape', 'reshape2', 'dplyr', 'stringr', 
+              'ggmap', 'patchwork', 'gridExtra')
+library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
 
-library(ggmap)
-library(gridExtra)
-library(openxlsx)
+#### Load packages from library
+(.libPaths(library)) # Set library directory
+for (p in packages){
+  # install.packages(p, lib = library) # devtools::install_github(username/repository)
+  library(p, character.only = TRUE, lib.loc = library)
+}
+
+# FUNCTIONS ####
+
+# Set ggplot theme
+theme_set(theme_classic())
 
 # Set seasons
 seasons <- c("Jan/Feb", "Mar/Apr", "May/Jun", "Jul/Aug", "Sep/Oct", "Nov/Dec")
@@ -219,7 +230,7 @@ marg_effect_full <- function(df, d, legend='No', x_axes='No', y_axes='No', custo
   if(d=='MDD') {
     name <- 'Minimum Dietary Diversity'
   } else if (d=='WDDS') {
-    name <- 'Dietary Diversity Score'
+    name <- 'Dietary Diversity Scores'
   } else {
     name <- paste0('Food Group: ', d)
   }
@@ -306,19 +317,18 @@ tufte_sort <- function(df, x="year", y="value", group="group", method="tufte", m
   
 }
 
-s <- 'Jan/Feb'
-# GG plotter for MF (abs diff flood levels)
+# GG plotter for MF (abs diff flood levels by season)
 Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgreen', 'grey')){
   
   
   if (binary=='Yes') {
     
     # FOOD GROUP PLOT
-    source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Minimum dietary diversity", "Dietary diversity scores*")))
+    source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c("Dietary diversity scores", "Minimum dietary diversity", "Flesh foods", "Eggs", "Other vegetables", "Nuts/seeds")))
     source_f1$value <- as.numeric(source_f1$value)
     # Prepare data
     f1 <- tufte_sort(source_f1, x="increase", y="value", group="group", method="tufte", min.space=0.05, max.space=1)
-    f1 <- transform(f1, x=factor(x, levels=c(0, 1, 2, 3), labels=c("No change","1SD","2SD", ">2SD")), y=round(y, 2))
+    f1 <- transform(f1, x=factor(x, levels=c(0, 1, 2, 3), labels=c("None","1SD","2SD", ">2SD")), y=round(y, 2))
     # Add sig back in
     source_f1 <- source_f1[order(source_f1$group, source_f1$increase), ]
     f1 <- f1[order(f1$group, f1$x), ]
@@ -330,14 +340,21 @@ Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgree
     val <- rev(link_colour)
     
   } else {
+    if(s=='Mar/Apr'){
+      spacing <- 4.5
+    } else {
+      spacing <- 3.9
+    }
     # DD PLOT
-    source_f1 <- source_f0 %>% filter(season == s) %>% filter(group %in% c("Minimum dietary diversity", "Dietary diversity scores*"))
+    source_f1 <- source_f0 %>% filter(season == s) %>% filter(group %in% c("Dietary diversity scores"))
+    source_f1$value <- as.numeric(source_f1$value)
     # Prepare data
     f1 <- source_f1 %>%
-      rename(x = increase, y = value) %>%
-      mutate(yshift = if_else(group == "Minimum dietary diversity", 0, 0.1), ypos=yshift+y) %>%
+      dplyr::rename(x = increase, y = value) %>%
+      mutate(yshift = if_else(group == "Minimum dietary diversity", 0, 0.2), ypos=yshift+y) %>%
       select(group, yshift, x, y, ypos, sig)
-    f1 <- transform(f1, x=factor(x, levels=c(0, 1, 5), labels=c("0%","1%","5%")), y=round(y, 2))
+    f1$ypos[f1$group == "Dietary diversity scores*"] <- f1$ypos[f1$group == "Dietary diversity scores*"] - spacing
+    f1 <- transform(f1, x=factor(x, levels=c(0, 1, 2, 3), labels=c("None","1SD","2SD", ">2SD")), y=round(y, 2))
     # Get axes colors
     f1$a <- ifelse(f1$sig == 'p>0.05', link_colour[2], link_colour[1])
     val <- f1$a
@@ -346,9 +363,9 @@ Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgree
   # Plot
   (gg <- ggplot(f1,aes(x=x,y=ypos, colour=sig)) +
       geom_line(aes(group=group, colour=sig)) +
-      scale_color_manual(name="Difference from 0%", values = val, limits=c('p>0.05', 'p<0.05')) +  # Set line colors manually
+      scale_color_manual(name="Difference from no change", values = val, limits=c('p>0.05', 'p<0.05')) +  # Set line colors manually
       labs(color = "") +  # Modify legend label
-      xlab("Increase in flooding") +
+      xlab("\nIncrease in flooding from seasonal average") +
       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
       annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
       geom_point(colour="white",size=8) +
@@ -362,25 +379,187 @@ Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgree
   
   if (x_labs=="Yes"){
     
-    gg <- gg + theme(axis.text.y = element_text(color = axes_colours),
-                     legend.position='bottom')
+    (gg <- gg + 
+     theme(axis.text.y = element_text(color = axes_colours),
+                     legend.position='bottom'))
   } else {
     
-    gg <- gg + 
-      coord_cartesian(ylim=c(min(f1$ypos)-1, max(f1$ypos)+1)) + # Zoom out for DD variables
+    (gg <- gg + 
+      coord_cartesian(ylim=c(min(f1$ypos)-0.1, max(f1$ypos)+0.1)) + # Zoom out for DD variables
       theme(axis.text.y = element_text(color = f1$a, family = "Helvetica", face="bold"),
             axis.text.x=element_blank(),
             axis.title.x= element_blank(),
-            legend.position="none") 
+            legend.position="none")) 
   }
   
   
   return (gg)
 }
 
+# GG plotter for MF (abs diff flood levels by season and treatment)
+Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend='Yes', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes){
+  # outcome <-'WDDS'
+  # df <- source_f0
+  # s <- 'Jan/Feb'
+  # FILTER DATA
+  source_f1 <- df %>% filter(season == s) %>% filter(group %in% c(outcome))  %>% filter(!(treat %in% c("HFP-Control")))
+  source_f2 <- df %>% filter(season == s) %>% filter(group %in% c(outcome))  %>% filter(treat %in% c("HFP-Control"))
+  
+  # PROCESS FOR PLOTING
+  f1 <- tufte_sort(source_f1, x="increase", y="value", group="treat", method="tufte", min.space=0.05, max.space=0.3)
+  f1 <- transform(f1, x=factor(x, levels=c(0, 1, 2, 3), labels=c("None","1SD","2SD", ">2SD")), y=round(y, 2))
+  f2 <- transform(source_f2, increase=factor(increase, levels=c(0, 1, 2, 3), labels=c("None","1SD","2SD", ">2SD")), y=round(value, 2))
+  # Create Label Points for vertical lines (Difference between Treat & Control)
+  control <- f1[f1$group == "Control", ] 
+  diff_labs <- control$y + (source_f2$value/2) 
+  
+  
+  if (binary=='Yes'){
+    y_lab <- 'Probability'
+    y_breaks <- seq(0, 1.1, 0.25)
+    y_lim <- c(0, 1.1)
+    nudge <- 0.1
+  } else{
+    y_lab <- 'Mean'
+    y_breaks <- seq(4, 7, 0.5)
+    y_lim <- c(4, 6.5)
+    nudge <- 0.4
+  }
+  
+  if(y_labs=='None'){
+    y_lab <- ""
+  } 
+  
+  if(title=="Season"){
+    title <- s
+  } else{
+    title <- outcome
+  }
+  # AESTETIC DATA
+  f1 <- f1[order(f1$group, f1$x), ]   
+  f1$sig <- source_f2$sig # Add sig back in (this represents the flood trend sig)
+  f1$seas <- source_f2$season # Add season back in
+  seas_col <- custom_colors[[unique(f1$seas)]] # get season color '#ce1126' 
+  f1$labels <- sprintf("%.2f", source_f2$value) # get geom labels
+  # Get test line colors
+  f1$test_col <- 'grey'
+  f1$test_col[f1$sig == 'p<0.05'] <- seas_col
+  # Get trend line colors (shift significance t be more intuitive visually)
+  line_sig <- subset(f1, group =='Control')$sig
+  if(all(line_sig==c("p>0.05", "p>0.05", "p>0.05", "p>0.05"))){ # no sig
+    f1$line_sig <- c("p>0.05", "p>0.05", "p>0.05", "p>0.05")
+  } else if (all(line_sig==c("p<0.05", "p>0.05", "p>0.05", "p>0.05"))){ # 1st sig
+    f1$line_sig <- c("p>0.05", "p>0.05", "p>0.05","p>0.05")
+  } else if (all(line_sig==c("p<0.05", "p<0.05", "p>0.05","p>0.05"))){ # 2nd sig
+    f1$line_sig <- c("p<0.05", "p>0.05", "p>0.05","p>0.05")
+  } else if (all(line_sig==c("p<0.05", "p<0.05", "p<0.05","p>0.05"))){ # 3rd sig
+    f1$line_sig <- c("p<0.05", "p<0.05", "p<0.05","p>0.05")
+  } else if (all(line_sig==c("p>0.05", "p<0.05", "p<0.05", "p>0.05"))){
+    f1$line_sig <- c("p>0.05", "p<0.05", "p>0.05", "p>0.05") #****
+  # } 
+  # else if (all(line_sig==c("p>0.05", "p<0.05", "p>0.05"))){
+  #   f1$line_sig <- c("p>0.05", "p>0.05", "p>0.05") #****
+  } else {
+    f1$line_sig <- line_sig
+  } 
+
+  
+  # PLOT
+  (gg <- ggplot(f1,aes(x=x,y=y)) +
+      # Add geometry
+      geom_line(aes(group=x, linetype=sig), colour=seas_col, show.legend = FALSE) +
+      geom_line(aes(group=group, colour=line_sig), show.legend = FALSE) + # Points
+      geom_point(aes(shape=group, colour=sig), size=3) +
+      # Add text to geom
+      geom_text(data = subset(f1, sig == "p<0.05" & group == "HFP"), aes(label=labels, y=max(f1$y)), colour=seas_col, nudge_y=nudge) +
+      # Set color, shapes & line types
+      scale_shape_manual(values=custom_shapes, name='Trial-arm') +
+      scale_linetype_manual(values=custom_lines, name='') +
+      scale_color_manual(values=custom_colors_sig, name='Difference between trial-arms', limits=c('p>0.05', 'p<0.05')) +
+      # Set axes
+      scale_y_continuous(limits = y_lim, breaks=y_breaks) + 
+      # scale_y_continuous(breaks=seq(round(min(f1$y), 1), max(f1$y), round(diff(range(f1$y))/5, 2))) + # set y breaks
+      # scale_y_continuous(breaks=y_breaks) + # set y breaks
+      labs(title=title, y=y_lab, x="Increase in flooding", color = "", shape="", linetype="") +  # Modify axes & legend labels
+      # Format borders
+      annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
+      annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
+      guides(shape = guide_legend(order = 1))) # guide_legend(order = 2, override.aes = list(shape=NA))
+  
+  # Fix legend
+  if(x_labs=='Yes'){
+    
+    (gg2 <- gg + theme(axis.ticks.x = element_blank(),
+                       axis.title.x = element_text(margin = margin(t = 15)), # shift away from x_labs
+                       axis.title.y = element_text(margin = margin(r = 15)), 
+                       plot.title = element_text(size=11, hjust=0.5, family = "Helvetica", face="bold"),
+                       axis.text = element_text(family = "Helvetica"),
+                       legend.position="bottom"))
+    if(legend=='No'){
+      
+      (gg2 <- gg2 + theme(legend.position="none"))
+      
+    }
+    
+  } else if(x_labs=='No'){
+    
+    (gg2 <- gg + theme(axis.ticks.x = element_blank(),
+                       axis.title.x = element_blank(), 
+                       axis.title.y = element_text(margin = margin(r = 15)), 
+                       axis.text.x = element_blank(),
+                       plot.title = element_text(size=11, hjust=0.5, family = "Helvetica", face="bold"),
+                       axis.text = element_text(family = "Helvetica"),
+                       legend.position="none"))
+  }
+  
+  
+  return(gg2)
+  
+}
 
 
-# MF: Descriptive - Flood coverage across seasons, by cluster ####
+# # SF: Descriptive - Temporal distribution of flooding & diets, pooled ####
+# 
+# # Load data
+# source_f0 <- read.xlsx(xlsxFile='II. Tables/desc_trial_rounds.xlsx')
+# # Clean data
+# source_f0 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
+# source_f0 <- melt(source_f0, id.vars = c('Round', 'Treatment'))
+# f1 <- source_f0 %>% filter(!(variable %in% c("perc_flooded_c_PROB"))) # Remove non probability variables
+# f1 <- cbind(f1, str_split(f1$Round, "-", simplify = TRUE))
+# colnames(f1)[5:6] <- c("year", "month")
+# # Rename variables
+# unique(f1$variable)
+# f1$variable <- gsub("dd10r_score_m_COEF", "WDDS", f1$variable)
+# f1$variable <- gsub("dd10r_starch_PROB", "Starchy staples", f1$variable)
+# f1$variable <- gsub("dd10r_min_m_PROB", "MDD", f1$variable)
+# f1$variable <- gsub("dd10r_flesh_PROB", "Flesh foods", f1$variable)
+# f1$variable <- gsub("dd10r_dairy_PROB", "Dairy products", f1$variable)
+# f1$variable <- gsub("dd10r_eggs_PROB", "Eggs", f1$variable)
+# f1$variable <- gsub("dd10r_dglv_PROB", "Dark green leafy vegetables", f1$variable)
+# f1$variable <- gsub("dd10r_vita_PROB", "Vitamin-A rich foods", f1$variable)
+# f1$variable <- gsub("dd10r_othv_PROB", "Other vegetables", f1$variable)
+# f1$variable <- gsub("dd10r_othf_PROB", "Other fruits", f1$variable)
+# f1$variable <- gsub("dd10r_legume_PROB", "Legumes", f1$variable)
+# f1$variable <- gsub("dd10r_nuts_PROB", "Nuts & Seeds", f1$variable)
+# f1$variable<- factor(f1$variable, levels=unique(f1$variable))
+# f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
+# 
+# # Subset the data frame to keep only columns with names not containing the character(s) to remove
+# (gg <- ggplot(f1, aes(x = Round, y = as.numeric(value), color = as.factor(Treatment), group = as.factor(Treatment))) +
+#     geom_line() +
+#     labs(title = "Line Plot of Multiple Variables Over Time",
+#        x = "Round", y = "Value",
+#        color = "variable") +
+#     scale_y_continuous(limits = c(0, 100)) + 
+#     facet_wrap(~ variable, scales = "free_y") +
+#     facetted_pos_scales(y = list(
+#       variable == "WDDS" ~ scale_y_continuous(limits = c(0,10)))) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+#   theme_minimal())
+# 
+# 
+# MF: Descriptive - Spatial flood distribution across seasons, by cluster ####
 
 
 # NEED API's (https://www.appsilon.com/post/r-ggmap)
@@ -458,17 +637,17 @@ source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Rel_Diff')
 (f10 <- marg_effect_full(source_f0, 'Legumes', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
 (f11 <- marg_effect_full(source_f0, 'Nuts/seeds', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 
-# MF: Absolute differences in probability of DD outcomes for different % flooding for each season (both trial-arms) ####
+# MF: Predicted measures of DD outcomes for different flood levels across seasons (pooled trial-arms) ####
 
 source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Abs_Flood_Levels')
-
-path <- "C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/III. Figures/Visuals.xlsx"
-s <- 'Jan/Feb'
+# Adapt other veg or visualization purposes
+source_f0$sig[source_f0$group=='Other vegetables'] <- 'p>0.05'
+source_f0$group[source_f0$group=='Dietary diversity scores*'] <- 'Dietary diversity scores'
 
 for(s in seasons) {
   
-  (fg <- Abs_flood(df=source_f0, s=s, binary='Yes', x_labs='Yes'))
-  (dd <- Abs_flood(df=source_f0, s=s, binary='No', x_labs='No'))
+  fg <- Abs_flood(df=source_f0, s=s, binary='Yes', x_labs='Yes')
+  dd <- Abs_flood(df=source_f0, s=s, binary='No', x_labs='No')
   
   # Put plots together
   layout <- c(
@@ -479,13 +658,60 @@ for(s in seasons) {
   # Final plot arrangement
   (res <- dd + fg  
     + plot_layout(design = layout) 
-    + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.62))))
+    + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.7))))
   
   # Export image
-  ggsave(paste0('MF2_AbsDiff - FloodLevels/', str_replace(s, "/", "-"), "_mf2.png"), 
+  ggsave(paste0('III. Figures/Predicted_Meas_Season/', str_replace(s, "/", "-"), ".png"), 
          res, width=15, height=20, units='cm')
   
 }
 
 
+
+# MF: Predicted measures of DD outcomes for different flood levels across seasons and trial-arms ####
+
+source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Abs_Flood_Treat_Levels')
+source_f0$group[source_f0$group=='WDDS'] <- 'Dietary diversity scores'
+
+for(s in seasons) {
+  
+  p0 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dietary diversity scores', x_labs='Yes', legend='Yes', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  legend <- get_legend(p0)
+  p1 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dietary diversity scores', x_labs='No', legend='No', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p2 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dairy', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p3 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dark green leafy vegetables', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Vitamin-A rich foods', x_labs='No', legend='No', binary='Yes', y_labs='No', custom_colors, custom_lines, custom_shapes)
+  p5 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Other fruits', x_labs='Yes', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p6 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Legumes', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  
+  # p1 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'MDD', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  # p2 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Flesh foods', x_labs='No', legend='No', binary='Yes',y_labs='None',  custom_colors, custom_lines, custom_shapes)
+  # p3 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Eggs', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  # p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Other vegetables', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  # p5 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Nuts/seeds', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  
+  # Put plots together
+  layout <- c(
+    area(t = 1, l = 0, b = 5, r = 5), # WDDS
+    area(t = 1, l = 6, b = 5, r = 10), # Dairy
+
+    area(t = 6, l = 0, b = 11, r = 5), # DGLV
+    area(t = 6, l = 6, b = 11, r = 10), # Vita
+    
+    area(t = 12, l = 0, b = 17, r = 5), # fruit
+    area(t = 12, l = 6, b = 17, r = 10), # legume
+
+    area(t = 18, l = 0, b = 18, r = 10) # legend
+  )
+  
+  # Final plot arrangement
+  (res <- p1 + p2 + p3 + p4 + p5 + p6 + legend
+    + plot_layout(design = layout) 
+    + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.5, face='bold'))))
+  
+  # Export image
+  ggsave(paste0('III. Figures/Predicted_Meas_Season-trial/', str_replace(s, "/", "-"), ".png"), 
+         res, width=18, height=18, units='cm')
+  
+}
 

@@ -12,10 +12,33 @@ setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/
 options(warn=-1) # 0 to turn back on
 options(scipen=999)
 
-# 1. Packages & Functions ####
+#### IMPORTANT - Run R0_Data_formatting first
+
+# PACKAGES ####
+
+# Required packages
+packages <- c('openxlsx', 'dplyr', 'zoo', 'tidyr', 'reshape2', 'spdep', 'nlme', 
+              'lme4', 'ggplot2', 'emmeans')
+
+library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+
+# Create new library for project
+# (.libPaths()) # Check Library Paths
+# dir.create(library, recursive = TRUE) # create
+# (.libPaths(library)) # Set library directory
+
+#### Install packages to library
+for (p in packages){
+  install.packages(p, lib = library) # devtools::install_github(username/repository)
+}
+
+#### Load packages from library
+for (p in packages){
+  library(get(p), lib.loc = library)
+}
 
 #### OTHER SETTINGS
-#### Detatch packages & clear environment/plots
+## Detatch packages & clear environment/plots
 # lapply(paste('package:',names(sessionInfo()$otherPkgs),sep=""),detach,character.only=TRUE,unload=TRUE)
 # rm(list = ls())
 ## Get citations
@@ -24,17 +47,7 @@ options(scipen=999)
 ## Check which packages were used
 # sessionInfo() 
 
-#### Load packages
-# Load packages
-library(openxlsx)
-library(dplyr)
-library(spdep)
-library(nlme) # lme
-library(lme4) # glmer
-library(ggplot2)
-library(emmeans) 
-# library(rgdal)
-# library(margins) # https://www.rdocumentation.org/packages/margins/versions/0.3.26.1
+# FUNCTIONS ####
 
 # Function to round numeric columns of data frame
 round_df <- function(x, digits) {
