@@ -29,7 +29,7 @@ get_results <- function(model, outcome, dtype, interaction) {
     print(plotResults(mod_res))
     
   } else if (dtype=='bin'){
-    (mod_res <- getGLMM(model, 0, 'PROBS'))
+    (mod_res <- getGLMM(model, 0, 'OR'))
     # Extract as probabilities (i.e. trans = "response")
     ame1 <- emtrends(model, as.formula(paste0('pairwise ', interaction)), at=list(Flood_1Lag = levels[2]), var = 1, trans='response')$emtrends
     emm_1 <- emmeans(model, as.formula(interaction), at=list(Flood_1Lag = levels[2]), trans = "response") # 1% increase
@@ -40,6 +40,8 @@ get_results <- function(model, outcome, dtype, interaction) {
   # Extract tables based on interaction combo
   if(interaction=='~ Flood_1Lag * season_flood * treatment'){
     
+    # Anova test
+    (anov <- car::Anova(model, type=3))
     ## A. Average Marginal Effects (slopes)
     (ame1_res <- summary(ame1,  infer = c(TRUE, TRUE)))
     (ame1_cont <- summary(contrast(ame1, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE)))
@@ -55,7 +57,7 @@ get_results <- function(model, outcome, dtype, interaction) {
     (contr_emm2B <- summary(contrast(emm_2, "pairwise", by = c("Flood_1Lag", "treatment")), infer = c(TRUE, TRUE)))
     (contr_emm2C <- summary(contrast(emm_2, "pairwise", by = c("season_flood", "treatment")), infer = c(TRUE, TRUE)))
     # List tables
-    tables <- c('mod_res', 'ame1_res', 'ame1_cont', 
+    tables <- c('anov', 'mod_res', 'ame1_res', 'ame1_cont', 
                 'emm_1_res', 'contr_emm1A', 'contr_emm1B', 
                 'emm_2_res', 'contr_emm2A', 'contr_emm2B', 'contr_emm2C')
     

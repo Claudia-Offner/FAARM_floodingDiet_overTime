@@ -17,24 +17,24 @@ options(scipen=999)
 # PACKAGES ####
 
 # Required packages
-packages <- c('openxlsx', 'dplyr', 'zoo', 'tidyr', 'reshape2', 'spdep', 'nlme', 
-              'lme4', 'ggplot2', 'emmeans')
-
+packages <- c('openxlsx', 'zoo', 'tidyr', 'reshape2', 'dplyr', 'ggplot2', 
+              'spdep', 'nlme', 'lme4', 'emmeans')
 library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
 
-# Create new library for project
+#### Create new library for project
 # (.libPaths()) # Check Library Paths
 # dir.create(library, recursive = TRUE) # create
 # (.libPaths(library)) # Set library directory
 
 #### Install packages to library
-for (p in packages){
-  install.packages(p, lib = library) # devtools::install_github(username/repository)
-}
+# for (p in packages){
+#   install.packages(p, lib = library) # devtools::install_github(username/repository)
+# }
 
 #### Load packages from library
+(.libPaths(library)) # Set library directory
 for (p in packages){
-  library(get(p), lib.loc = library)
+  library(p, character.only = TRUE, lib.loc = library)
 }
 
 #### OTHER SETTINGS
@@ -254,7 +254,7 @@ var <- c('(Intercept) Jan/Feb season',
          'Flood Extent : Sep/Oct season : Treatment',
          'Flood Extent : Nov/Dec season : Treatment')
 
-# 2. Load & Select Data ####
+# 1. Load & Select Data ####
 
 # Load shape data (as spatial vector df)
 cluster_shp <- st_read(dsn="96_Cluster_final.shp")
@@ -284,7 +284,7 @@ df <- data %>% select(c_code, wcode, year_season, year, season, season_DD, seaso
                       dep_ratio, md_score_BL, wealth_BL, dec_BL, quint_BL,
                       terc_BL, wealth2_BL, dec2_BL, quint2_BL, terc2_BL, hh1hh_mem_EL)
 
-# 3. Cleaning ####
+# 2. Cleaning ####
 
 # Check outcome distribution over time
 y <- df %>%
@@ -321,7 +321,7 @@ rownames(df) <- NULL
 
 
 
-# 4. Categorical Exposure: Create Average Seasonal Flood Thresholds ####
+# 3. Categorical Exposure: Create Average Seasonal Flood Thresholds ####
 
 # Group by season and calculate the average for each season
 (range(df$Flood_1Lag))
@@ -357,7 +357,7 @@ df$Flood_1Lag <- df$Flood_SThresh
 # levels <- c('No difference', '1 SD above mean', '2 SD above mean', '> 2 SD above mean')
 # df$Flood_SThresh <- factor(df$Flood_SThresh, levels=levels)
 
-# # 5. Continuous Exposure: Center & Scale Flooding ####
+# # 4. Continuous Exposure: Center & Scale Flooding ####
 # 
 # ## Scale flood exposure to improve interpret ability of the model
 # ## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
