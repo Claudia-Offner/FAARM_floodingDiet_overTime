@@ -16,7 +16,7 @@ options(scipen=999)
 
 # PACKAGES ####
 packages <- c('openxlsx', 'reshape', 'reshape2', 'dplyr', 'stringr', 
-              'ggmap', 'patchwork', 'gridExtra')
+              'ggmap', 'patchwork', 'gridExtra', 'ggh4x')
 library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
 
 #### Load packages from library
@@ -25,6 +25,7 @@ for (p in packages){
   # install.packages(p, lib = library) # devtools::install_github(username/repository)
   library(p, character.only = TRUE, lib.loc = library)
 }
+
 
 # FUNCTIONS ####
 
@@ -46,7 +47,7 @@ custom_colors <- c('Overall'="#2b2a2a",
                    'Sep/Oct'="#057dcd",
                    'Nov/Dec'="#7849b8")
 
-# GG mapper for flood levels, by season and cluster (highlighting trial-arms)
+# GG mapper for flood levels, by season and cluster (highlighting Trial arms)
 mapper <- function(basemap, df_spatial, season=NA, legend='yes') {
   
   if(is.na(season)) {
@@ -70,8 +71,8 @@ mapper <- function(basemap, df_spatial, season=NA, legend='yes') {
                            limits = c(0, 0.35),  # Set limits for the legend
                            breaks = c(0, 0.04, 0.15, 0.25, 0.35),  # Specify breaks
                            labels = c("0%", "5%", "15%", "25%", "35%")) +  # Custom labels
-      scale_linetype_manual(name='Trial-arm', values=c('dashed', 'solid'), ) +
-      scale_color_manual(name='Trial-arm', values=c('black', 'red'), limits=c('Control', 'HFP')) +
+      scale_linetype_manual(name='Trial arm', values=c('dashed', 'solid'), ) +
+      scale_color_manual(name='Trial arm', values=c('black', 'red'), limits=c('Control', 'HFP')) +
       # Set legend 
       labs(title=title,  color = "", shape="", linetype="") +  
       guides(fill=guide_legend(order=1)) + 
@@ -171,7 +172,7 @@ marg_effect_sect <- function(df, d, m, legend='Yes', x_axes='Yes', y_axes='Yes',
       geom_vline(xintercept = 0, linetype="dashed") +
       geom_hline(yintercept = seq(0.5, length(f1$Index), by = hz_line), color="gray", size=.5, alpha=.5) +# set horizontal lines between x groups
       # Add labels & set color
-      labs(x=x_ax, y="", color="Season", shape="Trial-arm") + 
+      labs(x=x_ax, y="", color="Season", shape="Trial arm") + 
       # geom_text(aes(label=Group)) + 
       scale_x_continuous(breaks=x_breaks) +
       scale_y_continuous(breaks=1:nrow(f1), labels=rev(f1$Group)) +
@@ -185,7 +186,7 @@ marg_effect_sect <- function(df, d, m, legend='Yes', x_axes='Yes', y_axes='Yes',
       theme(plot.title = element_text(hjust = 0.5), # Center title
             # axis.text.y = element_blank(),
             # axis.ticks.y= element_blank(),
-            legend.position="right")) 
+            legend.position="bottom")) 
   
   # Conditional Plot
   if (legend=='No'){
@@ -473,9 +474,9 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
       # Add text to geom
       geom_text(data = subset(f1, sig == "p<0.05" & group == "HFP"), aes(label=labels, y=max(f1$y)), colour=seas_col, nudge_y=nudge) +
       # Set color, shapes & line types
-      scale_shape_manual(values=custom_shapes, name='Trial-arm') +
+      scale_shape_manual(values=custom_shapes, name='Trial arm') +
       scale_linetype_manual(values=custom_lines, name='') +
-      scale_color_manual(values=custom_colors_sig, name='Difference between trial-arms', limits=c('p>0.05', 'p<0.05')) +
+      scale_color_manual(values=custom_colors_sig, name='Difference between Trial arms', limits=c('p>0.05', 'p<0.05')) +
       # Set axes
       scale_y_continuous(limits = y_lim, breaks=y_breaks) + 
       # scale_y_continuous(breaks=seq(round(min(f1$y), 1), max(f1$y), round(diff(range(f1$y))/5, 2))) + # set y breaks
@@ -518,47 +519,68 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
 }
 
 
-# # SF: Descriptive - Temporal distribution of flooding & diets, pooled ####
-# 
-# # Load data
-# source_f0 <- read.xlsx(xlsxFile='II. Tables/desc_trial_rounds.xlsx')
-# # Clean data
-# source_f0 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
-# source_f0 <- melt(source_f0, id.vars = c('Round', 'Treatment'))
-# f1 <- source_f0 %>% filter(!(variable %in% c("perc_flooded_c_PROB"))) # Remove non probability variables
-# f1 <- cbind(f1, str_split(f1$Round, "-", simplify = TRUE))
-# colnames(f1)[5:6] <- c("year", "month")
-# # Rename variables
-# unique(f1$variable)
-# f1$variable <- gsub("dd10r_score_m_COEF", "WDDS", f1$variable)
-# f1$variable <- gsub("dd10r_starch_PROB", "Starchy staples", f1$variable)
-# f1$variable <- gsub("dd10r_min_m_PROB", "MDD", f1$variable)
-# f1$variable <- gsub("dd10r_flesh_PROB", "Flesh foods", f1$variable)
-# f1$variable <- gsub("dd10r_dairy_PROB", "Dairy products", f1$variable)
-# f1$variable <- gsub("dd10r_eggs_PROB", "Eggs", f1$variable)
-# f1$variable <- gsub("dd10r_dglv_PROB", "Dark green leafy vegetables", f1$variable)
-# f1$variable <- gsub("dd10r_vita_PROB", "Vitamin-A rich foods", f1$variable)
-# f1$variable <- gsub("dd10r_othv_PROB", "Other vegetables", f1$variable)
-# f1$variable <- gsub("dd10r_othf_PROB", "Other fruits", f1$variable)
-# f1$variable <- gsub("dd10r_legume_PROB", "Legumes", f1$variable)
-# f1$variable <- gsub("dd10r_nuts_PROB", "Nuts & Seeds", f1$variable)
-# f1$variable<- factor(f1$variable, levels=unique(f1$variable))
-# f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
-# 
-# # Subset the data frame to keep only columns with names not containing the character(s) to remove
-# (gg <- ggplot(f1, aes(x = Round, y = as.numeric(value), color = as.factor(Treatment), group = as.factor(Treatment))) +
-#     geom_line() +
-#     labs(title = "Line Plot of Multiple Variables Over Time",
-#        x = "Round", y = "Value",
-#        color = "variable") +
-#     scale_y_continuous(limits = c(0, 100)) + 
-#     facet_wrap(~ variable, scales = "free_y") +
-#     facetted_pos_scales(y = list(
-#       variable == "WDDS" ~ scale_y_continuous(limits = c(0,10)))) +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-#   theme_minimal())
-# 
-# 
+# SF: Descriptive - Temporal distribution of flooding & diets, pooled ####
+
+# Load data
+source_f0 <- read.xlsx(xlsxFile='II. Tables/desc_trial_rounds.xlsx')
+# Clean data
+source_f0 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
+source_f0 <- melt(source_f0, id.vars = c('Round', 'Treatment'))
+source_f0 <- source_f0 %>% filter(!(Round %in% c("Baseline"))) # Remove non probability variables
+f1 <- cbind(source_f0, str_split(source_f0$Round, "-", simplify = TRUE))
+colnames(f1)[5:6] <- c("year", "month")
+# f1$Round <- factor(f1$Round, levels = c("Baseline", sort(unique(f1$Round))[-25])) # Factor rounds
+
+# Rename rounds
+f1$month[f1$month==1] <- 'Jan/Feb'
+f1$month[f1$month==2] <- 'Mar/Apr'
+f1$month[f1$month==3] <- 'May/Jun'
+f1$month[f1$month==4] <- 'Jul/Aug'
+f1$month[f1$month==5] <- 'Sep/Oct'
+f1$month[f1$month==6] <- 'Nov/Dec'
+f1$Round <- paste0(f1$year, ' ', f1$month)
+
+# Rename variables
+unique(f1$variable)
+f1$variable <- gsub("dd10r_score_m_COEF", "(A) WDDS", f1$variable)
+f1$variable <- gsub("dd10r_min_m_PROB", "(B) MDD", f1$variable)
+f1$variable <- gsub("dd10r_starch_PROB", "(C) Starchy staples", f1$variable)
+f1$variable <- gsub("dd10r_flesh_PROB", "(D) Flesh foods", f1$variable)
+f1$variable <- gsub("dd10r_dairy_PROB", "(E) Dairy products", f1$variable)
+f1$variable <- gsub("dd10r_eggs_PROB", "(F) Eggs", f1$variable)
+f1$variable <- gsub("dd10r_dglv_PROB", "(G) DGLV", f1$variable)
+f1$variable <- gsub("dd10r_vita_PROB", "(H) Vitamin-A rich foods", f1$variable)
+f1$variable <- gsub("dd10r_othv_PROB", "(I) Other vegetables", f1$variable)
+f1$variable <- gsub("dd10r_othf_PROB", "(J) Other fruits", f1$variable)
+f1$variable <- gsub("dd10r_legume_PROB", "(K) Legumes", f1$variable)
+f1$variable <- gsub("dd10r_nuts_PROB", "(L) Nuts & Seeds", f1$variable)
+f1$variable <- gsub("perc_flooded_c_PROB", "(M) Percent Flooded", f1$variable)
+f1$variable<- factor(f1$variable, levels=unique(f1$variable))
+f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
+f1$variable <- factor(f1$variable, levels = c('(A) WDDS', '(B) MDD', 
+                                              '(C) Starchy staples', '(D) Flesh foods','(E) Dairy products',
+                                              '(F) Eggs', '(G) DGLV', '(H) Vitamin-A rich foods', '(I) Other vegetables', 
+                                              '(J) Other fruits', '(K) Legumes', '(L) Nuts & Seeds',
+                                              '(M) Percent Flooded')) # Factor rounds
+
+# Subset the data frame to keep only columns with names not containing the character(s) to remove
+(gg <- ggplot(f1, aes(x = Round, y = as.numeric(value), color = as.factor(Treatment), group = as.factor(Treatment))) +
+    geom_line() +
+    labs(x = "", y = "", color = "variable") +
+    scale_x_discrete(breaks = unique(f1$Round)[seq(1, length(unique(f1$Round)), by = 3)], # Label every other round
+                     guide = guide_axis(angle = 45)) + # Rotate  axes labels
+    scale_color_manual(values = c("Control" = "#3388f7", "HFP" = "#b51731"), name='Trial arm') + 
+    facet_wrap(~ variable, nrow = NULL, ncol = NULL, scales = "free_y") +
+    ggh4x::facetted_pos_scales(y = list(
+      variable == '(A) WDDS' ~ scale_y_continuous(limits = c(0, 10)),
+      variable == '(M) Percent Flooded' ~ scale_y_continuous(limits = c(0, 10)),
+      TRUE ~ scale_y_continuous(limits = c(0, 100))
+      )) + theme_bw())
+
+
+ggsave(paste0('III. Figures/Descriptives_Time/', "time_series.png"), 
+       gg, width=35, height=25, units='cm')
+
 # MF: Descriptive - Spatial flood distribution across seasons, by cluster ####
 
 
@@ -627,17 +649,17 @@ source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Rel_Diff')
 # Get full plot for each dietary outcome
 (f1 <- marg_effect_full(source_f0, 'WDDS', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
 (f2 <- marg_effect_full(source_f0, 'MDD', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
-(f3 <- marg_effect_full(source_f0, 'Flesh foods', legend='Yes', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
-(f4 <- marg_effect_full(source_f0, 'Dairy', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
-(f5 <- marg_effect_full(source_f0, 'Eggs', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f3 <- marg_effect_full(source_f0, 'Flesh foods', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f4 <- marg_effect_full(source_f0, 'Dairy', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f5 <- marg_effect_full(source_f0, 'Eggs', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
 (f6 <- marg_effect_full(source_f0, 'Dark green leafy vegetables', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
-(f7 <- marg_effect_full(source_f0, 'Vitamin-A rich foods', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
+(f7 <- marg_effect_full(source_f0, 'Vitamin-A rich foods', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 (f8 <- marg_effect_full(source_f0, 'Other vegetables', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
-(f9 <- marg_effect_full(source_f0, 'Other fruits', legend='Yes', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
-(f10 <- marg_effect_full(source_f0, 'Legumes', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
-(f11 <- marg_effect_full(source_f0, 'Nuts/seeds', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f9 <- marg_effect_full(source_f0, 'Other fruits', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
+(f10 <- marg_effect_full(source_f0, 'Legumes', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f11 <- marg_effect_full(source_f0, 'Nuts/seeds', legend='Yes', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 
-# MF: Predicted measures of DD outcomes for different flood levels across seasons (pooled trial-arms) ####
+# MF: Predicted measures of DD outcomes for different flood levels across seasons (pooled Trial arms) ####
 
 source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Abs_Flood_Levels')
 # Adapt other veg or visualization purposes
@@ -668,7 +690,7 @@ for(s in seasons) {
 
 
 
-# MF: Predicted measures of DD outcomes for different flood levels across seasons and trial-arms ####
+# MF: Predicted measures of DD outcomes for different flood levels across seasons and Trial arms ####
 
 source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Abs_Flood_Treat_Levels')
 source_f0$group[source_f0$group=='WDDS'] <- 'Dietary diversity scores'
@@ -680,7 +702,7 @@ for(s in seasons) {
   p1 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dietary diversity scores', x_labs='No', legend='No', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
   p2 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dairy', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
   p3 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dark green leafy vegetables', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Vitamin-A rich foods', x_labs='No', legend='No', binary='Yes', y_labs='No', custom_colors, custom_lines, custom_shapes)
+  p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Vitamin-A rich foods', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
   p5 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Other fruits', x_labs='Yes', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
   p6 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Legumes', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
   

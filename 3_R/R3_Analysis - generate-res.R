@@ -42,6 +42,8 @@ get_results <- function(model, outcome, dtype, interaction) {
     
     # Anova test
     (anov <- car::Anova(model, type=3))
+    anov <- cbind(row.names(anov), anov)
+    
     ## A. Average Marginal Effects (slopes)
     (ame1_res <- summary(ame1,  infer = c(TRUE, TRUE)))
     (ame1_cont <- summary(contrast(ame1, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE)))
@@ -126,6 +128,7 @@ get_results <- function(model, outcome, dtype, interaction) {
 }
 
 run_model <- function(outcome, type) {
+  
   # Set the main formula
   fixed <- ' ~ Flood_1Lag * season_flood * treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL'
   

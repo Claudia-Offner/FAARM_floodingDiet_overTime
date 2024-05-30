@@ -17,8 +17,8 @@ options(scipen=999)
 # PACKAGES ####
 
 # Required packages
-packages <- c('openxlsx', 'zoo', 'tidyr', 'reshape2', 'dplyr', 'ggplot2', 
-              'spdep', 'nlme', 'lme4', 'emmeans')
+packages <- c('openxlsx', 'zoo', 'reshape2', 'ggplot2', 'spdep', 'nlme', 'lme4', 'emmeans',
+              'tidyr', 'dplyr')
 library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
 
 #### Create new library for project
@@ -32,10 +32,11 @@ library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
 # }
 
 #### Load packages from library
-(.libPaths(library)) # Set library directory
+# (.libPaths(library)) # Set library directory
 for (p in packages){
-  library(p, character.only = TRUE, lib.loc = library)
+  library(p, character.only = TRUE)
 }
+
 
 #### OTHER SETTINGS
 ## Detatch packages & clear environment/plots
@@ -46,6 +47,10 @@ for (p in packages){
 # citation('nlme')
 ## Check which packages were used
 # sessionInfo() 
+## Update packages
+# update.packages(ask = FALSE)
+# install.packages("dplyr", dependencies = TRUE)
+
 
 # FUNCTIONS ####
 

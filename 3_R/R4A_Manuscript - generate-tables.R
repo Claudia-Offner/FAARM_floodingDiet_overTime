@@ -15,13 +15,13 @@ setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/
 # Required packages & library
 packages <- c('openxlsx', 'zoo', 'cli', 'tidyr', 'dplyr', 'reshape2')
 library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+(.libPaths(library)) # Set library directory
+# install.packages('dplyr')
 
 #### Load packages from library
-(.libPaths(library)) # Set library directory
 for (p in packages){
-  library(p, character.only = TRUE, lib.loc = library)
+  library(p, character.only = TRUE)
 }
-
 
 # FUNCTIONS ####
 
@@ -192,11 +192,13 @@ get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
   # Remove irrelevant levels/cols
   if (grepl('treatment', folder)) {
     col <- res$Flood_1Lag
-    # res <- res[!grepl("^0", as.character(col)), ]
-    # row.names(res) <- NULL
   } else {
     col <- res$contrast
+    col <- sub("Flood_1Lag", "", col)
+    col <- sub("Flood_1Lag", "", col)
     res <- res[grep("^0", as.character(col)), ]
+    res$contrast <- sub("Flood_1Lag", "", res$contrast)
+    res$contrast <- sub("Flood_1Lag", "", res$contrast)
     row.names(res) <- NULL
   }
 
@@ -346,11 +348,11 @@ rel_diff_fig <- function(outcome, name, dtype){
 # Function to get all absolute value outputs for figure creations
 abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
   
-  # outcome <- 'dd10r_score_m'
+  # outcome <- 'dd10r_min_m'
   # name <- 'WDDS'
   # dtype <- 'cont'
   # folder <- f
-  # p_vl <- 'p.value' 
+  # p_vl <- 'p.value'
   
   if (dtype=='cont'){
     
@@ -554,6 +556,43 @@ master <- master %>% arrange_at(c('Treatment', 'Round'))
 write.xlsx(master, "II. Tables/desc_trial_rounds.xlsx", rowNames=FALSE, fileEncoding = "UTF-8") # export to xlsx
 
 
+# TYPE 3 ANOVA: Interaction tests for significance ####
+
+# Create main frame with continuous outcome
+### Get data
+(path <- paste0('I. Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
+master <- read.xlsx(path)
+### Format 2 decimal places
+master$Chisq <- sprintf("%.1f", master$Chisq)
+master$P[master$`Pr(>Chisq)` < 0.001] <- "<0.001"  
+master$`Pr(>Chisq)` <- sprintf("%.2f", master$`Pr(>Chisq)`)
+master$`Pr(>Chisq)`[master$P == '<0.001'] <- "<0.001"
+master$P <- NULL 
+colnames(master) <- paste0(outcomes_cont, '_', colnames(master)) 
+
+
+### Append each binary outcome to the main frame
+for (b in outcomes_bin) {
+  
+  # Get data
+  (path <- paste0('I. Results/', b, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
+  new <- read.xlsx(path)
+  ### Format 2 decimal places
+  new$Chisq <- sprintf("%.1f", new$Chisq)
+  new$P[new$`Pr(>Chisq)` < 0.001] <- "<0.001"  
+  new$`Pr(>Chisq)` <- sprintf("%.2f", new$`Pr(>Chisq)`)
+  new$`Pr(>Chisq)`[new$P == '<0.001'] <- "<0.001"
+  new$P <- NULL
+  colnames(new) <- paste0(b, '_', colnames(new)) 
+  # Append columns to master df
+  master <- cbind(master, new)
+  
+}
+
+# Export
+write.xlsx(master,  'II. Tables/anova.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
+
+
 # MAIN EFFECTS: Regression results for impact of 1% flood coverage on dietary outcomes ####
 
 # Create main frame with continuous outcome
@@ -676,7 +715,7 @@ table1 <- rbind(rel_diff_fig('dd10r_score_m', 'WDDS', 'cont'),
                rel_diff_fig('dd10r_dairy', 'Dairy', 'bin'),
                rel_diff_fig('dd10r_eggs', 'Eggs', 'bin'),
                rel_diff_fig('dd10r_dglv', 'Dark green leafy vegetables', 'bin'),
-               rel_diff_fig('dd10r_vita', 'Vitamin-A rich foods', 'bin'),
+               rel_diff_fig('dd10r_vita', 'Vitamin A-rich foods', 'bin'),
                rel_diff_fig('dd10r_othv', 'Other vegetables', 'bin'),
                rel_diff_fig('dd10r_othf', 'Other fruits', 'bin'),
                rel_diff_fig('dd10r_legume', 'Legumes', 'bin'),
@@ -690,7 +729,7 @@ table2 <- rbind(abs_val_fig('dd10r_score_m', "Dietary diversity scores*", 'cont'
                abs_val_fig('dd10r_dairy', 'Dairy', 'bin', f),
                abs_val_fig('dd10r_eggs', 'Eggs', 'bin', f),
                abs_val_fig('dd10r_dglv', 'Dark green leafy vegetables', 'bin', f),
-               abs_val_fig('dd10r_vita', 'Vitamin-A rich foods', 'bin', f),
+               abs_val_fig('dd10r_vita', 'Vitamin A-rich foods', 'bin', f),
                abs_val_fig('dd10r_othv', 'Other vegetables', 'bin', f),
                abs_val_fig('dd10r_othf', 'Other fruits', 'bin', f),
                abs_val_fig('dd10r_legume', 'Legumes', 'bin', f),
@@ -705,7 +744,7 @@ table3 <- rbind(abs_val_fig('dd10r_score_m', 'WDDS', 'cont', f),
                abs_val_fig('dd10r_dairy', 'Dairy', 'bin', f),
                abs_val_fig('dd10r_eggs', 'Eggs', 'bin', f),
                abs_val_fig('dd10r_dglv', 'Dark green leafy vegetables', 'bin', f),
-               abs_val_fig('dd10r_vita', 'Vitamin-A rich foods', 'bin', f),
+               abs_val_fig('dd10r_vita', 'Vitamin A-rich foods', 'bin', f),
                abs_val_fig('dd10r_othv', 'Other vegetables', 'bin', f),
                abs_val_fig('dd10r_othf', 'Other fruits', 'bin', f),
                abs_val_fig('dd10r_legume', 'Legumes', 'bin', f),
