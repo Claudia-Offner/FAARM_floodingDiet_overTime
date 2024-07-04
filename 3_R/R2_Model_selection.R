@@ -38,6 +38,7 @@ lme3_mod <- lme(
   na.action = na.omit,  # Handle missing data using na.omit
   data = df
 )
+summary(lme3_mod)
 (anov <- car::Anova(lme3_mod, type=2)) # Check interaction significance (sequential, good for interactions)
 anov <- cbind(row.names(anov), anov)
 

@@ -6,7 +6,7 @@
 # gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/')
+setwd('G:/My Drive/1. Work/13. LSHTM/2. Research/FAARM/3. Analysis/')
 
 ## Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
@@ -18,7 +18,7 @@ options(scipen=999)
 library(sjPlot)
 library(car)
 library(gridExtra)
-
+library(glmmTMB)
 
 # FUNCTIONS ####
 
@@ -32,6 +32,11 @@ custom_colors <- c('Overall'="#2b2a2a",
 outcomes_bin <- c("dd10r_min_m", "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
                   "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
                   "dd10r_legume", "dd10r_nuts") 
+
+# outcome <- 'dd10r_min_m'
+# name <- 'MDD'
+# type <- 'glmer'
+# exposure <- 'cont'
 
 sens_check <- function(df, outcome, name, type, exposure) {
   
@@ -55,6 +60,8 @@ sens_check <- function(df, outcome, name, type, exposure) {
       data = df
     )
     
+    # Check assumptions
+    (ass_plots <- plot_model(model, type = "diag"))
     
   } else if (type=='glmer'){
     
@@ -66,31 +73,44 @@ sens_check <- function(df, outcome, name, type, exposure) {
       control=glmerControl(optimizer="bobyqa") # Removes non-convergence warnings
     )
     
+    # Check assumptions
+    (ass_plots <- plot_model(model, type = "diag")[1])
   }
-  
-  # Check assumptions
-  ass_plots <- plot_model(model, type = "diag")
   
   # Run sensitivity analysis for comparison
   if (exposure=='cat'){
-    fib.rg = ref_grid(model) # for linear flood
+    fib.rg = ref_grid(model, trans='response') # for non-linear flood
   } else{
     fib.rg = ref_grid(model, at=list(Flood_1Lag=c(0, 1, 2, 3))) # for linear flood
   }
+  summary(fib.rg, infer = c(TRUE, TRUE)) # get means (whole interaction)
+  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag*season_flood)$emmeans, infer = c(TRUE, TRUE)) # get means (partial interaction)
+  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag*season_flood)$contrasts, infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
+  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag | season_flood), infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
+  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag | treatment), infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
+  # summary(emmeans(fib.rg, pairwise ~ treatment | Flood_1Lag | season_flood, trans = "response"), infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
+  # (ame1_cont <- summary(contrast(fib.rg, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE)))
   
   (em_plot <- emmip(fib.rg, treatment ~ Flood_1Lag | season_flood, style='factor', CIs=TRUE, col = c("black"),
-                    linearg = list(), dotarg = list(size = 2), CIarg = list(linetype='solid', alpha = 1, show.legend = FALSE),
+                    linearg = list(), dotarg = list(size = 3), CIarg = list(linetype='solid', alpha = 1, show.legend = FALSE),
                     xlab = "Increase in flooding",  # Modify x-axis label
-                    tlab = "Trial-arm"))
+                    tlab = "Trial arm"))
   # Aesthetics 
   (em_plot <- em_plot + 
           aes(shape=treatment, linetype=treatment, col=season_flood) +
           scale_color_manual(values=custom_colors, name='Season')+
-          scale_shape_manual(values=c(15, 17), name='Trial-arm') +
-          scale_linetype_manual(values=c('dashed', 'solid'), name='Trial-arm')+
-          labs(title=name, color = "Season", shape = "Trial-arm", linetype="Trial-arm") + 
+          scale_shape_manual(values=c(15, 17), name='Trial arm') +
+          scale_linetype_manual(values=c('dashed', 'solid'), name='Trial arm')+
+          labs(title=name, color = "Season", shape = "Trial arm", linetype="Trial arm") + 
       theme_bw() +
-      theme(plot.title = element_text(hjust = 0.5)))  # Center the title
+      theme(plot.title = element_text(hjust = 0.5, size=20, face='bold'),  # center title
+            legend.title = element_text(size=16, face='bold'), # legend text
+            legend.text = element_text(size=14), # legend text
+            legend.position = "right",       # legend position
+            legend.key.size = unit(1, 'cm'), # legend size
+            axis.title = element_text(size=14, face='bold'),
+            axis.text = element_text(size=12),)  # Remove x-axis title
+  )  
 
   
   return(list(ass_plots, em_plot))
@@ -144,10 +164,17 @@ sens_figures <- function(df, outcome, name, type){
 sens_figures(df, 'dd10r_score_m', 'WDDS', type='lme')
 
 # LOGISTIC MIXED EFFECTS MODELS
-for (b in outcomes_bin) {
-  
-  sens_figures(df, b, type='glmer')
-  
-}
+sens_figures(df, 'dd10r_min_m', "MDD", type='glmer')
+sens_figures(df, 'dd10r_dairy', "Dairy", type='glmer')
+sens_figures(df, 'dd10r_flesh', "Flesh foods", type='glmer')
+sens_figures(df, 'dd10r_eggs', "Eggs", type='glmer')
+sens_figures(df, 'dd10r_dglv', "DGLV", type='glmer')
+sens_figures(df, 'dd10r_vita', "Vitamin A-rich Foods", type='glmer')
+sens_figures(df, 'dd10r_othv', "Other vegetables", type='glmer')
+sens_figures(df, 'dd10r_othf', "Other fruits", type='glmer')
+sens_figures(df, 'dd10r_legume', "Legumes", type='glmer')
+sens_figures(df, 'dd10r_nuts', "Nuts and seeds", type='glmer')
+
+
 
 

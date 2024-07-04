@@ -6,7 +6,7 @@
 # gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/2. Data/')
+setwd('G:/My Drive/1. Work/13. LSHTM/2. Research/FAARM/2. Data/')
 
 ## Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
@@ -17,9 +17,10 @@ options(scipen=999)
 # PACKAGES ####
 
 # Required packages
-packages <- c('openxlsx', 'zoo', 'reshape2', 'ggplot2', 'spdep', 'nlme', 'lme4', 'emmeans',
-              'tidyr', 'dplyr')
-library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+# packages <- c('openxlsx', 'zoo', 'reshape2', 'ggplot2', 'spdep', 'nlme', 'lme4', 'emmeans',
+#               'tidyr', 'dplyr')
+# library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+# # (.libPaths(library)) # Set library directory
 
 #### Create new library for project
 # (.libPaths()) # Check Library Paths
@@ -32,10 +33,21 @@ library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
 # }
 
 #### Load packages from library
-# (.libPaths(library)) # Set library directory
-for (p in packages){
-  library(p, character.only = TRUE)
-}
+library(openxlsx)
+library(zoo)
+library(reshape2)
+library(ggplot2)
+library(spdep)
+library(nlme)
+library(lme4)
+library(emmeans)
+library(tidyr)
+library(dplyr)
+
+
+# for (p in packages){
+#   library(p, character.only = TRUE)
+# }
 
 
 #### OTHER SETTINGS

@@ -6,7 +6,8 @@
 # gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/')
+setwd('G:/My Drive/1. Work/13. LSHTM/2. Research/FAARM/3. Analysis/')
+
 
 ## Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
@@ -17,13 +18,13 @@ options(scipen=999)
 # PACKAGES ####
 packages <- c('openxlsx', 'reshape', 'reshape2', 'dplyr', 'stringr', 
               'ggmap', 'patchwork', 'gridExtra', 'ggh4x')
-library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+# library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
+# (.libPaths(library)) # Set library directory
 
 #### Load packages from library
-(.libPaths(library)) # Set library directory
 for (p in packages){
   # install.packages(p, lib = library) # devtools::install_github(username/repository)
-  library(p, character.only = TRUE, lib.loc = library)
+  library(p, character.only = TRUE)
 }
 
 
@@ -64,7 +65,7 @@ mapper <- function(basemap, df_spatial, season=NA, legend='yes') {
   
   (ggmap <- ggmap(basemap) + 
       # Add geometry
-      geom_sf(data = df_spatial, aes(fill=perc_flooded_c, color=treatment, linetype=treatment), size=0.5) +
+      geom_sf(data = df_spatial, aes(fill=perc_flooded_c, color=treatment, linetype=treatment), linewidth=1) +
       # Set fill, color & line types
       scale_fill_gradientn(name = 'Average cluster\nflood coverage', 
                            colours = c("#ffffff", "#49C1ADFF", "#357BA2FF", "#3E356BFF", "#0B0405FF"), #rev(mako(5)) - library(viridis)
@@ -78,8 +79,11 @@ mapper <- function(basemap, df_spatial, season=NA, legend='yes') {
       guides(fill=guide_legend(order=1)) + 
       # Set axes
       theme_minimal() +
-      theme(plot.title = element_text(hjust = 0.5, size=18),  # center title
-            legend.position = "right",       # position legend
+      theme(plot.title = element_text(hjust = 0.5, size=24, face='bold'),  # center title
+            legend.title = element_text(size=16), # legend text
+            legend.text = element_text(size=16), # legend text
+            legend.position = "right",       # legend position
+            legend.key.size = unit(1, 'cm'), # legend size
             axis.title.x = element_blank(),  # Remove x-axis title
             axis.title.y = element_blank(),  # Remove y-axis title
             axis.text.x = element_blank(),   # Remove x-axis labels
@@ -166,7 +170,7 @@ marg_effect_sect <- function(df, d, m, legend='Yes', x_axes='Yes', y_axes='Yes',
       ggplot(aes(y = rev(1:nrow(f1)))) + 
       theme_classic() +
       # Add points & error bars
-      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=3) + 
+      geom_point(aes(x=Diff, colour=Seas, shape=Treat), size=5) + 
       geom_linerange(aes(xmin=Lower.CI, xmax=Upper.CI, colour=Seas)) + 
       # Add vertical & horizontal lines
       geom_vline(xintercept = 0, linetype="dashed") +
@@ -184,9 +188,11 @@ marg_effect_sect <- function(df, d, m, legend='Yes', x_axes='Yes', y_axes='Yes',
       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) + # add boarder on top (x)
       annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) + # add board on side (y)
       theme(plot.title = element_text(hjust = 0.5), # Center title
-            # axis.text.y = element_blank(),
-            # axis.ticks.y= element_blank(),
-            legend.position="bottom")) 
+            axis.text.y = element_text(size=14),
+            axis.text.x = element_text(size=14),
+            axis.title.y = element_text(size=16),
+            axis.title.x = element_text(size=16),            # axis.ticks.y= element_blank(),
+            legend.position="right")) 
   
   # Conditional Plot
   if (legend=='No'){
@@ -253,17 +259,17 @@ marg_effect_full <- function(df, d, legend='No', x_axes='No', y_axes='No', custo
     
     (res <- f1 + f2 + f3 + f4 + leg
       + plot_layout(design = layout) 
-      + plot_annotation(name, theme = theme(plot.title = element_text(size = 16, hjust = 0.4))))
+      + plot_annotation(name, theme = theme(plot.title = element_text(size = 18, hjust = 0.45))))
     
   } else {
     
     (res <- f1 + f2 + f3 + f4 
       + plot_layout(design = layout) 
-      + plot_annotation(name, theme = theme(plot.title = element_text(size = 16, hjust = 0.4))))
+      + plot_annotation(name, theme = theme(plot.title = element_text(size = 18, hjust = 0.45))))
     
   }
 
-  ggsave(paste0('III. Figures/Marginal_Effects/', d, ".png"), res, width=18, height=16, units='cm')
+  ggsave(paste0('III. Figures/Marginal_Effects/', d, ".png"), res, width=18, height=20, units='cm')
   
   return(res)
 }
@@ -369,13 +375,16 @@ Abs_flood <- function(df, s, binary='Yes', x_labs='Yes', link_colour=c('darkgree
       xlab("\nIncrease in flooding from seasonal average") +
       annotate(geom = 'segment', y = Inf, yend = Inf, x = -Inf, xend = Inf) +
       annotate(geom = 'segment', y = -Inf, yend = Inf, x = Inf, xend = Inf) +
-      geom_point(colour="white",size=8) +
-      geom_text(aes(label=y, colour=sig), size=3, family="Helvetica", show.legend = FALSE) +
+      geom_point(colour="white",size=5) +
+      geom_text(aes(label=y, colour=sig), size=5, family="Helvetica", show.legend = FALSE) +
       scale_y_continuous(name="", breaks=subset(f1, x==head(x,1))$ypos, labels=subset(f1, x==head(x,1))$group) + 
       theme_classic() +
       theme(axis.ticks = element_blank(),
             plot.title = element_text(hjust=0.5, family = "Helvetica", face="bold"),
-            axis.text = element_text(family = "Helvetica", face="bold"),
+            legend.title = element_text(size=14),
+            legend.text = element_text(size=14),
+            axis.text = element_text(family = "Helvetica", face="bold", size=14),
+            axis.title = element_text(family = "Helvetica", face="bold", size=16),
             plot.margin=unit(c(0,2.5,0,0), 'cm')))
   
   if (x_labs=="Yes"){
@@ -419,12 +428,12 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
     y_lab <- 'Probability'
     y_breaks <- seq(0, 1.1, 0.25)
     y_lim <- c(0, 1.1)
-    nudge <- 0.1
+    nudge <- 0.15
   } else{
     y_lab <- 'Mean'
     y_breaks <- seq(4, 7, 0.5)
     y_lim <- c(4, 6.5)
-    nudge <- 0.4
+    nudge <- 0.55
   }
   
   if(y_labs=='None'){
@@ -470,13 +479,13 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
       # Add geometry
       geom_line(aes(group=x, linetype=sig), colour=seas_col, show.legend = FALSE) +
       geom_line(aes(group=group, colour=line_sig), show.legend = FALSE) + # Points
-      geom_point(aes(shape=group, colour=sig), size=3) +
+      geom_point(aes(shape=group, colour=sig), size=4) +
       # Add text to geom
-      geom_text(data = subset(f1, sig == "p<0.05" & group == "HFP"), aes(label=labels, y=max(f1$y)), colour=seas_col, nudge_y=nudge) +
+      geom_text(data = subset(f1, sig == "p<0.05" & group == "HFP"), aes(label=labels, y=max(f1$y)), colour=seas_col, size=5, nudge_y=nudge) +
       # Set color, shapes & line types
       scale_shape_manual(values=custom_shapes, name='Trial arm') +
       scale_linetype_manual(values=custom_lines, name='') +
-      scale_color_manual(values=custom_colors_sig, name='Difference between Trial arms', limits=c('p>0.05', 'p<0.05')) +
+      scale_color_manual(values=custom_colors_sig, name='Difference between trial arms', limits=c('p>0.05', 'p<0.05')) +
       # Set axes
       scale_y_continuous(limits = y_lim, breaks=y_breaks) + 
       # scale_y_continuous(breaks=seq(round(min(f1$y), 1), max(f1$y), round(diff(range(f1$y))/5, 2))) + # set y breaks
@@ -490,11 +499,14 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
   # Fix legend
   if(x_labs=='Yes'){
     
-    (gg2 <- gg + theme(axis.ticks.x = element_blank(),
-                       axis.title.x = element_text(margin = margin(t = 15)), # shift away from x_labs
+    (gg2 <- gg + theme(axis.title = element_text(family = "Helvetica", face="bold", size=15),
+                       axis.text = element_text(family = "Helvetica", face="bold", size=14),
                        axis.title.y = element_text(margin = margin(r = 15)), 
-                       plot.title = element_text(size=11, hjust=0.5, family = "Helvetica", face="bold"),
-                       axis.text = element_text(family = "Helvetica"),
+                       axis.title.x = element_text(margin = margin(t = 15)), # shift away from x_labs
+                       axis.ticks.x = element_blank(),
+                       legend.title = element_text(size=14),
+                       legend.text = element_text(size=14),
+                       plot.title = element_text(size=16, hjust=0.5, family = "Helvetica", face="bold"),
                        legend.position="bottom"))
     if(legend=='No'){
       
@@ -504,15 +516,16 @@ Abs_flood_Treat <- function(df, s, outcome, title="Outcome", x_labs='No', legend
     
   } else if(x_labs=='No'){
     
-    (gg2 <- gg + theme(axis.ticks.x = element_blank(),
-                       axis.title.x = element_blank(), 
+    (gg2 <- gg + theme(axis.title = element_text(family = "Helvetica", face="bold", size=15),                       axis.title.x = element_blank(), 
+                       axis.text = element_text(family = "Helvetica", face="bold", size=14),
                        axis.title.y = element_text(margin = margin(r = 15)), 
                        axis.text.x = element_blank(),
-                       plot.title = element_text(size=11, hjust=0.5, family = "Helvetica", face="bold"),
-                       axis.text = element_text(family = "Helvetica"),
+                       axis.ticks.x = element_blank(),
+                       legend.title = element_text(size=14),
+                       legend.text = element_text(size=14),
+                       plot.title = element_text(size=16, hjust=0.5, family = "Helvetica", face="bold"),
                        legend.position="none"))
   }
-  
   
   return(gg2)
   
@@ -543,13 +556,13 @@ f1$Round <- paste0(f1$year, ' ', f1$month)
 # Rename variables
 unique(f1$variable)
 f1$variable <- gsub("dd10r_score_m_COEF", "(A) WDDS", f1$variable)
-f1$variable <- gsub("dd10r_min_m_PROB", "(B) MDD", f1$variable)
+f1$variable <- gsub("dd10r_min_m_PROB", "(B) MDD-W", f1$variable)
 f1$variable <- gsub("dd10r_starch_PROB", "(C) Starchy staples", f1$variable)
 f1$variable <- gsub("dd10r_flesh_PROB", "(D) Flesh foods", f1$variable)
 f1$variable <- gsub("dd10r_dairy_PROB", "(E) Dairy products", f1$variable)
 f1$variable <- gsub("dd10r_eggs_PROB", "(F) Eggs", f1$variable)
 f1$variable <- gsub("dd10r_dglv_PROB", "(G) DGLV", f1$variable)
-f1$variable <- gsub("dd10r_vita_PROB", "(H) Vitamin-A rich foods", f1$variable)
+f1$variable <- gsub("dd10r_vita_PROB", "(H) Vitamin A-rich foods", f1$variable)
 f1$variable <- gsub("dd10r_othv_PROB", "(I) Other vegetables", f1$variable)
 f1$variable <- gsub("dd10r_othf_PROB", "(J) Other fruits", f1$variable)
 f1$variable <- gsub("dd10r_legume_PROB", "(K) Legumes", f1$variable)
@@ -557,9 +570,9 @@ f1$variable <- gsub("dd10r_nuts_PROB", "(L) Nuts & Seeds", f1$variable)
 f1$variable <- gsub("perc_flooded_c_PROB", "(M) Percent Flooded", f1$variable)
 f1$variable<- factor(f1$variable, levels=unique(f1$variable))
 f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
-f1$variable <- factor(f1$variable, levels = c('(A) WDDS', '(B) MDD', 
+f1$variable <- factor(f1$variable, levels = c('(A) WDDS', '(B) MDD-W', 
                                               '(C) Starchy staples', '(D) Flesh foods','(E) Dairy products',
-                                              '(F) Eggs', '(G) DGLV', '(H) Vitamin-A rich foods', '(I) Other vegetables', 
+                                              '(F) Eggs', '(G) DGLV', '(H) Vitamin A-rich foods', '(I) Other vegetables', 
                                               '(J) Other fruits', '(K) Legumes', '(L) Nuts & Seeds',
                                               '(M) Percent Flooded')) # Factor rounds
 
@@ -629,7 +642,7 @@ for (s in seasons) {
   ))
   
   (m1 <- mapper(basemap, sdf_season, season=s, legend='no') +
-      annotation_custom(grob = tableGrob(sum, rows=NULL, cols=NULL, ttheme_default(base_size=14)), xmin = 91.5, xmax = 91.62, ymin=24.35, ymax = 24.5)
+      annotation_custom(grob = tableGrob(sum, rows=NULL, cols=NULL, ttheme_default(base_size=20)), xmin = 91.49, xmax = 91.61, ymin=24.35, ymax = 24.5)
   )
   
   # Export image
@@ -652,8 +665,8 @@ source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Rel_Diff')
 (f3 <- marg_effect_full(source_f0, 'Flesh foods', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 (f4 <- marg_effect_full(source_f0, 'Dairy', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 (f5 <- marg_effect_full(source_f0, 'Eggs', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
-(f6 <- marg_effect_full(source_f0, 'Dark green leafy vegetables', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
-(f7 <- marg_effect_full(source_f0, 'Vitamin-A rich foods', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f6 <- marg_effect_full(source_f0, 'DGLV', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
+(f7 <- marg_effect_full(source_f0, 'Vitamin A-rich foods', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 (f8 <- marg_effect_full(source_f0, 'Other vegetables', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
 (f9 <- marg_effect_full(source_f0, 'Other fruits', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes))
 (f10 <- marg_effect_full(source_f0, 'Legumes', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes))
@@ -680,11 +693,11 @@ for(s in seasons) {
   # Final plot arrangement
   (res <- dd + fg  
     + plot_layout(design = layout) 
-    + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.7))))
+    + plot_annotation(s, theme = theme(plot.title = element_text(size = 18, hjust = 0.7))))
   
   # Export image
   ggsave(paste0('III. Figures/Predicted_Meas_Season/', str_replace(s, "/", "-"), ".png"), 
-         res, width=15, height=20, units='cm')
+         res, width=20, height=20, units='cm')
   
 }
 
@@ -701,8 +714,8 @@ for(s in seasons) {
   legend <- get_legend(p0)
   p1 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dietary diversity scores', x_labs='No', legend='No', binary='No', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
   p2 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dairy', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p3 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Dark green leafy vegetables', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
-  p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Vitamin-A rich foods', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
+  p3 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'DGLV', x_labs='No', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
+  p4 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Vitamin A-rich foods', x_labs='No', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
   p5 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Other fruits', x_labs='Yes', legend='No', binary='Yes', y_labs='Yes', custom_colors, custom_lines, custom_shapes)
   p6 <- Abs_flood_Treat(source_f0, s=s, title="Outcome", 'Legumes', x_labs='Yes', legend='No', binary='Yes', y_labs='None', custom_colors, custom_lines, custom_shapes)
   
@@ -729,11 +742,11 @@ for(s in seasons) {
   # Final plot arrangement
   (res <- p1 + p2 + p3 + p4 + p5 + p6 + legend
     + plot_layout(design = layout) 
-    + plot_annotation(s, theme = theme(plot.title = element_text(size = 16, hjust = 0.5, face='bold'))))
+    + plot_annotation(s, theme = theme(plot.title = element_text(size = 20, hjust = 0.5, face='bold'))))
   
   # Export image
   ggsave(paste0('III. Figures/Predicted_Meas_Season-trial/', str_replace(s, "/", "-"), ".png"), 
-         res, width=18, height=18, units='cm')
+         res, width=20, height=18, units='cm')
   
 }
 
