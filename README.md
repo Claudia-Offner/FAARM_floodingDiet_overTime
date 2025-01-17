@@ -18,8 +18,9 @@ Python code to pre-processes and combines exogenous data extracted from GEE with
 ## 3_R Folder
 R code for processing, analysing, and modelling the relationship between flooding and dietary diversity over time. 
  - __R0_DataFormatting__: Load and format data for analysis in R. NOTE: This file must be run before running any other R files. 
- - __R1_RSMetric_Validation__: Test the strength associations between flood time series metrics & flood experience in April 2017 (Still in process)
- - __R2_STDA_DietFlooding__: Spatial-Temporal Data Analysis (STDA) of outcome and exposure variables to determine the lags required and levels of autocorrelation to control for. Includes confounder selection process and non-spatial EDA.
- - __R3_RINLA_SpatioTemporal_Fitting__: Building optimal RINLA model parameters by testing integrated spatial & temporal random effects. 
- - __R4_Results__: Optimized model results testing for interactions (2-way and 3-way) and quadratic effects.
- - __RINLA_FloodDiet_Modelling__: R projct file.
+ - __R1_Exploratory_analysis__: Spatial-Temporal Data Analysis (STDA) of outcome and exposure variables to determine the lags required and levels of autocorrelation to control for. Includes confounder selection process and non-spatial EDA.
+ - __R2_Model_selection__: Testing for the presence of interactions for continuous and binary dietary outcomes.
+ - __R3_Analysis - generate-res__: Generates the three-way interaction results from the optimized model, for all dietary outcomes (continuous and binary).
+ - __R4A_Analysis - generate-tables__: Organises model outputs for paper tables.
+ - __R4A_Analysis - generate-figures__: Organises model outputs for paper figures.
+ - __FAARM_Flood-Diet-HFP.Rproj__: R projct file.
