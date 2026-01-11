@@ -1,37 +1,19 @@
-################################################################################
-#### GENERATE MANUSCRIPT TABLES  #### 
-################################################################################
+### ------------------------------------------------------------------------ ### 
+### Generate tables
+### ------------------------------------------------------------------------ ### 
 
-#### IMPORTANT - set github credentials
-# gitcreds::gitcreds_set()
+# Clear environment
+rm(list = ls())
 
-#### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/')
+### IMPORTANT - set file paths to folder locations
+data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
+git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+setwd(git_path)
 
-#### IMPORTANT - Run R0_Data_formatting first
+#### DEPENDENCIES ####
+source('R0_Dependencies.R')
 
-# PACKAGES ####
-
-# Required packages & library
-packages <- c('openxlsx', 'zoo', 'cli', 'tidyr', 'dplyr', 'reshape2')
-library <- 'C:/Users/offne/Documents/R/win-library/FAARM/' # set path
-(.libPaths(library)) # Set library directory
-# install.packages('dplyr')
-
-#### Load packages from library
-for (p in packages){
-  library(p, character.only = TRUE)
-}
-
-# FUNCTIONS ####
-
-outcomes_cont <- "dd10r_score_m"
-outcomes_bin <- c("dd10r_min_m", "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
-                  "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
-                  "dd10r_legume", "dd10r_nuts")
-
-## DESCRIPTIVE FUNCTIONS
-# Function to extract descriptive info for continuous variable (mean, CI, p)
+# DESC Function to extract descriptive info for continuous variable (mean, CI, p)
 summary_cont <- function(df, g1, group=1, col) {
   # Extract descriptive info for continuous variable (mean, CI, p)
   # Data is grouped by treatment and year_season
@@ -51,7 +33,7 @@ summary_cont <- function(df, g1, group=1, col) {
   
 }
 
-# Function to extract descriptive info for binary variable (proportion, CI, p)
+# DESC Function to extract descriptive info for binary variable (proportion, CI, p)
 summary_bin <- function(df, g1, group=1, col) {
   # Extract descriptive info for binary variable (proportion, CI, p)
   # Data is grouped by treatment and year_season
@@ -72,7 +54,7 @@ summary_bin <- function(df, g1, group=1, col) {
   
 }
 
-# Function to extract descriptive info for cat variable (proportion, CI, p)
+# DESC Function to extract descriptive info for cat variable (proportion, CI, p)
 t1_summary_cat <- function(df, col) {
   # Extract descriptive info for cat variable (proportion, CI, p)
   # Assuming df is your data frame
@@ -91,7 +73,7 @@ t1_summary_cat <- function(df, col) {
   return(result)  
 }
 
-# Function to extract descriptive info for continuous variable 
+# DESC Function to extract descriptive info for continuous variable 
 t1_summary_cont <- function(df, col) {
   # Extract descriptive info for continuous variable
   # Assuming df is your data frame
@@ -108,8 +90,7 @@ t1_summary_cont <- function(df, col) {
   return(result)  
 }
 
-## ANALYSIS FUNCTIONS
-# Function to extract the string including 3 characters before and after the '/' sign
+# MAIN Function to extract the string including 3 characters before and after the '/' sign
 extract_string <- function(string) {
   # Find the position of the '/' sign
   slash_position <- regexpr("/", string)
@@ -122,7 +103,7 @@ extract_string <- function(string) {
   return(extracted_string)
 }
 
-# Function to format columns
+# MAIN Function to format columns
 format_cols <- function(outcome, var, est, l_ci, u_ci, p, num=2) {
   
   ### Format CI & p (2 decimal places)
@@ -140,7 +121,7 @@ format_cols <- function(outcome, var, est, l_ci, u_ci, p, num=2) {
   return(master)
 }
 
-# Function to extract and format predicted values
+# MAIN Function to extract and format predicted values
 get_emm <- function (outcome, folder,val, l_ci, u_ci, p_vl) {
   
   # Get relevant data
@@ -178,7 +159,7 @@ get_emm <- function (outcome, folder,val, l_ci, u_ci, p_vl) {
   
 }
 
-# Function to extract and format difference tests
+# MAIN Function to extract and format difference tests
 get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
   
   # Get data
@@ -201,7 +182,7 @@ get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
     res$contrast <- sub("Flood_1Lag", "", res$contrast)
     row.names(res) <- NULL
   }
-
+  
   # Set variable, depending on folder
   if (folder=='/Flood_1Lag-season_flood-treatment/'){
     (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$contrast, sep = "-"))
@@ -216,28 +197,28 @@ get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
   # Format
   res[, c("estimate", l_ci, u_ci)] <- res[, c("estimate", l_ci, u_ci)] * -1
   (diff <- format_cols(outcome, var, res[['estimate']], res[[l_ci]], res[[u_ci]], round(res[[p_vl]], 2)))
-
+  
   # Line up columns
   if (!grepl("treatment", folder)){
-      
+    
     diff <- diff %>% 
-        group_by(grp = (row_number()-4) %/% 3) %>% # add NA's every 3rd row after row 4
+      group_by(grp = (row_number()-4) %/% 3) %>% # add NA's every 3rd row after row 4
       group_modify(~ add_row(.x, !!paste0(outcome, "_variables") := rep(NA, 1))) %>% 
       ungroup() %>% 
-        select(-grp)
-      diff <- rbind(NA, diff)
-      diff <- diff[-nrow(diff), ] # remove last row
-
-      return(diff)
+      select(-grp)
+    diff <- rbind(NA, diff)
+    diff <- diff[-nrow(diff), ] # remove last row
     
-    } else {
-      
-      return(diff)
-      
-    }
+    return(diff)
+    
+  } else {
+    
+    return(diff)
+    
+  }
 }
 
-# Function to get absolute difference tables, formatted according to excel structure
+# MAIN Function to get absolute difference tables, formatted according to excel structure
 # NB: Tables will be automatically saved to location
 abs_diff_table <- function(outcome, dtype){
   
@@ -274,83 +255,84 @@ abs_diff_table <- function(outcome, dtype){
   table <- rbind(top, bottom)
   
   # Export
-  write.xlsx(table,  paste0('II. Tables/absolute_diff_', outcome, '.xlsx'), rowNames=FALSE, fileEncoding = "UTF-8")
+  folder <- paste0('II. Tables/absolute_diff_', outcome, '.xlsx')
+  write.xlsx(table, folder, rowNames=FALSE, fileEncoding = "UTF-8")
   
   return(table)
   
 }
 
-# Function to format relative difference outputs 
-rel_diff_form <- function(outcome, name, dtype, model, folder){
-  
-  if (dtype=='cont'){
-    
-    # set variable names
-    l_ci <- 'lower.CL'
-    u_ci <- 'upper.CL'
-    
-  } else if (dtype=='bin'){
-    
-    # set variable names
-    l_ci <- 'asymp.LCL'
-    u_ci <- 'asymp.UCL'
-    
-  }
-  
-  (res <- read.xlsx(paste0('I. Results/', outcome, folder, 'ame1_res.xlsx')))
-  
-  if (folder=='/Flood_1Lag-season_flood-treatment/') {
-    
-    res$treatment <- ifelse(res$treatment == 0, "Control", 'HFP')
-    res$group <- paste0(res$season_flood, ':', res$treatment)
-    
-  } else if (folder=='/Flood_1Lag-season_flood/'){ #there is no treatment
-    
-    res$treatment <- 'Overall'
-    res$group <- res$season_flood      
-    
-  } else if (folder=='/Flood_1Lag-treatment/') { # there is no season
-    
-    res$treatment <- ifelse(res$treatment == 0, "Control", 'HFP')
-    res$season_flood <- 'Overall'
-    res$group <- res$treatment      
-    
-    
-  } else {
-    
-    res$treatment <- 'Overall'
-    res$season_flood <- 'Overall'
-    res$group <- 'Overall'    
-    
-  }
-  
-  res$model <- model
-  res$outcome <- name
-  res <- res[, c('outcome', 'model', 'season_flood', 'treatment', 'group', '1.trend', l_ci, u_ci, 'p.value')]
-  colnames(res) <- c('Outcome', 'Model', 'Seas', 'Treat', 'Group', 'Diff', 'Lower.CI', 'Upper.CI', 'P')
-  
-  return(res)
-  
-}
-
 # Function to get all difference outputs for figure creations
-rel_diff_fig <- function(outcome, name, dtype){
+rel_diff_fig <- function(outcome, dtype){
   
-  f1 <- rel_diff_form(outcome, name, dtype, 'F1', '/Flood_1Lag/')
-  f2 <- rel_diff_form(outcome, name, dtype, 'F2', '/Flood_1Lag-treatment/')
-  f3 <- rel_diff_form(outcome, name, dtype, 'F3', '/Flood_1Lag-season_flood/')
-  f4 <- rel_diff_form(outcome, name, dtype, 'F4', '/Flood_1Lag-season_flood-treatment/')
+  # Function to format relative difference outputs 
+  rel_diff_form <- function(outcome, dtype, model, folder){
+    
+    if (dtype=='cont'){
+      
+      # set variable names
+      l_ci <- 'lower.CL'
+      u_ci <- 'upper.CL'
+      
+    } else if (dtype=='bin'){
+      
+      # set variable names
+      l_ci <- 'asymp.LCL'
+      u_ci <- 'asymp.UCL'
+      
+    }
+    
+    (res <- read.xlsx(paste0('I. Results/', outcome, folder, 'ame1_res.xlsx')))
+    
+    if (folder=='/Flood_1Lag-season_flood-treatment/') {
+      
+      res$treatment <- ifelse(res$treatment == 0, "Control", 'HFP')
+      res$group <- paste0(res$season_flood, ':', res$treatment)
+      
+    } else if (folder=='/Flood_1Lag-season_flood/'){ #there is no treatment
+      
+      res$treatment <- 'Overall'
+      res$group <- res$season_flood      
+      
+    } else if (folder=='/Flood_1Lag-treatment/') { # there is no season
+      
+      res$treatment <- ifelse(res$treatment == 0, "Control", 'HFP')
+      res$season_flood <- 'Overall'
+      res$group <- res$treatment      
+      
+      
+    } else {
+      
+      res$treatment <- 'Overall'
+      res$season_flood <- 'Overall'
+      res$group <- 'Overall'    
+      
+    }
+    
+    res$model <- model
+    res$outcome <- outcome
+    res <- res[, c('outcome', 'model', 'season_flood', 'treatment', 'group', '1.trend', l_ci, u_ci, 'p.value')]
+    colnames(res) <- c('Outcome', 'Model', 'Seas', 'Treat', 'Group', 'Diff', 'Lower.CI', 'Upper.CI', 'P')
+    
+    return(res)
+    
+  }
+  
+  f1 <- rel_diff_form(outcome, dtype, 'F1', '/Flood_1Lag/')
+  f2 <- rel_diff_form(outcome, dtype, 'F2', '/Flood_1Lag-treatment/')
+  f3 <- rel_diff_form(outcome, dtype, 'F3', '/Flood_1Lag-season_flood/')
+  f4 <- rel_diff_form(outcome, dtype, 'F4', '/Flood_1Lag-season_flood-treatment/')
   
   return (rbind(f1, f2, f3, f4))
   
 }
 
 # Function to get all absolute value outputs for figure creations
-abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
+abs_val_fig <- function (outcome, dtype, folder, fig=0) {
   
   # outcome <- 'dd10r_min_m'
   # name <- 'WDDS'
-  # dtype <- 'cont'
+  # dtype <- 'bin'
   # folder <- f
   # p_vl <- 'p.value'
   
@@ -371,7 +353,7 @@ abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
   
   # Get means
   (res <- get_emm(outcome, folder, val, l_ci, u_ci, 'p.value'))
-
+  
   if (grepl('treatment', folder)){
     
     (res <- data.frame(pivot_longer(res, cols = everything(), names_to = ".value", names_pattern = paste0(outcome,"_(.*)"))))
@@ -384,8 +366,8 @@ abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
   
   colnames(res)[1:3] <- c('variables', 'value', 'CI')
   res$season <- sapply(res$variables , extract_string)
-  res$group <- name
-
+  res$group <- outcome
+  
   # Get sig tests
   contr <- data.frame(get_contr(outcome, folder, l_ci, u_ci, 'p.value'))
   contr$sig <- as.numeric(gsub("[()]", "", contr[, grepl("_P$", names(contr))]))
@@ -400,10 +382,10 @@ abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
     contr$treat <- 'HFP-Control'
     contr$increase <- c(0, 1, 2, 3)
     contr$season <- sapply(contr$variables , extract_string)
-    contr$group <- name
+    contr$group <- outcome
     res <- rbind(res, contr)
   } else{
-
+    
     res$sig <- contr$sig
   }
   
@@ -419,8 +401,22 @@ abs_val_fig <- function (outcome, name, dtype, folder, fig=0) {
   return(res)
 }
 
+#### MAIN CODE ####
 
-# DESCRIPTIVE DATA CLEANING ####
+# Load data
+load(paste0('main_data.RData'))
+
+# Set path
+setwd(paste0(git_path, '/Outputs/'))
+
+# Check and set result location
+folder <- paste0(git_path, '/Outputs/II. Tables/')
+check_folder_loc(folder)
+folder <- paste0(git_path, '/Outputs/III. Figures/')
+check_folder_loc(folder)
+
+# Data cleaning ####
+
 # Get observations for women over BL 
 dates <- c('2015-1', '2015-2', '2015-3', '2015-4')
 w_BL <- df_BL %>% filter(year_season %in% dates & !is.na(dd_elig))
@@ -469,7 +465,7 @@ diets_BL$year_season <-  'Baseline'
 # Create df with BL and surveillance
 df_BL_S <- bind_rows(diets_BL, w_S, .id = "Source")
 
-# DESCRIPTIVE STATISTICS: Baseline characteristics of women, by trial-arm ####
+# MT1: Baseline characteristics of women, by trial-arm (desc_trial) ####
 
 # Get descriptive on characteristics
 cont <- c("age_3_BL", "wi_land_BL", "hh1hh_mem_EL") 
@@ -509,10 +505,20 @@ for (c in c(cat, 'dd10r_starch', outcomes_bin)) {
 }
 master <- data.frame(t(master)) # transpose
 colnames(master) <- c('Control', 'Treatment')
-# Export
-write.xlsx(master, "II. Tables/desc_trial.xlsx", rowNames=TRUE, fileEncoding = "UTF-8") # export to xlsx
+desired_order <- c('treatment', 'age_3_BL', 
+                   'woman_edu_cat__BL__0', 'woman_edu_cat__BL__1', 'woman_edu_cat__BL__2',
+                   'woman_edu_cat__BL__3', 'woman_edu_cat__BL__4', 'quint2_BL__1',
+                   'quint2_BL__2', 'quint2_BL__3', 'quint2_BL__4', 'quint2_BL__5', 
+                   'g_2h_BL__1', 'g_2h_BL__2', 'hh1hh_mem_EL', 'wi_land_BL', 
+                   'dd10r_starch', "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
+                   "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
+                   "dd10r_legume", "dd10r_nuts", 'dd10r_min_m', 'dd10r_score_m')
+master <- master[match(desired_order, rownames(master)), ]
 
-# DESCRIPTIVE STATISTICS: Baseline characteristics of women, by trial-arm, across survey rounds ####
+desc_trial <- master
+
+
+# Optional: Baseline characteristics of women, by trial-arm, across survey rounds (desc_trial_rounds) ####
 
 # Export descriptive stats for WDDS 
 c <- outcomes_cont
@@ -525,7 +531,7 @@ master <- cbind(master[, 1], m$treatment, master[, -1])
 names(master)[1:2] <- c("Round", 'Treatment')
 
 # Export descriptive stats for flooding 
-c <- 'perc_flooded_c'
+c <- 'Flood_1Lag'
 tre <- summary_cont(df, g1='year_season', group=1, c) # treat
 con <- summary_cont(df, g1='year_season', group=0, c) # control
 m <- rbind(tre, con) # combine treat & control by row
@@ -552,11 +558,9 @@ for (b in c('dd10r_min_m', "dd10r_starch", outcomes_bin[outcomes_bin != 'dd10r_m
 # Convert the column to a factor with the desired order of levels
 master$Round <- factor(master$Round, levels = c('Baseline', sort(unique(master$Round[master$Round != 'Baseline']))))
 master <- master %>% arrange_at(c('Treatment', 'Round'))
-# Export
-write.xlsx(master, "II. Tables/desc_trial_rounds.xlsx", rowNames=FALSE, fileEncoding = "UTF-8") # export to xlsx
+desc_trial_rounds <- master
 
-
-# TYPE 3 ANOVA: Interaction tests for significance ####
+# ST2: Interaction tests for significance (anova) ####
 
 # Create main frame with continuous outcome
 ### Get data
@@ -569,7 +573,10 @@ master$`Pr(>Chisq)` <- sprintf("%.2f", master$`Pr(>Chisq)`)
 master$`Pr(>Chisq)`[master$P == '<0.001'] <- "<0.001"
 master$P <- NULL 
 colnames(master) <- paste0(outcomes_cont, '_', colnames(master)) 
-
+# Merge relevant cols
+res <- data.frame()
+row_df <- setNames(data.frame(paste0(master[[1]], " (", master[[3]], ")")), outcomes_cont)
+res <- rbind(res, row_df)
 
 ### Append each binary outcome to the main frame
 for (b in outcomes_bin) {
@@ -577,7 +584,7 @@ for (b in outcomes_bin) {
   # Get data
   (path <- paste0('I. Results/', b, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
   new <- read.xlsx(path)
-  ### Format 2 decimal places
+  # Format 2 decimal places
   new$Chisq <- sprintf("%.1f", new$Chisq)
   new$P[new$`Pr(>Chisq)` < 0.001] <- "<0.001"  
   new$`Pr(>Chisq)` <- sprintf("%.2f", new$`Pr(>Chisq)`)
@@ -585,48 +592,24 @@ for (b in outcomes_bin) {
   new$P <- NULL
   colnames(new) <- paste0(b, '_', colnames(new)) 
   # Append columns to master df
-  master <- cbind(master, new)
-  
+  row_df <- setNames(data.frame(paste0(new[[1]], " (", new[[3]], ")")), b)
+  res <- cbind(res, row_df)  
 }
 
-# Export
-write.xlsx(master,  'II. Tables/anova.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
+# Select results for reporting
+rownames(res) <- c("(Intercept)", "Flood_1Lag", "season_flood", "treatment", 
+                      "WDDS_BL", "ramadan", "g_2h_BL", "quint2_BL", 
+                      "Flood_1Lag:season_flood", "Flood_1Lag:treatment", 
+                      "season_flood:treatment", "Flood_1Lag:season_flood:treatment")
+res <- as.data.frame(t(res)) %>% 
+  select('Flood_1Lag', 'season_flood', 'treatment', 'Flood_1Lag:treatment', 
+         'Flood_1Lag:season_flood', 'season_flood:treatment', 
+         'Flood_1Lag:season_flood:treatment')
+anova <- res
 
 
-# MAIN EFFECTS: Regression results for impact of 1% flood coverage on dietary outcomes ####
 
-# Create main frame with continuous outcome
-### Get data
-(path <- paste0('I. Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
-(mod_res <- read.xlsx(path))
-### Format CI & p (2 decimal places)
-master <- format_cols(outcomes_cont, mod_res$Variables, mod_res$Estimate, mod_res$Lower_CI, mod_res$Upper_CI, mod_res$P_Value)
-names(master)[names(master) == "dd10r_score_m_variables"] <- "variables"  
-
-### Append each binary outcome to the main frame
-for (b in outcomes_bin) {
-  
-  # Get data
-  (path <- paste0('I. Results/', b, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
-  mod_res <- read.xlsx(path)
-  # Format CI & p (2 decimal places)
-  new <- format_cols(b, mod_res$Variables, mod_res$Estimate, mod_res$Lower_CI, mod_res$Upper_CI, mod_res$P_Value)
-  # Append columns to master df
-  master <- cbind(master, new)
-  
-}
-print(master)
-
-# Re-arrange the row orders
-rows_to_move <- c(1, 3:7, 2, 13:17, 8, 19:23, 18, 24:28,9:12)
-(master <- rbind(master[rows_to_move, ], master[-rows_to_move, ]))
-rownames(master) <- NULL
-
-# Export
-write.xlsx(master,  'II. Tables/main_effects.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
-
-
-# MARGINAL EFFECTS: Relative effects of 1% flood coverage on dietary outcomes ####
+# ST3: Marginal effects of 1% flood coverage on dietary outcomes (marginal_effects) ####
 
 # GET 3 WAY INTERACTION
 f <- '/Flood_1Lag-season_flood-treatment/'
@@ -691,9 +674,9 @@ for (b in outcomes_bin) {
 
 # Combine tables
 master <- rbind(Int_0, Int_2_T, Int_2_S, Int_3)
-write.xlsx(master,  'II. Tables/marginal_effects.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
+marginal_effects <- master
 
-# PREDICTED VALUES: Absolute measures of 1% flood coverage on dietary outcomes, with difference tests ####
+# ST4: Marginal means of 1% flood coverage on dietary outcomes, with difference tests ####
 
 # Table 1 (Presentation)
 
@@ -706,50 +689,98 @@ for (b in outcomes_bin) {
 }
 
 
-# Table Processing for figures ####
+# ST5: Main effects for impact of 1% flood coverage on dietary outcomes (main_effects) ####
+
+# Create main frame with continuous outcome
+### Get data
+(path <- paste0('I. Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
+(mod_res <- read.xlsx(path))
+### Format CI & p (2 decimal places)
+master <- format_cols(outcomes_cont, mod_res$Variables, mod_res$Estimate, mod_res$Lower_CI, mod_res$Upper_CI, mod_res$P_Value)
+names(master)[names(master) == "dd10r_score_m_variables"] <- "variables"  
+
+### Append each binary outcome to the main frame
+for (b in outcomes_bin) {
+  
+  # Get data
+  (path <- paste0('I. Results/', b, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
+  mod_res <- read.xlsx(path)
+  # Format CI & p (2 decimal places)
+  new <- format_cols(b, mod_res$Variables, mod_res$Estimate, mod_res$Lower_CI, mod_res$Upper_CI, mod_res$P_Value)
+  # Append columns to master df
+  master <- cbind(master, new)
+  
+}
+
+# Re-arrange the row orders
+rows_to_move <- c(1, 3:7, 2, 13:17, 8, 19:23, 18, 24:28,9:12)
+(master <- rbind(master[rows_to_move, ], master[-rows_to_move, ]))
+rownames(master) <- NULL
+main_effects <- master
+
+# Tables for figures ####
 
 # Create R_Rel-Diff
-table1 <- rbind(rel_diff_fig('dd10r_score_m', 'WDDS', 'cont'),
-               rel_diff_fig('dd10r_min_m', 'MDD', 'bin'),
-               rel_diff_fig('dd10r_flesh', 'Flesh foods', 'bin'),
-               rel_diff_fig('dd10r_dairy', 'Dairy', 'bin'),
-               rel_diff_fig('dd10r_eggs', 'Eggs', 'bin'),
-               rel_diff_fig('dd10r_dglv', 'Dark green leafy vegetables', 'bin'),
-               rel_diff_fig('dd10r_vita', 'Vitamin A-rich foods', 'bin'),
-               rel_diff_fig('dd10r_othv', 'Other vegetables', 'bin'),
-               rel_diff_fig('dd10r_othf', 'Other fruits', 'bin'),
-               rel_diff_fig('dd10r_legume', 'Legumes', 'bin'),
-               rel_diff_fig('dd10r_nuts', 'Nuts/seeds', 'bin'))
+table1 <- rbind(rel_diff_fig('dd10r_score_m', 'cont'),
+                rel_diff_fig('dd10r_min_m', 'bin'),
+                rel_diff_fig('dd10r_flesh', 'bin'),
+                rel_diff_fig('dd10r_dairy', 'bin'),
+                rel_diff_fig('dd10r_eggs', 'bin'),
+                rel_diff_fig('dd10r_dglv', 'bin'),
+                rel_diff_fig('dd10r_vita', 'bin'),
+                rel_diff_fig('dd10r_othv', 'bin'),
+                rel_diff_fig('dd10r_othf', 'bin'),
+                rel_diff_fig('dd10r_legume', 'bin'),
+                rel_diff_fig('dd10r_nuts', 'bin'))
 
 # Create R_Abs-Flood-Levels
 f <- '/Flood_1Lag-season_flood/'
-table2 <- rbind(abs_val_fig('dd10r_score_m', "Dietary diversity scores*", 'cont', f), 
-               abs_val_fig('dd10r_min_m', "Minimum dietary diversity", 'bin', f),
-               abs_val_fig('dd10r_flesh', 'Flesh foods', 'bin', f),
-               abs_val_fig('dd10r_dairy', 'Dairy', 'bin', f),
-               abs_val_fig('dd10r_eggs', 'Eggs', 'bin', f),
-               abs_val_fig('dd10r_dglv', 'Dark green leafy vegetables', 'bin', f),
-               abs_val_fig('dd10r_vita', 'Vitamin A-rich foods', 'bin', f),
-               abs_val_fig('dd10r_othv', 'Other vegetables', 'bin', f),
-               abs_val_fig('dd10r_othf', 'Other fruits', 'bin', f),
-               abs_val_fig('dd10r_legume', 'Legumes', 'bin', f),
-               abs_val_fig('dd10r_nuts', 'Nuts/seeds', 'bin', f))
+table2 <- rbind(abs_val_fig('dd10r_score_m',  'cont', f), 
+                abs_val_fig('dd10r_min_m', 'bin', f),
+                abs_val_fig('dd10r_flesh', 'bin', f),
+                abs_val_fig('dd10r_dairy', 'bin', f),
+                abs_val_fig('dd10r_eggs', 'bin', f),
+                abs_val_fig('dd10r_dglv', 'bin', f),
+                abs_val_fig('dd10r_vita', 'bin', f),
+                abs_val_fig('dd10r_othv', 'bin', f),
+                abs_val_fig('dd10r_othf', 'bin', f),
+                abs_val_fig('dd10r_legume', 'bin', f),
+                abs_val_fig('dd10r_nuts', 'bin', f))
 
 
 # Create R-Abs-Flood-Treat_Levels
 f <- '/Flood_1Lag-season_flood-treatment/'
-table3 <- rbind(abs_val_fig('dd10r_score_m', 'WDDS', 'cont', f), 
-               abs_val_fig('dd10r_min_m', 'MDD', 'bin', f),
-               abs_val_fig('dd10r_flesh', 'Flesh foods', 'bin', f),
-               abs_val_fig('dd10r_dairy', 'Dairy', 'bin', f),
-               abs_val_fig('dd10r_eggs', 'Eggs', 'bin', f),
-               abs_val_fig('dd10r_dglv', 'Dark green leafy vegetables', 'bin', f),
-               abs_val_fig('dd10r_vita', 'Vitamin A-rich foods', 'bin', f),
-               abs_val_fig('dd10r_othv', 'Other vegetables', 'bin', f),
-               abs_val_fig('dd10r_othf', 'Other fruits', 'bin', f),
-               abs_val_fig('dd10r_legume', 'Legumes', 'bin', f),
-               abs_val_fig('dd10r_nuts', 'Nuts/seeds', 'bin', f))
+table3 <- rbind(abs_val_fig('dd10r_score_m', 'cont', f), 
+                abs_val_fig('dd10r_min_m', 'bin', f),
+                abs_val_fig('dd10r_flesh', 'bin', f),
+                abs_val_fig('dd10r_dairy', 'bin', f),
+                abs_val_fig('dd10r_eggs', 'bin', f),
+                abs_val_fig('dd10r_dglv', 'bin', f),
+                abs_val_fig('dd10r_vita', 'bin', f),
+                abs_val_fig('dd10r_othv', 'bin', f),
+                abs_val_fig('dd10r_othf', 'bin', f),
+                abs_val_fig('dd10r_legume', 'bin', f),
+                abs_val_fig('dd10r_nuts', 'bin', f))
 
+# Rename variables
+table1 <- replace_matches(table1, nm)
+table2 <- replace_matches(table2, nm)
+table3 <- replace_matches(table3, nm)
 
-# Save the dataframes to an Excel file with different sheet names
+# Save the data frames to an Excel file with different sheet names
 write.xlsx(list(R_Rel_Diff=table1, R_Abs_Flood_Levels=table2, R_Abs_Flood_Treat_Levels=table3), "III. Figures/Visuals.xlsx")
+
+#### EXPORT ####
+
+# Rename variables
+desc_trial <- replace_matches(desc_trial, nm)
+anova <- replace_matches(anova, nm)
+marginal_effects <- replace_matches(marginal_effects, nm)
+main_effects <- replace_matches(main_effects, nm)
+
+# Export
+tables <- c('desc_trial', 'desc_trial_rounds', 'anova', 'marginal_effects', 'main_effects')
+for (t in tables){
+  write.xlsx(get(t), paste0("II. Tables/", t, ".xlsx"), rowNames=TRUE, fileEncoding = "UTF-8")
+}
+

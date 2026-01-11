@@ -6,7 +6,7 @@
 # gitcreds::gitcreds_set()
 
 #### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/')
+setwd('C:/Users/claer14/OneDrive/2. Career/23. Work/LSHTM/III. Research/2024_Flooding-DD-HFP/2. Data/')
 
 ## Suppress warnings & turn off scientific notation
 options(warn=-1) # 0 to turn back on
@@ -55,7 +55,7 @@ getLME(lme3_mod)
 
 fib.rg = ref_grid(lme3_mod, at = list(Flood_1Lag = c(0, 1, 2, 3))) # for linear flood
 emmip(fib.rg, treatment ~ Flood_1Lag | season_flood, style='factor', CIs=TRUE,col = "black",
-      linearg = list(), dotarg = list(size = 2), CIarg = list(alpha = 1)) +
+      linearg = list(), dotarg = list(size = 2), CIarg = list(alpha = 1),  plotit = TRUE) + 
   ggplot2::theme_bw()
 
 emmip(fib.rg, ~ Flood_1Lag | season_flood, style='factor', CIs=TRUE,col = "black",

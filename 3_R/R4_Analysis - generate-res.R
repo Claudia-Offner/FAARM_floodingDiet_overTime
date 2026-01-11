@@ -1,24 +1,21 @@
-################################################################################
-#### GENERATE RESULTS (CONTINUOUS EXPOSURE)  #### 
-################################################################################
+### ------------------------------------------------------------------------ ### 
+### Generate main results
+### ------------------------------------------------------------------------ ### 
 
-#### IMPORTANT - set github credentials
-# gitcreds::gitcreds_set()
+# Clear environment
+rm(list = ls())
 
-#### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/offne/OneDrive - London School of Hygiene and Tropical Medicine/2. Research/B. FAARM/3. Analysis/I. Results')
+### IMPORTANT - set file paths to folder locations
+data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
+git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+# setwd(git_path)
 
-#### IMPORTANT - Run R0_Data_formatting first
+#### DEPENDENCIES ####
+source('R0_Dependencies.R')
 
-times <- data.frame(Variable = character(0), Time = numeric(0))
-outcomes_cont <- c("dd10r_score_m")
-outcomes_bin <- c("dd10r_min_m", "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
-                  "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
-                  "dd10r_legume", "dd10r_nuts") 
-
-# FUNCTIONS
+# Function to export estimates, marginal effects and marginal means
 get_results <- function(model, outcome, dtype, interaction) {
- 
+  
   # Get calculations based to outcome data type
   if(dtype=='cont'){
     (mod_res <- getLME(model))
@@ -42,7 +39,8 @@ get_results <- function(model, outcome, dtype, interaction) {
     
     # Anova test
     (anov <- car::Anova(model, type=3))
-    anov <- cbind(row.names(anov), anov)
+    anov <- round_df(cbind(row.names(anov), anov), 10)
+    row.names(anov) <- NULL
     
     ## A. Average Marginal Effects (slopes)
     (ame1_res <- summary(ame1,  infer = c(TRUE, TRUE)))
@@ -116,6 +114,10 @@ get_results <- function(model, outcome, dtype, interaction) {
   
   ## Export Tables & Plots
   folder <- paste0(outcome, '/', gsub("^-", "", gsub("[[:space:]~*]+", "-", interaction)), '/')
+  
+  # Check if folder exists
+  check_folder_loc(folder)
+  
   for(t in tables) {
     
     write.xlsx(get(t), paste0(folder, t, '.xlsx'), rowNames=FALSE, fileEncoding = "UTF-8")
@@ -127,6 +129,7 @@ get_results <- function(model, outcome, dtype, interaction) {
   
 }
 
+# Function to run binary/continuous models, depending on outcome
 run_model <- function(outcome, type) {
   
   # Set the main formula
@@ -160,13 +163,27 @@ run_model <- function(outcome, type) {
   get_results(model, outcome, type, '~ Flood_1Lag * season_flood') # 2-way-seas
   get_results(model, outcome, type, '~ Flood_1Lag * treatment') # 2-way-treat
   get_results(model, outcome, type, '~ Flood_1Lag') # none
-  
-  
+
 }
 
+#### MAIN CODE ####
 
-# GENERATE RESULTS FOR ALL OUTCOMES
+# Load data
+load(paste0('main_data.RData'))
 
+# Relevant exposure
+df$Flood_1Lag <- df$Flood_SThresh
+levels <- flood_cat_levels
+
+# Check and set result location
+folder <- paste0(git_path, '/Outputs/I. Results/')
+check_folder_loc(folder)
+setwd(folder)
+
+# Set model timer
+times <- data.frame(Variable = character(0), Time = numeric(0))
+
+# 1. Extract and export results for continuous outcomes ####
 for (c in outcomes_cont){
   
   # Run model
@@ -179,6 +196,8 @@ for (c in outcomes_cont){
   times <- rbind(times, data.frame(Variable = c, Time = total_time))
   print(paste0('TIME TO RUN ', c, ' MODEL: ', total_time))
 }
+
+# 2. Extract and export results for binary outcomes ####
 
 for (b in outcomes_bin) {
   
@@ -193,6 +212,7 @@ for (b in outcomes_bin) {
   print(paste0('TIME TO RUN ', b, ' MODEL: ', total_time))  
 }
 
+#### EXPORT ####
 print(times)
 write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 
