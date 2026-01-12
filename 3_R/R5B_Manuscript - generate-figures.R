@@ -543,13 +543,10 @@ tufte_sort <- function(df, x='year', y='value', group='group', method='tufte', m
 # Load data
 load(paste0('main_data.RData'))
 
-# Set path
-setwd(paste0(git_path, '/Outputs/'))
-
 # SF2: DESC - Temporal distribution of flooding & diets, pooled ####
 
 # Load data
-source_f0 <- read.xlsx(xlsxFile='II. Tables/desc_trial_rounds.xlsx')
+source_f0 <- read.xlsx(xlsxFile='Tables/ST_desc_trial_rounds.xlsx')
 # Clean data
 source_f0 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
 source_f0 <- melt(source_f0, id.vars=c('Round', 'Treatment'))
@@ -605,7 +602,7 @@ f1$variable <- factor(f1$variable, levels=c('(A) DDS', '(B) MDD-W',
       )) + theme_bw())
 
 
-ggsave('III. Figures/SF2_time_series.png', sf2, width=35, height=25, units='cm')
+ggsave('Figures/SF2_time_series.png', sf2, width=35, height=25, units='cm')
 
 # MF2: DESC - Spatial flood distribution across seasons, by cluster ####
 
@@ -654,12 +651,12 @@ basemap <- get_map(c(left=bbox$xmin,
 # Get seasonal maps
 mf2 <- mapper(basemap, sdf_season, stats_df)
 
-ggsave(paste0('III. Figures/MF2_Seasonal_Flood.png'), mf2, width=20, height=15, units='cm',   bg='white')
+ggsave(paste0('Figures/MF2_Seasonal_Flood.png'), mf2, width=20, height=15, units='cm',   bg='white')
 
 
 # MF3: RES - Marginal effects of interaction model for each DD outcome (1SD flood) ####
 
-source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Rel_Diff')
+source_f0 <- read.xlsx(xlsxFile='Tables/Visuals.xlsx', sheet='R_Rel_Diff')
 
 # Get full plot for each dietary outcome
 f0 <- marg_effect_full(source_f0, alpha='(A)', d='DDS', legend='Yes', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes)$leg
@@ -681,12 +678,12 @@ output <- list(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, leg_plot)
 mf3 <- wrap_plots(output, ncol=4) & theme(plot.title.position='plot', plot.margin=margin(5,5,5,5))
 
 # Save
-ggsave(paste0('III. Figures/MF3_Marginal_effects.png'), mf3, width=45, height=45, units='cm')
+ggsave(paste0('Figures/MF3_Marginal_effects.png'), mf3, width=45, height=45, units='cm')
 
 
 # MF4: RES - Predicted measures of DD outcomes for different flood levels across seasons (pooled Trial arms) ####
 
-source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Abs_Flood_Levels')
+source_f0 <- read.xlsx(xlsxFile='Tables/Visuals.xlsx', sheet='R_Abs_Flood_Levels')
 
 # Adapt other veg or visualization purposes
 source_f0$sig[source_f0$group=='Other vegetables'] <- 'p>0.05'
@@ -707,11 +704,11 @@ output <- wrap_plots(list(f1, f2, f3, f4, f5, f6), ncol=3) & theme(plot.margin=m
 mf4 <- wrap_plots(list(output, leg_plot), ncol=1, heights=c(20, 1)) & theme(plot.margin=margin(r=20, l=5, b=5, t=5))
 
 # Save 
-ggsave(paste0('III. Figures/MF4_Marginal_means_season.png'), mf4, width=45, height=40, units='cm')
+ggsave(paste0('Figures/MF4_Marginal_means_season.png'), mf4, width=45, height=40, units='cm')
 
 # MF5: RES - Predicted measures of DD outcomes for different flood levels across seasons and Trial arms ####
 
-source_f0 <- read.xlsx(xlsxFile='III. Figures/Visuals.xlsx', sheet='R_Abs_Flood_Treat_Levels')
+source_f0 <- read.xlsx(xlsxFile='Tables/Visuals.xlsx', sheet='R_Abs_Flood_Treat_Levels')
 # source_f0$group[source_f0$group=='DDS'] <- 'Dietary diversity scores'
 
 # Get seasonal plots
@@ -729,4 +726,4 @@ output <- wrap_plots(list(f1, f2, f3, f4, f5, f6), ncol=3) & theme(plot.margin=m
 mf5 <- wrap_plots(list(output, leg_plot), ncol=1, heights=c(20, 1))
 
 # Save
-ggsave(paste0('III. Figures/MF5_Marginal_means_season-trial.png'), mf5, width=50, height=35, units='cm')
+ggsave(paste0('Figures/MF5_Marginal_means_season-trial.png'), mf5, width=50, height=35, units='cm')

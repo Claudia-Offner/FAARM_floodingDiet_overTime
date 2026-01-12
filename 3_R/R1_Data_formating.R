@@ -16,7 +16,6 @@ source('R0_Dependencies.R')
 
 # Load FAARM data
 data <- read.csv(file=paste0(data_path, '3_FloodMetrics.csv'), fileEncoding='UTF-8-BOM')
-# data <- read.csv(file=paste0(data_path, 'gee_flood_dates.csv'), fileEncoding='UTF-8-BOM')
 
 # Load shape data (as spatial vector df)
 cluster_shp <- st_read(dsn=paste0(data_path, "96_Cluster_final.shp"))

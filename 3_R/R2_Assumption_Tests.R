@@ -1,47 +1,25 @@
-################################################################################
-#### ASSUMPTION TESTS #### 
-################################################################################
+### ------------------------------------------------------------------------ ### 
+### Model selection
+### ------------------------------------------------------------------------ ### 
 
-#### IMPORTANT - set github credentials
-# gitcreds::gitcreds_set()
+# Clear environment
+rm(list = ls())
 
-#### IMPORTANT - set file paths to folder locations
-setwd('G:/My Drive/1. Work/13. LSHTM/2. Research/FAARM/3. Analysis/')
+### IMPORTANT - set file paths to folder locations
+data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
+git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+setwd(git_path)
 
-## Suppress warnings & turn off scientific notation
-options(warn=-1) # 0 to turn back on
-options(scipen=999)
+#### DEPENDENCIES ####
+library(sjPlot); library(car); library(gridExtra); library(glmmTMB)
 
-#### IMPORTANT - Run R0_Data_formatting first
+source('R0_Dependencies.R')
 
-# LIBRARY ####
-library(sjPlot)
-library(car)
-library(gridExtra)
-library(glmmTMB)
-
-# FUNCTIONS ####
-
-custom_colors <- c('Overall'="#2b2a2a",
-                   'Jan/Feb'="#ce1126", 
-                   'Mar/Apr'="#f2609e", 
-                   'May/Jun'="#e66300", #ebac23
-                   'Jul/Aug'="#80b517",
-                   'Sep/Oct'="#057dcd",
-                   'Nov/Dec'="#7849b8")
-outcomes_bin <- c("dd10r_min_m", "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
-                  "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
-                  "dd10r_legume", "dd10r_nuts") 
-
-# outcome <- 'dd10r_min_m'
-# name <- 'MDD'
-# type <- 'glmer'
-# exposure <- 'cont'
-
+# Function to 
 sens_check <- function(df, outcome, name, type, exposure) {
   
   df$treatment <- factor(df$treatment, levels=c(0, 1), labels=c("Control", "HFP"))
-
+  
   if (exposure=='cat'){
     df$Flood_1Lag <- factor(df$Flood_1Lag, levels=c(0, 1, 2, 3), labels=c("None","1SD","2SD", ">2SD"))
   }
@@ -97,11 +75,11 @@ sens_check <- function(df, outcome, name, type, exposure) {
                     tlab = "Trial arm"))
   # Aesthetics 
   (em_plot <- em_plot + 
-          aes(shape=treatment, linetype=treatment, col=season_flood) +
-          scale_color_manual(values=custom_colors, name='Season')+
-          scale_shape_manual(values=c(15, 17), name='Trial arm') +
-          scale_linetype_manual(values=c('dashed', 'solid'), name='Trial arm')+
-          labs(title=name, color = "Season", shape = "Trial arm", linetype="Trial arm") + 
+      aes(shape=treatment, linetype=treatment, col=season_flood) +
+      scale_color_manual(values=custom_colors, name='Season')+
+      scale_shape_manual(values=c(15, 17), name='Trial arm') +
+      scale_linetype_manual(values=c('dashed', 'solid'), name='Trial arm')+
+      labs(title=name, color = "Season", shape = "Trial arm", linetype="Trial arm") + 
       theme_bw() +
       theme(plot.title = element_text(hjust = 0.5, size=20, face='bold'),  # center title
             legend.title = element_text(size=16, face='bold'), # legend text
@@ -111,12 +89,12 @@ sens_check <- function(df, outcome, name, type, exposure) {
             axis.title = element_text(size=14, face='bold'),
             axis.text = element_text(size=12),)  # Remove x-axis title
   )  
-
+  
   
   return(list(ass_plots, em_plot))
 }
 
-
+# Function to
 sens_figures <- function(df, outcome, name, type){
   
   if(type=='glmer'){
@@ -134,7 +112,7 @@ sens_figures <- function(df, outcome, name, type){
     sensitivity <- output[[2]]
     ggsave(paste0('Sensitivity_Analysis/Model_Sensitivity/', outcome, "_sens.png"),
            sensitivity, width=20, height=15, units='cm')
-
+    
   } else{
     
     # ASSUMPTIONS
@@ -156,6 +134,15 @@ sens_figures <- function(df, outcome, name, type){
   }
   
 }
+
+#### MAIN CODE ####
+
+# Load data
+load(paste0('main_data.RData'))
+
+# Select correct flood exposure
+df$Flood_1Lag <- df$Flood_SThresh
+level <- flood_cont_levels
 
 
 #### 1. Sensitivity Analysis ####

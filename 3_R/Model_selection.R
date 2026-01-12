@@ -1,22 +1,36 @@
+### ------------------------------------------------------------------------ ### 
+### Model selection
+### ------------------------------------------------------------------------ ### 
+
+# Clear environment
+rm(list = ls())
+
+### IMPORTANT - set file paths to folder locations
+data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
+git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+setwd(git_path)
+
+#### DEPENDENCIES ####
+library(car); library(emmeans)
+
+source('R0_Dependencies.R')
+
+#### MAIN CODE ####
+
+# Load data
+load(paste0('main_data.RData'))
+
+# Select correct flood exposure
+df$Flood_1Lag <- df$Flood_SThresh
+
+
 ################################################################################
 #### MODEL SELECTION #### 
 ################################################################################
-
-#### IMPORTANT - set github credentials
-# gitcreds::gitcreds_set()
-
-#### IMPORTANT - set file paths to folder locations
-setwd('C:/Users/claer14/OneDrive/2. Career/23. Work/LSHTM/III. Research/2024_Flooding-DD-HFP/2. Data/')
-
-## Suppress warnings & turn off scientific notation
-options(warn=-1) # 0 to turn back on
-options(scipen=999)
-
 # Interaction testing
 # https://stats.stackexchange.com/questions/60362/choice-between-type-i-type-ii-or-type-iii-anova
 ## NB: stats::anova runs type 1 tests; car::Anova runs type 2 & 3 tests
-library(car)
-library(emmeans)
+
 # install.packages('car', lib=library)
 
 ### MODEL BUILDING

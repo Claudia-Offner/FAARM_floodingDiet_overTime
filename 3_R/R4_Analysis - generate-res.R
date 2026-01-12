@@ -8,7 +8,7 @@ rm(list = ls())
 ### IMPORTANT - set file paths to folder locations
 data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
 git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-# setwd(git_path)
+setwd(git_path)
 
 #### DEPENDENCIES ####
 source('R0_Dependencies.R')
@@ -176,7 +176,7 @@ df$Flood_1Lag <- df$Flood_SThresh
 levels <- flood_cat_levels
 
 # Check and set result location
-folder <- paste0(git_path, '/Outputs/I. Results/')
+folder <- paste0(git_path, '/Main Results/')
 check_folder_loc(folder)
 setwd(folder)
 

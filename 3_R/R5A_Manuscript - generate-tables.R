@@ -125,7 +125,7 @@ format_cols <- function(outcome, var, est, l_ci, u_ci, p, num=2) {
 get_emm <- function (outcome, folder,val, l_ci, u_ci, p_vl) {
   
   # Get relevant data
-  res <- read.xlsx(paste0('I. Results/', outcome, folder, 'emm_2_res.xlsx'))
+  res <- read.xlsx(paste0('Main Results/', outcome, folder, 'emm_2_res.xlsx'))
   # res <- res[-grep(c('8.54', '18.54'), as.character(res$Flood_1Lag)), ]
   # row.names(res) <- NULL
   # Set variable, depending on folder
@@ -168,7 +168,7 @@ get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
   } else {
     file <- 'contr_emm2a.xlsx'
   }
-  res <- read.xlsx(paste0('I. Results/', outcome, folder, file))
+  res <- read.xlsx(paste0('Main Results/', outcome, folder, file))
   
   # Remove irrelevant levels/cols
   if (grepl('treatment', folder)) {
@@ -255,7 +255,7 @@ abs_diff_table <- function(outcome, dtype){
   table <- rbind(top, bottom)
   
   # Export
-  folder <- paste0('II. Tables/absolute_diff_', outcome, '.xlsx')
+  folder <- paste0('Tables/ST4_absolute_diff_', outcome, '.xlsx')
   write.xlsx(table, folder, rowNames=FALSE, fileEncoding = "UTF-8")
   
   return(table)
@@ -282,7 +282,7 @@ rel_diff_fig <- function(outcome, dtype){
       
     }
     
-    (res <- read.xlsx(paste0('I. Results/', outcome, folder, 'ame1_res.xlsx')))
+    (res <- read.xlsx(paste0('Main Results/', outcome, folder, 'ame1_res.xlsx')))
     
     if (folder=='/Flood_1Lag-season_flood-treatment/') {
       
@@ -406,13 +406,10 @@ abs_val_fig <- function (outcome, dtype, folder, fig=0) {
 # Load data
 load(paste0('main_data.RData'))
 
-# Set path
-setwd(paste0(git_path, '/Outputs/'))
-
 # Check and set result location
-folder <- paste0(git_path, '/Outputs/II. Tables/')
+folder <- paste0(git_path, '/Tables/')
 check_folder_loc(folder)
-folder <- paste0(git_path, '/Outputs/III. Figures/')
+folder <- paste0(git_path, '/Figures/')
 check_folder_loc(folder)
 
 # Data cleaning ####
@@ -515,7 +512,7 @@ desired_order <- c('treatment', 'age_3_BL',
                    "dd10r_legume", "dd10r_nuts", 'dd10r_min_m', 'dd10r_score_m')
 master <- master[match(desired_order, rownames(master)), ]
 
-desc_trial <- master
+MT1_desc_trial <- master
 
 
 # Optional: Baseline characteristics of women, by trial-arm, across survey rounds (desc_trial_rounds) ####
@@ -558,13 +555,13 @@ for (b in c('dd10r_min_m', "dd10r_starch", outcomes_bin[outcomes_bin != 'dd10r_m
 # Convert the column to a factor with the desired order of levels
 master$Round <- factor(master$Round, levels = c('Baseline', sort(unique(master$Round[master$Round != 'Baseline']))))
 master <- master %>% arrange_at(c('Treatment', 'Round'))
-desc_trial_rounds <- master
+ST_desc_trial_rounds <- master
 
 # ST2: Interaction tests for significance (anova) ####
 
 # Create main frame with continuous outcome
 ### Get data
-(path <- paste0('I. Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
+(path <- paste0('Main Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
 master <- read.xlsx(path)
 ### Format 2 decimal places
 master$Chisq <- sprintf("%.1f", master$Chisq)
@@ -582,7 +579,7 @@ res <- rbind(res, row_df)
 for (b in outcomes_bin) {
   
   # Get data
-  (path <- paste0('I. Results/', b, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
+  (path <- paste0('Main Results/', b, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
   new <- read.xlsx(path)
   # Format 2 decimal places
   new$Chisq <- sprintf("%.1f", new$Chisq)
@@ -605,7 +602,7 @@ res <- as.data.frame(t(res)) %>%
   select('Flood_1Lag', 'season_flood', 'treatment', 'Flood_1Lag:treatment', 
          'Flood_1Lag:season_flood', 'season_flood:treatment', 
          'Flood_1Lag:season_flood:treatment')
-anova <- res
+ST2_anova <- res
 
 
 
@@ -613,13 +610,13 @@ anova <- res
 
 # GET 3 WAY INTERACTION
 f <- '/Flood_1Lag-season_flood-treatment/'
-(path <- paste0('I. Results/', outcomes_cont, f, 'ame1_res.xlsx'))
+(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
 (res <- read.xlsx(path))
 (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$treatment, sep = "-"))
 (Int_3 <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
 # For every binary outcome
 for (b in outcomes_bin) {
-  (path <- paste0('I. Results/', b, f, 'ame1_res.xlsx'))
+  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
   (res <- read.xlsx(path))
   (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
   # Append columns to master df
@@ -628,13 +625,13 @@ for (b in outcomes_bin) {
 
 # GET 2 WAY INTERACTION (SEASON)
 f <- '/Flood_1Lag-season_flood/'
-(path <- paste0('I. Results/', outcomes_cont, f, 'ame1_res.xlsx'))
+(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
 (res <- read.xlsx(path))
 (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, sep = "-"))
 (Int_2_S <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
 # For every binary outcome
 for (b in outcomes_bin) {
-  (path <- paste0('I. Results/', b, f, 'ame1_res.xlsx'))
+  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
   (res <- read.xlsx(path))
   (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
   # Append columns to master df
@@ -644,13 +641,13 @@ for (b in outcomes_bin) {
 
 # GET 2 WAY INTERACTION (TREATMENT)
 f <- '/Flood_1Lag-treatment/'
-(path <- paste0('I. Results/', outcomes_cont, f, 'ame1_res.xlsx'))
+(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
 (res <- read.xlsx(path))
 (var <- paste(round(res$Flood_1Lag, 2), res$treatment, sep = "-"))
 (Int_2_T <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
 # For every binary outcome
 for (b in outcomes_bin) {
-  (path <- paste0('I. Results/', b, f, 'ame1_res.xlsx'))
+  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
   (res <- read.xlsx(path))
   (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
   # Append columns to master df
@@ -659,13 +656,13 @@ for (b in outcomes_bin) {
 
 # GET OVERALL (NO INTERACTION)
 f <- '/Flood_1Lag/'
-(path <- paste0('I. Results/', outcomes_cont, f, 'ame1_res.xlsx'))
+(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
 (res <- read.xlsx(path))
 (var <- round(res$Flood_1Lag, 2))
 (Int_0 <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
 # For every binary outcome
 for (b in outcomes_bin) {
-  (path <- paste0('I. Results/', b, f, 'ame1_res.xlsx'))
+  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
   (res <- read.xlsx(path))
   (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
   # Append columns to master df
@@ -674,7 +671,7 @@ for (b in outcomes_bin) {
 
 # Combine tables
 master <- rbind(Int_0, Int_2_T, Int_2_S, Int_3)
-marginal_effects <- master
+ST3_marginal_effects <- master
 
 # ST4: Marginal means of 1% flood coverage on dietary outcomes, with difference tests ####
 
@@ -693,7 +690,7 @@ for (b in outcomes_bin) {
 
 # Create main frame with continuous outcome
 ### Get data
-(path <- paste0('I. Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
+(path <- paste0('Main Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
 (mod_res <- read.xlsx(path))
 ### Format CI & p (2 decimal places)
 master <- format_cols(outcomes_cont, mod_res$Variables, mod_res$Estimate, mod_res$Lower_CI, mod_res$Upper_CI, mod_res$P_Value)
@@ -703,7 +700,7 @@ names(master)[names(master) == "dd10r_score_m_variables"] <- "variables"
 for (b in outcomes_bin) {
   
   # Get data
-  (path <- paste0('I. Results/', b, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
+  (path <- paste0('Main Results/', b, '/Flood_1Lag-season_flood-treatment/mod_res.xlsx'))
   mod_res <- read.xlsx(path)
   # Format CI & p (2 decimal places)
   new <- format_cols(b, mod_res$Variables, mod_res$Estimate, mod_res$Lower_CI, mod_res$Upper_CI, mod_res$P_Value)
@@ -716,7 +713,7 @@ for (b in outcomes_bin) {
 rows_to_move <- c(1, 3:7, 2, 13:17, 8, 19:23, 18, 24:28,9:12)
 (master <- rbind(master[rows_to_move, ], master[-rows_to_move, ]))
 rownames(master) <- NULL
-main_effects <- master
+ST5_main_effects <- master
 
 # Tables for figures ####
 
@@ -768,19 +765,19 @@ table2 <- replace_matches(table2, nm)
 table3 <- replace_matches(table3, nm)
 
 # Save the data frames to an Excel file with different sheet names
-write.xlsx(list(R_Rel_Diff=table1, R_Abs_Flood_Levels=table2, R_Abs_Flood_Treat_Levels=table3), "III. Figures/Visuals.xlsx")
+write.xlsx(list(R_Rel_Diff=table1, R_Abs_Flood_Levels=table2, R_Abs_Flood_Treat_Levels=table3), "Tables/Visuals.xlsx")
 
 #### EXPORT ####
 
 # Rename variables
-desc_trial <- replace_matches(desc_trial, nm)
-anova <- replace_matches(anova, nm)
-marginal_effects <- replace_matches(marginal_effects, nm)
-main_effects <- replace_matches(main_effects, nm)
+MT1_desc_trial <- replace_matches(MT1_desc_trial, nm)
+ST2_anova <- replace_matches(ST2_anova, nm)
+ST3_marginal_effects <- replace_matches(ST3_marginal_effects, nm)
+ST5_main_effects <- replace_matches(ST5_main_effects, nm)
 
 # Export
-tables <- c('desc_trial', 'desc_trial_rounds', 'anova', 'marginal_effects', 'main_effects')
+tables <- c('MT1_desc_trial', 'ST_desc_trial_rounds', 'ST2_anova', 'ST3_marginal_effects', 'ST5_main_effects')
 for (t in tables){
-  write.xlsx(get(t), paste0("II. Tables/", t, ".xlsx"), rowNames=TRUE, fileEncoding = "UTF-8")
+  write.xlsx(get(t), paste0("Tables/", t, ".xlsx"), rowNames=TRUE, fileEncoding = "UTF-8")
 }
 
