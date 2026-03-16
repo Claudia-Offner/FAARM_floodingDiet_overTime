@@ -1,4 +1,15 @@
+# Ignore file types
+*.RData
+*.docx
+*.pptx
+*.html
+*.bib
+
+# Ignore specific files
 .Rproj.user
 .Rhistory
-.RData
 .Ruserdata
+.RDataTmp
+
+# Ignore specific folders
+3_R/- Archive/
