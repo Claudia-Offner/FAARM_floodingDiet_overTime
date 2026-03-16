@@ -6,7 +6,6 @@
 rm(list = ls())
 
 ### IMPORTANT - set file paths to folder locations
-data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
 git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 setwd(git_path)
 

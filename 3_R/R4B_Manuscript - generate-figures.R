@@ -33,7 +33,7 @@ mapper <- function(basemap, df_spatial, stats_df=NULL, title='') {
     theme_minimal() +
     theme(
       plot.title=element_blank(),
-      strip.text=element_text(size=15, face='bold'),
+      strip.text=element_text(size=12, face='bold'),
       axis.text=element_blank(),
       axis.title=element_blank(),
       panel.grid=element_blank(),
@@ -148,8 +148,8 @@ marg_effect_full <- function(df, alpha, d, legend='No', x_axes='No', y_axes='No'
         annotate(geom='segment', y=Inf, yend=Inf, x=-Inf, xend=Inf) + # add boarder on top (x)
         annotate(geom='segment', y=-Inf, yend=Inf, x=Inf, xend=Inf) + # add board on side (y)
         theme(plot.title=element_text(hjust=0.5), # Center title
-              axis.text.y=element_text(size=14),
-              axis.text.x=element_text(size=14, angle=45, hjust=1),
+              axis.text.y=element_text(size=15),
+              axis.text.x=element_text(size=15, angle=45, hjust=1),
               axis.title.y=element_text(size=16),
               axis.title.x=element_text(size=16),
               plot.margin=margin(0, 0, 0, 0),
@@ -179,7 +179,7 @@ marg_effect_full <- function(df, alpha, d, legend='No', x_axes='No', y_axes='No'
     if (title=='Yes'){
       gg <- gg + 
         ggtitle(name) +
-        theme(plot.title=element_text(size=18, hjust=0.5, face='bold'))
+        theme(plot.title=element_text(size=16, hjust=0.5, face='bold'))
       if (y_axes != 'No'){
         gg <- gg + theme(plot.title=element_text(hjust=0.75))
       }
@@ -543,6 +543,9 @@ tufte_sort <- function(df, x='year', y='value', group='group', method='tufte', m
 # Load data
 load(paste0('main_data.RData'))
 
+# If you want the Flood SD categorical counts over time, I can make that as a table, 
+
+
 # SF2: DESC - Temporal distribution of flooding & diets, pooled ####
 
 # Load data
@@ -566,43 +569,62 @@ f1$Round <- paste0(f1$year, ' ', f1$month)
 
 # Rename variables
 unique(f1$variable)
-f1$variable <- gsub('dd10r_score_m_COEF', '(A) DDS', f1$variable)
-f1$variable <- gsub('dd10r_min_m_PROB', '(B) MDD', f1$variable)
-f1$variable <- gsub('dd10r_starch_PROB', '(C) Starchy staples', f1$variable)
-f1$variable <- gsub('dd10r_flesh_PROB', '(D) Flesh foods', f1$variable)
-f1$variable <- gsub('dd10r_dairy_PROB', '(E) Dairy products', f1$variable)
-f1$variable <- gsub('dd10r_eggs_PROB', '(F) Eggs', f1$variable)
-f1$variable <- gsub('dd10r_dglv_PROB', '(G) DGLV', f1$variable)
-f1$variable <- gsub('dd10r_vita_PROB', '(H) Vitamin A-rich foods', f1$variable)
-f1$variable <- gsub('dd10r_othv_PROB', '(I) Other vegetables', f1$variable)
-f1$variable <- gsub('dd10r_othf_PROB', '(J) Other fruits', f1$variable)
-f1$variable <- gsub('dd10r_legume_PROB', '(K) Legumes', f1$variable)
-f1$variable <- gsub('dd10r_nuts_PROB', '(L) Nuts & Seeds', f1$variable)
-f1$variable <- gsub('Flood_1Lag_PROB', '(M) Percent Flooded', f1$variable)
+
+f1$variable <- gsub('Flood_1Lag_PROB', '(A) Percent Flooded', f1$variable)
+f1$variable <- gsub('dd10r_score_m_COEF', '(B) DDS', f1$variable)
+f1$variable <- gsub('dd10r_min_m_PROB', '(C) MDD', f1$variable)
+f1$variable <- gsub('dd10r_starch_PROB', '(D) Starchy staples', f1$variable)
+f1$variable <- gsub('dd10r_flesh_PROB', '(E) Flesh foods', f1$variable)
+f1$variable <- gsub('dd10r_dairy_PROB', '(F) Dairy products', f1$variable)
+f1$variable <- gsub('dd10r_eggs_PROB', '(G) Eggs', f1$variable)
+f1$variable <- gsub('dd10r_dglv_PROB', '(H) DGLV', f1$variable)
+f1$variable <- gsub('dd10r_vita_PROB', '(I) Vit. A-rich foods', f1$variable)
+f1$variable <- gsub('dd10r_othv_PROB', '(J) Other vegetables', f1$variable)
+f1$variable <- gsub('dd10r_othf_PROB', '(K) Other fruits', f1$variable)
+f1$variable <- gsub('dd10r_legume_PROB', '(L) Legumes', f1$variable)
+f1$variable <- gsub('dd10r_nuts_PROB', '(M) Nuts & Seeds', f1$variable)
 f1$variable<- factor(f1$variable, levels=unique(f1$variable))
 f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
-f1$variable <- factor(f1$variable, levels=c('(A) DDS', '(B) MDD-W', 
-                                              '(C) Starchy staples', '(D) Flesh foods','(E) Dairy products',
-                                              '(F) Eggs', '(G) DGLV', '(H) Vitamin A-rich foods', '(I) Other vegetables', 
-                                              '(J) Other fruits', '(K) Legumes', '(L) Nuts & Seeds',
-                                              '(M) Percent Flooded')) # Factor rounds
+f1$variable <- factor(f1$variable, levels=c('(A) Percent Flooded', '(B) DDS', '(C) MDD', 
+                                            '(D) Starchy staples', '(E) Flesh foods','(F) Dairy products',
+                                            '(G) Eggs', '(H) DGLV', '(I) Vit. A-rich foods', '(J) Other vegetables', 
+                                              '(K) Other fruits', '(L) Legumes', '(M) Nuts & Seeds')) # Factor rounds
 
 # Subset the data frame to keep only columns with names not containing the character(s) to remove
+# Subset the data frame to keep only columns with names not containing the character(s) to remove
 (sf2 <- ggplot(f1, aes(x=Round, y=as.numeric(value), color=as.factor(Treatment), group=as.factor(Treatment))) +
-    geom_line() +
+    geom_line(linewidth=0.9) +
     labs(x='', y='', color='variable') +
     scale_x_discrete(breaks=c(unique(f1$Round)[seq(1, length(unique(f1$Round)), by=3)]), 
                      guide=guide_axis(angle=45)) + # Rotate  axes labels
     scale_color_manual(values=c('Control'='#3388f7', 'HFP'='#b51731'), name='Trial arm') + 
-    facet_wrap(~ variable, nrow=NULL, ncol=NULL, scales='free_y') +
+    facet_wrap(~ variable, nrow=NULL, ncol=3, scales='free_y') +
     ggh4x::facetted_pos_scales(y=list(
-      variable == '(A) DDS' ~ scale_y_continuous(limits=c(0, 10)),
-      variable == '(M) Percent Flooded' ~ scale_y_continuous(limits=c(0, 10)),
+      variable == '(A) Percent Flooded' ~ scale_y_continuous(limits=c(0, 10)),
+      variable == '(B) DDS' ~ scale_y_continuous(limits=c(0, 10)),
       TRUE ~ scale_y_continuous(limits=c(0, 100))
-      )) + theme_bw())
+    )) + theme_bw() +
+    theme(
+      strip.text = element_text(size=16, face='bold'),
+      axis.text.x = element_text(size=14),
+      axis.text.y = element_text(size=14),
+      panel.spacing = unit(1.2, "lines"),
+      legend.position = 'none'
+    ))
 
 
-ggsave('Figures/SF2_time_series.png', sf2, width=35, height=25, units='cm')
+legend <- get_legend(
+  sf2 + theme(
+    legend.position="bottom",
+    legend.title = element_text(size=16, face='bold'),
+    legend.text = element_text(size=14),
+    legend.key.size = unit(1.2,"cm")
+  )
+)
+
+ggsave('Figures/SF2_time_series.png', sf2, width=10, height=9)
+ggsave('Figures/SF2_legend.png', legend, width=6, height=2)
+
 
 # MF2: DESC - Spatial flood distribution across seasons, by cluster ####
 
@@ -651,7 +673,7 @@ basemap <- get_map(c(left=bbox$xmin,
 # Get seasonal maps
 mf2 <- mapper(basemap, sdf_season, stats_df)
 
-ggsave(paste0('Figures/MF2_Seasonal_Flood.png'), mf2, width=20, height=15, units='cm',   bg='white')
+ggsave(paste0('Figures/MF2_Seasonal_Flood.png'), mf2, width=22, height=18, units='cm',   bg='white')
 
 
 # MF3: RES - Marginal effects of interaction model for each DD outcome (1SD flood) ####
@@ -673,12 +695,12 @@ f10 <- marg_effect_full(source_f0, alpha='(J)', d='Legumes', legend='No', x_axes
 f11 <- marg_effect_full(source_f0, alpha='(K)', d='Nuts/seeds', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes)$res
 
 # Wrap plots with legend
-leg_plot <- plot_grid(f0, ncol=1)
+leg_plot <- cowplot::plot_grid(f0, ncol=1)
 output <- list(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, leg_plot)
 mf3 <- wrap_plots(output, ncol=4) & theme(plot.title.position='plot', plot.margin=margin(5,5,5,5))
 
 # Save
-ggsave(paste0('Figures/MF3_Marginal_effects.png'), mf3, width=45, height=45, units='cm')
+ggsave(paste0('Figures/MF3_Marginal_effects.png'), mf3, width=45, height=55, units='cm')
 
 
 # MF4: RES - Predicted measures of DD outcomes for different flood levels across seasons (pooled Trial arms) ####
@@ -699,7 +721,7 @@ f5 <- marginal_means_s(source_f0, '(E)', 'Sep/Oct', x_labs='Yes')$res
 f6 <- marginal_means_s(source_f0, '(F)', 'Nov/Dec', x_labs='Yes')$res
 
 # Wrap plots with legend
-leg_plot <- plot_grid(f0, ncol=1)
+leg_plot <- cowplot::plot_grid(f0, ncol=1)
 output <- wrap_plots(list(f1, f2, f3, f4, f5, f6), ncol=3) & theme(plot.margin=margin(r=5, l=5, b=50, t=5))
 mf4 <- wrap_plots(list(output, leg_plot), ncol=1, heights=c(20, 1)) & theme(plot.margin=margin(r=20, l=5, b=5, t=5))
 
@@ -721,7 +743,7 @@ f5 <- marginal_means_s_t(source_f0, alpha='(E)', s='Sep/Oct', highlight=list(F,F
 f6 <- marginal_means_s_t(source_f0, alpha='(F)', s='Nov/Dec', highlight=list(F,T,F,F,F,F), legend=F, x_tit=T)$res
 
 # Wrap plots with legend
-leg_plot <- plot_grid(f0, ncol=1)
+leg_plot <- cowplot::plot_grid(f0, ncol=1)
 output <- wrap_plots(list(f1, f2, f3, f4, f5, f6), ncol=3) & theme(plot.margin=margin(r=5, l=5, b=10, t=5))
 mf5 <- wrap_plots(list(output, leg_plot), ncol=1, heights=c(20, 1))
 

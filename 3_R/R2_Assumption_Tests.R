@@ -6,12 +6,14 @@
 rm(list = ls())
 
 ### IMPORTANT - set file paths to folder locations
-data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
 git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 setwd(git_path)
 
 #### DEPENDENCIES ####
 library(sjPlot); library(car); library(gridExtra); library(glmmTMB)
+# Override emmeans internal theme to avoid ggplot2 version conflict
+theme_emm <- function(...) ggplot2::theme_bw(...)
+assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
 
 source('R0_Dependencies.R')
 
@@ -70,7 +72,7 @@ sens_check <- function(df, outcome, name, type, exposure) {
   # (ame1_cont <- summary(contrast(fib.rg, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE)))
   
   (em_plot <- emmip(fib.rg, treatment ~ Flood_1Lag | season_flood, style='factor', CIs=TRUE, col = c("black"),
-                    linearg = list(), dotarg = list(size = 3), CIarg = list(linetype='solid', alpha = 1, show.legend = FALSE),
+                    linearg = list(linewidth=0.8), dotarg = list(size = 3), CIarg = list(linetype='solid', linewidth=0.8, alpha = 1, show.legend = FALSE),
                     xlab = "Increase in flooding",  # Modify x-axis label
                     tlab = "Trial arm"))
   # Aesthetics 
@@ -80,6 +82,7 @@ sens_check <- function(df, outcome, name, type, exposure) {
       scale_shape_manual(values=c(15, 17), name='Trial arm') +
       scale_linetype_manual(values=c('dashed', 'solid'), name='Trial arm')+
       labs(title=name, color = "Season", shape = "Trial arm", linetype="Trial arm") + 
+      facet_wrap(~ season_flood, labeller=labeller(season_flood = label_value)) + 
       theme_bw() +
       theme(plot.title = element_text(hjust = 0.5, size=20, face='bold'),  # center title
             legend.title = element_text(size=16, face='bold'), # legend text
@@ -87,7 +90,8 @@ sens_check <- function(df, outcome, name, type, exposure) {
             legend.position = "right",       # legend position
             legend.key.size = unit(1, 'cm'), # legend size
             axis.title = element_text(size=14, face='bold'),
-            axis.text = element_text(size=12),)  # Remove x-axis title
+            axis.text = element_text(size=12),
+            strip.text = element_text(size=14, face='bold'))
   )  
   
   
@@ -103,15 +107,15 @@ sens_figures <- function(df, outcome, name, type){
     output <- sens_check(df, outcome, name, type='glmer', exposure='cont')
     # Get assumption figures
     assumptions <- output[[1]]
-    ggsave(paste0('Sensitivity_Analysis/Model_Assumptions/', outcome, "_assumptions.png"), 
-           assumptions[[1]], width=40, height=20, units='cm')
+    ggsave(paste0('Sensitivity Results/Model_Assumptions/', outcome, "_assumptions.png"), 
+           assumptions[[1]], width=10, height=5)
     
     # CATEGORICAL SENSITIVITY
     output <- sens_check(df, outcome, name, type='glmer', exposure='cat')
     # Get sensitivity figures
     sensitivity <- output[[2]]
-    ggsave(paste0('Sensitivity_Analysis/Model_Sensitivity/', outcome, "_sens.png"),
-           sensitivity, width=20, height=15, units='cm')
+    ggsave(paste0('Sensitivity Results/Model_Sensitivity/', outcome, "_sens.png"),
+           sensitivity, width=12, height=8)
     
   } else{
     
@@ -120,15 +124,15 @@ sens_figures <- function(df, outcome, name, type){
     # Get assumption figures
     assumptions <- output[[1]]
     assumptions <- grid.arrange(assumptions[[1]], assumptions[[2]], assumptions[[3]], ncol=3)
-    ggsave(paste0('Sensitivity_Analysis/Model_Assumptions/', outcome, "_assumptions.png"), 
-           assumptions, width=30, height=10, units='cm')
+    ggsave(paste0('Sensitivity Results/Model_Assumptions/', outcome, "_assumptions.png"), 
+           assumptions, width=15, height=5)
     
     # CATEGORICAL SENSITIVITY
     output <- sens_check(df, outcome, name, type='lme', exposure='cat')
     # Get sensitivity figures
     sensitivity <- output[[2]]
-    ggsave(paste0('Sensitivity_Analysis/Model_Sensitivity/', outcome, "_sens.png"),
-           sensitivity, width=20, height=15, units='cm')
+    ggsave(paste0('Sensitivity Results/Model_Sensitivity/', outcome, "_sens.png"),
+           sensitivity, width=12, height=8)
     
     
   }
@@ -145,10 +149,12 @@ df$Flood_1Lag <- df$Flood_SThresh
 level <- flood_cont_levels
 
 
-#### 1. Sensitivity Analysis ####
+# 1. Sensitivity Analysis ####
+
 
 # LINEAR MIXED EFFECTS MODELS
-sens_figures(df, 'dd10r_score_m', 'WDDS', type='lme')
+start_time <- Sys.time()
+sens_figures(df, outcome='dd10r_score_m', name='WDDS', type='lme')
 
 # LOGISTIC MIXED EFFECTS MODELS
 sens_figures(df, 'dd10r_min_m', "MDD", type='glmer')
@@ -161,6 +167,12 @@ sens_figures(df, 'dd10r_othv', "Other vegetables", type='glmer')
 sens_figures(df, 'dd10r_othf', "Other fruits", type='glmer')
 sens_figures(df, 'dd10r_legume', "Legumes", type='glmer')
 sens_figures(df, 'dd10r_nuts', "Nuts and seeds", type='glmer')
+end_time <- Sys.time()
+
+# Print timings
+total_time <- end_time - start_time
+times <- rbind(times, data.frame(Variable = c, Time = total_time))
+print(paste0('TIME TO RUN ', c, ' MODEL: ', total_time))
 
 
 

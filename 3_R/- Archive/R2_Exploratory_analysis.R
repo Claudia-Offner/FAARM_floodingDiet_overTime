@@ -6,7 +6,6 @@
 rm(list = ls())
 
 ### IMPORTANT - set file paths to folder locations
-data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
 git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 setwd(git_path)
 
@@ -117,3 +116,10 @@ df %>%
 #   filter(diet == 0) %>%
 #   group_by(treatment) %>%
 #   summarise(count = n())
+
+# 5. Check number of  flood deviations by year/season ####
+
+sub <- df %>%  mutate(year_seasf = interaction(year, season_flood, sep = " ", drop = TRUE)) 
+mar_apr <- table(sub$year_seasf, sub$Flood_SThresh)[5:8,]
+colnames(mar_apr) <- c('None', '1SD', '2SD', '>2SD')
+mar_apr
