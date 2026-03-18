@@ -8,8 +8,8 @@
 # ### IMPORTANT - set file paths to folder locations
 # git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 # setwd(git_path)
-
-#### DEPENDENCIES ####
+#
+# #### DEPENDENCIES ####
 # source('R0_Dependencies.R')
 
 # Function to export estimates, marginal effects and marginal means
@@ -202,18 +202,9 @@ for (c in outcomes_cont){
 for (b in outcomes_bin) {
   
   # Run model
-  start_time <- Sys.time()
   run_model(b, 'bin')
-  end_time <- Sys.time()
-  
-  # Print timings
-  total_time <- end_time - start_time
-  times <- rbind(times, data.frame(Variable = b, Time = total_time))
-  print(paste0('TIME TO RUN ', b, ' MODEL: ', total_time))  
+
 }
 
-#### EXPORT ####
-print(times)
-write.xlsx(times, 'times.xlsx', rowNames=FALSE, fileEncoding = "UTF-8")
 
 

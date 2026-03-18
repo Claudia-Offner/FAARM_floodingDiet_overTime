@@ -431,13 +431,6 @@ abs_val_fig <- function (outcome, dtype, folder, fig=0) {
 # Load data
 load(paste0('main_data.RData'))
 
-# Check and set result location
-folder <- paste0(git_path, '/Tables/')
-check_folder_loc(folder)
-folder <- paste0(git_path, '/Figures/')
-check_folder_loc(folder)
-
-
 # Flood level replacement names
 flood_nm <- c('0' = 'No change in flooding',
               '1' = '1 SD above average',

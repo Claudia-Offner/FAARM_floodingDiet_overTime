@@ -8,8 +8,8 @@
 # ### IMPORTANT - set file paths to folder locations
 # git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 # setwd(git_path)
-
-#### DEPENDENCIES ####
+# 
+# #### DEPENDENCIES ####
 
 # Override emmeans internal theme to avoid ggplot2 version conflict
 theme_emm <- function(...) ggplot2::theme_bw(...)
@@ -152,7 +152,6 @@ level <- flood_cont_levels
 # 1. Sensitivity Analysis ####
 
 # LINEAR MIXED EFFECTS MODELS
-start_time <- Sys.time()
 sens_figures(df, outcome='dd10r_score_m', name='WDDS', type='lme')
 
 # LOGISTIC MIXED EFFECTS MODELS
@@ -166,12 +165,6 @@ sens_figures(df, 'dd10r_othv', "Other vegetables", type='glmer')
 sens_figures(df, 'dd10r_othf', "Other fruits", type='glmer')
 sens_figures(df, 'dd10r_legume', "Legumes", type='glmer')
 sens_figures(df, 'dd10r_nuts', "Nuts and seeds", type='glmer')
-end_time <- Sys.time()
-
-# Print timings
-total_time <- end_time - start_time
-print(paste0('TIME TO RUN: ', total_time))
-
 
 
 

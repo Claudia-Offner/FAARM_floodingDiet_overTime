@@ -15,7 +15,16 @@
 # GG mapper for flood levels, by season and cluster (highlighting Trial arms)
 mapper <- function(basemap, df_spatial, stats_df=NULL, title='') {
   
-  p <- ggmap(basemap) +
+    # Plot function depending on whether basemap loaded
+  base_plot <- if (!is.null(basemap)) {
+    ggmap(basemap)
+  } else {
+    ggplot() + 
+      coord_fixed(xlim=c(bbox$xmin, bbox$xmax), ylim=c(bbox$ymin, bbox$ymax)) +
+      theme_bw()
+  }
+  
+  p <- base_plot +
     geom_sf(data=df_spatial, aes(fill=perc_flooded_c, color=treatment, linetype=treatment), linewidth=0.4) +
     facet_wrap(~season_flood, ncol=3) +
     # Set fill, color & line types
@@ -628,10 +637,6 @@ ggsave('Figures/SF2_legend.png', legend, width=6, height=2)
 
 # MF2: DESC - Spatial flood distribution across seasons, by cluster ####
 
-# NEED API's (https://www.appsilon.com/post/r-ggmap)
-# ggmap::register_google(key='AIzaSyCVzPwqMVzz-f374mq0b-6UfsLXmMCFIU8', write=TRUE) # Use at own risk, it is connected to billing address
-ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
-
 # Clean flood data for visualizing
 df[df$treatment == 0, 'treatment'] <- 'Control'
 df[df$treatment == 1, 'treatment'] <- 'HFP'
@@ -664,11 +669,17 @@ poly_box <- st_as_sfc(st_bbox(cluster_shp))
 buffered_polygon <- st_buffer(poly_box, dist=1000)  # 1km=1000 meters
 bbox <- as.list(st_bbox(buffered_polygon))
 # NB: ggmap uses long/lat (NOT lat/long)
-basemap <- get_map(c(left=bbox$xmin, 
-                     bottom=bbox$ymin, 
-                     right=bbox$xmax, 
-                     top=bbox$ymax), 
-                   source='stadia', maptype='stamen_terrain') #_background
+
+# !!! NEED API key (see instructions in main_script) !!!
+basemap <- tryCatch(
+  get_map(c(left=bbox$xmin, bottom=bbox$ymin, right=bbox$xmax, top=bbox$ymax),
+          source='stadia', maptype='stamen_terrain'),
+  error = function(e) {
+    message("API key not available, using blank map instead.")
+    NULL
+  }
+)
+
 
 # Get seasonal maps
 mf2 <- mapper(basemap, sdf_season, stats_df)
