@@ -5,6 +5,11 @@
 # Clear environment
 rm(list = ls())
 
+library(flexlsx)
+library(openxlsx2)
+library(flextable)
+library(stringr)
+
 ### IMPORTANT - set file paths to folder locations
 git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 setwd(git_path)
@@ -219,45 +224,71 @@ get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
 
 # MAIN Function to get absolute difference tables, formatted according to excel structure
 # NB: Tables will be automatically saved to location
-abs_diff_table <- function(outcome, dtype){
+abs_diff_table <- function(outcome, dtype) {
   
-  if (dtype=='cont'){
-    
-    # set variable names
-    l_ci <- 'lower.CL'
-    u_ci <- 'upper.CL'
-    p_vl <- 'p.value'
-    val <- 'emmean'
-    
-  } else if (dtype=='bin'){
-    
-    # set variable names
-    l_ci <- 'asymp.LCL'
-    u_ci <- 'asymp.UCL'
-    p_vl <- 'p.value'
-    val <- 'prob'
-    
-  }
+  # Variable names by dtype
+  vars <- if (dtype == 'cont') list(val='emmean',  l_ci='lower.CL',  u_ci='upper.CL',  p_vl='p.value')
+  else                  list(val='prob',    l_ci='asymp.LCL', u_ci='asymp.UCL', p_vl='p.value')
   
-  f <- '/Flood_1Lag-season_flood-treatment/'
-  (Int_3 <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci, p_vl)))
-  f <- '/Flood_1Lag-season_flood/'
-  (Int_2_s <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci,  p_vl)))
-  f <- '/Flood_1Lag-treatment/'
-  (Int_2_t <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci,  p_vl)))
-  f <- '/Flood_1Lag/'
-  (Int_0 <- cbind(get_emm(outcome, f, val, l_ci, u_ci, p_vl), get_contr(outcome, f, u_ci, l_ci,  p_vl)))
+  # Get emmeans + contrasts for a given interaction path
+  get_int <- function(f) cbind(
+    get_emm(outcome, f, vars$val, vars$l_ci, vars$u_ci, vars$p_vl),
+    get_contr(outcome, f, vars$u_ci, vars$l_ci, vars$p_vl)
+  )
   
-  # COMBINE ALL MEANS & TESTS
-  (top <- cbind(Int_0, Int_2_t))
-  (bottom <- cbind(Int_2_s, Int_3))
-  table <- rbind(top, bottom)
+  # Build and label table
+  table <- rbind(
+    cbind(get_int('/Flood_1Lag/'), get_int('/Flood_1Lag-treatment/')),
+    cbind(get_int('/Flood_1Lag-season_flood/'), get_int('/Flood_1Lag-season_flood-treatment/'))
+  )
+  colnames(table) <- paste0(
+    c(rep("Overall",3), rep("Flood Level",4), rep("Control",3), rep("Intervention",3), rep("HFP",4)),
+    "_", sub("^.*_", "", colnames(table))
+  )
+  colnames(table)[1] <- 'Levels'
+  table <- table %>% select(-ends_with("_variables"))
   
-  # Export
-  folder <- paste0('Tables/ST4_absolute_diff_', outcome, '.xlsx')
-  write.xlsx(table, folder, rowNames=FALSE, fileEncoding = "UTF-8")
+  # Replace flood level labels and mark all rows for indenting
+  table$Levels <- ifelse(
+    table$Levels %in% names(flood_nm), flood_nm[table$Levels],
+    paste0(flood_nm[sub("-.*", "", table$Levels)], "-", sub(".*-", "", table$Levels))
+  )
+  table$indent <- TRUE
   
-  return(table)
+  # Season header rows
+  seasons <- unique(sub(".*-", "", table$Levels[grepl("-", table$Levels)]))
+  season_blocks <- do.call(rbind, lapply(seasons, function(s) {
+    header <- replace(table[1,], TRUE, NA); header$Levels <- s; header$indent <- FALSE
+    rows <- table[grepl(paste0("-", s, "$"), table$Levels), ]
+    rows$Levels <- sub("-.*$", "", rows$Levels)
+    rbind(header, rows)
+  }))
+  
+  # Label rows
+  make_label <- function(txt) { r <- replace(table[1,], TRUE, NA); r$Levels <- txt; r$indent <- FALSE; r }
+  
+  # Combine
+  result <- rbind(make_label("Flood impacts overall"), table[1:4,], 
+                  make_label("Flood impacts by season"), season_blocks)
+  rownames(result) <- NULL
+  
+  # Flextable
+  col_names   <- names(result)[-c(1, ncol(result))]
+  groups      <- unique(sub("_.*$", "", col_names))
+  header_wids <- c(1, sapply(groups, function(g) sum(startsWith(col_names, g))))
+  display_nms <- gsub("\\.[0-9]+$", "", c("Levels", make.unique(sub("^.*_", "", col_names))))
+  
+  flextable(result %>% select(-indent)) %>%
+    set_header_labels(values = setNames(display_nms, col_names)) %>%
+    add_header_row(values = c("", groups), colwidths = header_wids) %>%
+    align(part = "header", align = "center") %>%
+    padding(i = which(result$indent), j = 1, padding.left = 20) %>%
+    vline(j = cumsum(header_wids)[-length(header_wids)], part = "all") %>%
+    theme_booktabs() %>%
+    bold(part = "header") %>%
+    bold(i = c(1, 6), part = "body") %>%
+    italic(i = c(1, 6), part = "body") %>%
+    autofit()
   
 }
 
@@ -411,6 +442,14 @@ check_folder_loc(folder)
 folder <- paste0(git_path, '/Figures/')
 check_folder_loc(folder)
 
+
+# Flood level replacement names
+flood_nm <- c('0' = 'No change in flooding',
+              '1' = '1 SD above average',
+              '2' = '2 SD above average',
+              '3' = '>2 SD above average')
+
+
 # Data cleaning ####
 
 # Get observations for women over BL 
@@ -463,56 +502,94 @@ df_BL_S <- bind_rows(diets_BL, w_S, .id = "Source")
 
 # MT1: Baseline characteristics of women, by trial-arm (desc_trial) ####
 
+# Summarise continuous outcomes
+summarise_cont <- function(df, cols) {
+  do.call(cbind, lapply(cols, function(c) {
+    desc <- t1_summary_cont(df, c)
+    desc[, sapply(desc, is.numeric)] <- lapply(desc[, sapply(desc, is.numeric)], round, digits=1)
+    setNames(data.frame(paste0(desc$mean_value, " ± ", desc$sd_value)), c)
+  }))
+}
+
+# Summarise categorical outcomes
+summarise_cat <- function(df, cols) {
+  do.call(cbind, lapply(cols, function(c) {
+    desc <- t1_summary_cat(df, c)
+    desc[, sapply(desc, is.numeric)] <- lapply(desc[, sapply(desc, is.numeric)], round, digits=1)
+    if (all(unique(desc$`get(col)`) %in% c(0, 1))) {
+      setNames(data.frame(desc$proportion[desc$`get(col)` != 0]), c)
+    } else {
+      out <- spread(desc, key=`get(col)`, value=proportion)
+      out <- out[, -c(1,2)]
+      colnames(out) <- paste0(c, '__', colnames(out))
+      out
+    }
+  }))
+}
+
 # Get descriptive on characteristics
-cont <- c("age_3_BL", "wi_land_BL", "hh1hh_mem_EL") 
+cont <- c("age_3_BL", "wi_land_BL", "hh1hh_mem_EL", 'dd10r_score_m') 
 cat <- c("woman_edu_cat__BL", 'quint2_BL', 'g_2h_BL') 
 
-c <- outcomes_cont
-master <- t1_summary_cont(w_BL, c)
-master[, sapply(master, is.numeric)] <- lapply(master[, sapply(master, is.numeric)], function(x) round(x, digit=1)) # round decimals to 3
-master[[c]] <- paste0(master$mean_value, " ± ", master$sd_value)  # Drop irrelevant columns
-master <- master[, c(1,7)]  # Select relevant columns
-
-# Export descriptive stats for continuous data
-for (c in cont) {
-  desc <- t1_summary_cont(w_BL, c)
-  desc[, sapply(desc, is.numeric)] <- lapply(desc[, sapply(desc, is.numeric)], function(x) round(x, digit=1)) # round decimals to 3
-  desc[[c]] <- paste0(desc$mean_value, " ± ", desc$sd_value)  # Drop irrelevant columns
-  desc <- desc[, 7]  # Select relevant columns
-  master <- cbind(master, desc)
-}
-
-# Export descriptive stats for cat data
-for (c in c(cat, 'dd10r_starch', outcomes_bin)) {
-  desc <- t1_summary_cat(w_BL, c)
-  desc[, sapply(desc, is.numeric)] <- lapply(desc[, sapply(desc, is.numeric)], function(x) round(x, digit=1)) # round decimals to 3
-  
-  if(all(unique(desc$`get(col)`) %in% c(0, 1))) {
-    desc <- desc[desc$`get(col)` != 0, ] # Select relevant rows
-    master[[c]] <- desc$proportion
-  } else {
-    desc <- desc %>% 
-      spread(key = `get(col)`, value = proportion) %>% # Transpose variables with values NOT 0
-      arrange_at(c('treatment'))
-    colnames(desc) <- paste0(c, '__', colnames(desc)) 
-    desc <- desc[, -c(1,2)]  # Drop irrelevant columns
-    master <- cbind(master, desc)
-  }
-}
-master <- data.frame(t(master)) # transpose
+# Build master table
+master <- cbind(
+  summarise_cont(w_BL, c(cont)),
+  summarise_cat(w_BL, c(cat, 'dd10r_starch', outcomes_bin))
+)
+master <- data.frame(t(master))
 colnames(master) <- c('Control', 'Treatment')
-desired_order <- c('treatment', 'age_3_BL', 
-                   'woman_edu_cat__BL__0', 'woman_edu_cat__BL__1', 'woman_edu_cat__BL__2',
-                   'woman_edu_cat__BL__3', 'woman_edu_cat__BL__4', 'quint2_BL__1',
-                   'quint2_BL__2', 'quint2_BL__3', 'quint2_BL__4', 'quint2_BL__5', 
-                   'g_2h_BL__1', 'g_2h_BL__2', 'hh1hh_mem_EL', 'wi_land_BL', 
+
+# Reorder and clean
+desired_order <- c('age_3_BL',
+                   paste0('woman_edu_cat__BL__', 0:4),
+                   paste0('quint2_BL__', 1:5),
+                   paste0('g_2h_BL__', 1:2),
+                   'hh1hh_mem_EL', 'wi_land_BL',
                    'dd10r_starch', "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
-                   "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
-                   "dd10r_legume", "dd10r_nuts", 'dd10r_min_m', 'dd10r_score_m')
+                   "dd10r_dglv",  "dd10r_vita",  "dd10r_othv",  "dd10r_othf",
+                   "dd10r_legume","dd10r_nuts",  'dd10r_min_m', 'dd10r_score_m')
 master <- master[match(desired_order, rownames(master)), ]
+MT1_desc_trial <- replace_matches(master, nm)
 
-MT1_desc_trial <- master
+# Restructure rows with group headers
+make_label  <- function(txt, df) { r <- df[1,]; r[1,] <- NA; rownames(r) <- txt; r }
+split_group <- function(df, prefix) {
+  rows <- df[grepl(paste0("^", prefix, ":"), rownames(df)), ]
+  rownames(rows) <- sub(paste0(prefix, ": "), "", rownames(rows))
+  rbind(make_label(prefix, df), rows)
+}
 
+MT1_desc_trial <- rbind(
+  make_label("Individual Characteristics", MT1_desc_trial),
+  MT1_desc_trial["Age", , drop=FALSE],
+  split_group(MT1_desc_trial, "Education"),
+  split_group(MT1_desc_trial, "Wealth"),
+  split_group(MT1_desc_trial, "Religion"),
+  MT1_desc_trial[c("Household members", "Land owned"), , drop=FALSE],
+  make_label("Women's Dietary Characteristics", MT1_desc_trial),
+  make_label("Food Groups", MT1_desc_trial),
+  MT1_desc_trial[c("Starchy staples", "Flesh foods", "Dairy", "Eggs",
+                   "DGLV", "Vit. A-rich foods", "Other vegetables",
+                   "Other fruits", "Legumes", "Nuts/seeds", "MDD", "DDS"), , drop=FALSE]
+)
+
+# Flextable formatting
+label_rows  <- which(rownames(MT1_desc_trial) %in% c("Individual Characteristics", "Women's Dietary Characteristics"))
+cat_headers <- which(rownames(MT1_desc_trial) %in% c("Age", "Education", "Wealth", "Religion", "Household members", "Land owned", "Food Groups", "MDD", "DDS"))
+cat_rows    <- which(grepl("^(None|Partial primary|Complete primary|Partial secondary|Complete secondary|Poorest|Lower|Middle|Upper|Wealthiest|Muslim|Hindu|Starchy staples|Flesh foods|Dairy|Eggs|DGLV|Vit\\. A-rich foods|Other vegetables|Other fruits|Legumes|Nuts/seeds)", rownames(MT1_desc_trial)))
+
+ft <- flextable(tibble::rownames_to_column(MT1_desc_trial, " ")) %>%
+  bold(i = label_rows,  j = 1, part = "body") %>%
+  italic(i = cat_headers, j = 1, part = "body") %>%
+  padding(i = cat_rows,   j = 1, padding.left = 20) %>%
+  theme_booktabs() %>%
+  bold(part = "header") %>%
+  autofit()
+
+# Export
+wb <- openxlsx2::wb_workbook() %>% openxlsx2::wb_add_worksheet('MT1_desc_trial')
+wb <- wb_add_flextable(wb, sheet='MT1_desc_trial', ft, start_col=1, start_row=1)
+openxlsx2::wb_save(wb, 'Tables/MT1_desc_trial.xlsx')
 
 # Optional: Baseline characteristics of women, by trial-arm, across survey rounds (desc_trial_rounds) ####
 
@@ -556,14 +633,83 @@ master$Round <- factor(master$Round, levels = c('Baseline', sort(unique(master$R
 master <- master %>% arrange_at(c('Treatment', 'Round'))
 ST_desc_trial_rounds <- master
 
+# Save raw unformatted file
+write.xlsx(ST_desc_trial_rounds, paste0("Tables/Visuals_ST_rounds.xlsx"), rowNames=TRUE, fileEncoding = "UTF-8")
+
+# Get the base names (everything before _COEF, _PROB, _CI)
+coef_cols <- grep("_COEF$", names(ST_desc_trial_rounds), value = TRUE)
+prob_cols  <- grep("_PROB$", names(ST_desc_trial_rounds), value = TRUE)
+
+# Merge COEF+CI pairs
+for (col in coef_cols) {
+  base <- sub("_COEF$", "", col)
+  ci_col <- paste0(base, "_CI")
+  ST_desc_trial_rounds[[base]] <- paste0(ST_desc_trial_rounds[[col]], " (", ST_desc_trial_rounds[[ci_col]], ")")
+  ST_desc_trial_rounds[[col]] <- NULL
+  ST_desc_trial_rounds[[ci_col]] <- NULL
+}
+
+# Merge PROB+CI pairs
+for (col in prob_cols) {
+  base <- sub("_PROB$", "", col)
+  ci_col <- paste0(base, "_CI")
+  ST_desc_trial_rounds[[base]] <- paste0(ST_desc_trial_rounds[[col]], " (", ST_desc_trial_rounds[[ci_col]], ")")
+  ST_desc_trial_rounds[[col]] <- NULL
+  ST_desc_trial_rounds[[ci_col]] <- NULL
+}
+
+ST_desc_trial_rounds <- replace_matches(ST_desc_trial_rounds, nm)
+ST_desc_trial_rounds <- ST_desc_trial_rounds[, c(1, 2, 6:ncol(ST_desc_trial_rounds), 3, 5, 4)]
+
+
+# Split by treatment
+control   <- ST_desc_trial_rounds %>% filter(Treatment == 0) %>% select(-Treatment)
+treatment <- ST_desc_trial_rounds %>% filter(Treatment == 1) %>% select(-Treatment)
+
+# Rename cols
+colnames(control)[-1]   <- paste0(colnames(control)[-1],   "_Control")
+colnames(treatment)[-1] <- paste0(colnames(treatment)[-1], "_Intervention")
+
+# Merge side by side
+result <- left_join(control, treatment, by = "Round")
+# Interleave columns: DDS_Control, DDS_Intervention, Flooding_Control, Flooding_Intervention...
+col_names   <- names(result)[-1]
+groups      <- unique(sub("_Control$|_Intervention$", "", col_names))
+interleaved <- as.vector(rbind(
+  paste0(groups, "_Control"),
+  paste0(groups, "_Intervention")
+))
+result <- result[, c("Round", interleaved)]
+
+# Flextable with grouped headers (now grouped by variable, not treatment)
+col_names   <- names(result)[-1]
+groups      <- unique(sub("_Control$|_Intervention$", "", col_names))
+header_wids <- c(1, sapply(groups, function(g) sum(grepl(paste0("^", g, "_(Control|Intervention)$"), col_names))))
+display_nms <- gsub("\\.[0-9]+$", "", c("Round", make.unique(sub("^.*_", "", col_names))))
+
+ft <- flextable(result) %>%
+  set_header_labels(values = setNames(display_nms, names(result))) %>%
+  add_header_row(values = c("", groups), colwidths = header_wids) %>%
+  align(part = "header", align = "center") %>%
+  vline(j = cumsum(header_wids)[-length(header_wids)], part = "all") %>%
+  theme_booktabs() %>%
+  bold(part = "header") %>%
+  autofit()
+
+# Export
+wb <- openxlsx2::wb_workbook() %>% openxlsx2::wb_add_worksheet('ST_desc_trial_rounds')
+wb <- wb_add_flextable(wb, sheet='ST_desc_trial_rounds', ft, start_col=1, start_row=1)
+openxlsx2::wb_save(wb, 'Tables/ST_desc_trial_rounds.xlsx')
+
 # ST2: Interaction tests for significance (anova) ####
 
 # Create main frame with continuous outcome
 ### Get data
 (path <- paste0('Main Results/', outcomes_cont, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
 master <- read.xlsx(path)
+
 ### Format 2 decimal places
-master$Chisq <- sprintf("%.1f", master$Chisq)
+master$Chisq <- sprintf("%.1f", as.numeric(master$Chisq))
 master$P[master$`Pr(>Chisq)` < 0.001] <- "<0.001"  
 master$`Pr(>Chisq)` <- sprintf("%.2f", master$`Pr(>Chisq)`)
 master$`Pr(>Chisq)`[master$P == '<0.001'] <- "<0.001"
@@ -571,7 +717,7 @@ master$P <- NULL
 colnames(master) <- paste0(outcomes_cont, '_', colnames(master)) 
 # Merge relevant cols
 res <- data.frame()
-row_df <- setNames(data.frame(paste0(master[[1]], " (", master[[3]], ")")), outcomes_cont)
+row_df <- setNames(data.frame(paste0(master[[2]], " (", master[[4]], ")")), outcomes_cont)
 res <- rbind(res, row_df)
 
 ### Append each binary outcome to the main frame
@@ -581,14 +727,14 @@ for (b in outcomes_bin) {
   (path <- paste0('Main Results/', b, '/Flood_1Lag-season_flood-treatment/anov.xlsx'))
   new <- read.xlsx(path)
   # Format 2 decimal places
-  new$Chisq <- sprintf("%.1f", new$Chisq)
+  new$Chisq <- sprintf("%.1f", as.numeric(new$Chisq))
   new$P[new$`Pr(>Chisq)` < 0.001] <- "<0.001"  
   new$`Pr(>Chisq)` <- sprintf("%.2f", new$`Pr(>Chisq)`)
   new$`Pr(>Chisq)`[new$P == '<0.001'] <- "<0.001"
   new$P <- NULL
   colnames(new) <- paste0(b, '_', colnames(new)) 
   # Append columns to master df
-  row_df <- setNames(data.frame(paste0(new[[1]], " (", new[[3]], ")")), b)
+  row_df <- setNames(data.frame(paste0(new[[2]], " (", new[[4]], ")")), b)
   res <- cbind(res, row_df)  
 }
 
@@ -601,89 +747,159 @@ res <- as.data.frame(t(res)) %>%
   select('Flood_1Lag', 'season_flood', 'treatment', 'Flood_1Lag:treatment', 
          'Flood_1Lag:season_flood', 'season_flood:treatment', 
          'Flood_1Lag:season_flood:treatment')
-ST2_anova <- res
 
+# Fix names
+ST2_anova <- replace_matches(res, nm)
+names(ST2_anova) <- gsub("Treatment", 'HFP', names(ST2_anova))
+
+# Flex table format
+ft <- flextable(tibble::rownames_to_column(ST2_anova, " ")) %>%
+  theme_booktabs() %>%
+  bold(part = "header") %>%
+  autofit()
+
+# Export
+wb <- openxlsx2::wb_workbook() %>% openxlsx2::wb_add_worksheet('ST2_anova')
+wb <- wb_add_flextable(wb, sheet='ST2_anova', ft, start_col=1, start_row=1)
+openxlsx2::wb_save(wb, 'Tables/ST2_anova.xlsx')
 
 
 # ST3: Marginal effects of 1% flood coverage on dietary outcomes (marginal_effects) ####
 
-# GET 3 WAY INTERACTION
-f <- '/Flood_1Lag-season_flood-treatment/'
-(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
-(res <- read.xlsx(path))
-(var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$treatment, sep = "-"))
-(Int_3 <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
-# For every binary outcome
-for (b in outcomes_bin) {
-  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
-  (res <- read.xlsx(path))
-  (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
-  # Append columns to master df
-  (Int_3 <- cbind(Int_3, new))
+# Insert rows and rename existing variables
+restructure_levels <- function(df) {
+  
+  make_label <- function(txt) { r <- replace(df[1,], TRUE, NA); r$Variable <- txt; r$indent <- FALSE; r }
+  make_rows  <- function(pattern, label_fn) {
+    rows <- df[grepl(pattern, df$Variable), ]
+    rows$Variable <- label_fn(rows$Variable)
+    rows$indent <- TRUE
+    rows
+  }
+  
+  # Overall (just "1")
+  overall <- make_label("Flood* impact overall")
+  overall_row <- df[df$Variable == "1", ]; overall_row$indent <- TRUE
+  overall_row[1,1] <- NA
+  # By HFP ("1-0", "1-1")
+  by_hfp <- make_label("Flood* impacts by HFP")
+  hfp_rows <- make_rows("^1-[01]$", function(x) trt_nm[sub("1-", "", x)])
+  
+  # By season ("1-Jan/Feb" etc.)
+  by_season <- make_label("Flood* impacts by season")
+  season_rows <- make_rows(paste0("^1-(", paste(seasons, collapse="|"), ")$"),
+                           function(x) sub("1-", "", x))
+  
+  # By season & HFP ("1-Jan/Feb-0", "1-Jan/Feb-1" etc.)
+  by_season_hfp <- make_label("Flood* impacts by season & HFP")
+  season_hfp_rows <- do.call(rbind, lapply(c('0','1'), function(t) {
+    rows <- make_rows(paste0("^1-(", paste(seasons, collapse="|"), ")-", t, "$"),
+                      function(x) paste0(trt_nm[t], ": ", sub("^1-(.+)-[01]$", "\\1", x)))
+    rows
+  }))
+  
+  result <- rbind(overall, overall_row,
+                  by_hfp, hfp_rows,
+                  by_season, season_rows,
+                  by_season_hfp, season_hfp_rows)
+  rownames(result) <- NULL
+  result
 }
 
-# GET 2 WAY INTERACTION (SEASON)
-f <- '/Flood_1Lag-season_flood/'
-(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
-(res <- read.xlsx(path))
-(var <- paste(round(res$Flood_1Lag, 2), res$season_flood, sep = "-"))
-(Int_2_S <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
-# For every binary outcome
-for (b in outcomes_bin) {
-  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
-  (res <- read.xlsx(path))
-  (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
-  # Append columns to master df
-  (Int_2_S <- cbind(Int_2_S, new))
+# Helper to load and format one outcome for a given interaction path
+load_int <- function(outcome, f, is_cont) {
+  path <- paste0('Main Results/', outcome, f, 'ame1_res.xlsx')
+  res  <- read.xlsx(path)
+  ci   <- if (is_cont) list(l='lower.CL',   u='upper.CL')   else list(l='asymp.LCL', u='asymp.UCL')
+  list(var=res, trend=res[['1.trend']], l=res[[ci$l]], u=res[[ci$u]], p=res[['p.value']])
 }
 
-
-# GET 2 WAY INTERACTION (TREATMENT)
-f <- '/Flood_1Lag-treatment/'
-(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
-(res <- read.xlsx(path))
-(var <- paste(round(res$Flood_1Lag, 2), res$treatment, sep = "-"))
-(Int_2_T <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
-# For every binary outcome
-for (b in outcomes_bin) {
-  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
-  (res <- read.xlsx(path))
-  (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
-  # Append columns to master df
-  (Int_2_T <- cbind(Int_2_T, new))
+# Helper to build one interaction block across all outcomes
+build_block <- function(f, var_fn) {
+  get_cols <- function(o) {
+    is_cont <- o == outcomes_cont
+    d <- load_int(o, f, is_cont)
+    format_cols(o, var_fn(d$var), d$trend, d$l, d$u, d$p)
+  }
+  Reduce(cbind, lapply(c(outcomes_cont, outcomes_bin), get_cols))
 }
 
-# GET OVERALL (NO INTERACTION)
-f <- '/Flood_1Lag/'
-(path <- paste0('Main Results/', outcomes_cont, f, 'ame1_res.xlsx'))
-(res <- read.xlsx(path))
-(var <- round(res$Flood_1Lag, 2))
-(Int_0 <- format_cols(outcomes_cont, var, res[['1.trend']], res[['lower.CL']], res[['upper.CL']], res[['p.value']]))
-# For every binary outcome
-for (b in outcomes_bin) {
-  (path <- paste0('Main Results/', b, f, 'ame1_res.xlsx'))
-  (res <- read.xlsx(path))
-  (new <- format_cols(b, var, res[['1.trend']], res[['asymp.LCL']], res[['asymp.UCL']], res[['p.value']]))
-  # Append columns to master df
-  (Int_0 <- cbind(Int_0, new))
-}
+# Build all interaction blocks
+ST3_marginal_effects <- rbind(
+  build_block('/Flood_1Lag/',                function(r) round(r$Flood_1Lag, 2)),
+  build_block('/Flood_1Lag-treatment/',      function(r) paste(round(r$Flood_1Lag, 2), r$treatment,   sep="-")),
+  build_block('/Flood_1Lag-season_flood/',   function(r) paste(round(r$Flood_1Lag, 2), r$season_flood, sep="-")),
+  build_block('/Flood_1Lag-season_flood-treatment/', function(r) paste(round(r$Flood_1Lag, 2), r$season_flood, r$treatment, sep="-"))
+)
+rownames(ST3_marginal_effects) <- ST3_marginal_effects[[paste0(outcomes_cont, '_variables')]]
 
-# Combine tables
-master <- rbind(Int_0, Int_2_T, Int_2_S, Int_3)
-ST3_marginal_effects <- master
+# Clean and prep
+ST3_marginal_effects      <- ST3_marginal_effects %>% select(-ends_with("_variables"), -any_of("var"))
+col_names_orig <- colnames(ST3_marginal_effects)
+outcomes_all   <- unique(str_remove(col_names_orig, "_(COEF|PROB|CI|P)$"))
+header_values  <- c("", sapply(outcomes_all, function(o) nm[o]))
+header_widths  <- c(1,  sapply(outcomes_all, function(o) sum(str_detect(col_names_orig, paste0("^", o, "_")))))
+
+colnames(ST3_marginal_effects) <- make.unique(str_replace(col_names_orig, "^.*_(COEF|PROB|CI|P)$", "\\1"))
+clean_labels <- setNames(gsub("\\.[0-9]+$", "", colnames(ST3_marginal_effects)), colnames(ST3_marginal_effects))
+
+ST3_marginal_effects <- tibble::rownames_to_column(ST3_marginal_effects, var="Variable")
+ST3_marginal_effects$indent <- FALSE
+
+# Restructure and build flextable
+trt_nm  <- c('0'='Control', '1'='HFP')
+seasons <- c("Jan/Feb", "Mar/Apr", "May/Jun", "Jul/Aug", "Sep/Oct", "Nov/Dec")
+result     <- restructure_levels(ST3_marginal_effects)
+label_rows <- which(grepl("^Flood\\*", result$Variable))
+
+ft <- flextable(result %>% select(-indent)) %>%
+  set_header_labels(values = clean_labels) %>%
+  add_header_row(values = header_values, colwidths = header_widths) %>%
+  align(part = "header", align = "center") %>%
+  padding(i = which(result$indent), j = 1, padding.left = 20) %>%
+  vline(j = cumsum(header_widths)[-length(header_widths)] + 1, part = "all") %>%
+  theme_booktabs() %>% bold(part = "header") %>%
+  bold(i = label_rows, part = "body") %>%
+  italic(i = label_rows, part = "body") %>%
+  autofit()
+
+# Export
+wb <- openxlsx2::wb_workbook() %>% openxlsx2::wb_add_worksheet('ST3_marginal_effects')
+wb <- wb_add_flextable(wb, sheet='ST3_marginal_effects', ft, start_col=1, start_row=1)
+openxlsx2::wb_save(wb, 'Tables/ST3_marginal_effects.xlsx')
+
+
+
 
 # ST4: Marginal means of 1% flood coverage on dietary outcomes, with difference tests ####
 
-# Table 1 (Presentation)
+st4 <- list()
 
 ### Get continuous outcomes
-abs_diff_table(outcomes_cont, dtype='cont')
+st4[[outcomes_cont]] <- abs_diff_table(outcome=outcomes_cont, dtype='cont')
 
 ### Get binary outcomes
 for (b in outcomes_bin) {
-  abs_diff_table(b, dtype='bin')
+  st4[[b]] <- abs_diff_table(outcome=b, dtype='bin')
 }
 
+# Store outputs in multiple excel sheets
+wb <- openxlsx2::wb_workbook()
+for (outcome in names(st4)) {
+  
+  ft <- st4[[outcome]]
+  sheet_name <- nm[outcome]
+  
+  if(sheet_name=='Nuts/seeds') { sheet_name <- 'Nuts & seeds'}
+  
+  wb <- wb %>%
+    openxlsx2::wb_add_worksheet(sheet_name)
+  
+  wb <- wb_add_flextable(wb, sheet = sheet_name, ft, start_col = 1, start_row = 1)
+}
+
+# Save
+openxlsx2::wb_save(wb, 'Tables/ST4_absolute_diff.xlsx')
 
 # ST5: Main effects for impact of 1% flood coverage on dietary outcomes (main_effects) ####
 
@@ -709,10 +925,60 @@ for (b in outcomes_bin) {
 }
 
 # Re-arrange the row orders
-rows_to_move <- c(1, 3:7, 2, 13:17, 8, 19:23, 18, 24:28,9:12)
+rows_to_move <- c(1, 3:7, 2, 13:17, 8, 19:23, 18, 24:28, 9:12)
 (master <- rbind(master[rows_to_move, ], master[-rows_to_move, ]))
 rownames(master) <- NULL
-ST5_main_effects <- master
+ST5_main_effects <- replace_matches(master, nm) %>% select(-ends_with("variables"))
+# Set variable name
+ST5_main_effects <- cbind(
+  Term = c('(Intercept)', 
+           'Season (Mar/Apr)', 'Season (May/Jun)', 'Season (Jul/Aug)',
+           'Season (Sep/Oct)', 'Season (Nov/Dec)', 
+           'Flooding : Season (Jan/Feb)', 
+           'Flooding : Season (Mar/Apr)',
+           'Flooding : Season (May/Jun)',
+           'Flooding : Season (Jul/Aug)',
+           'Flooding : Season (Sep/Oct)',
+           'Flooding : Season (Nov/Dec)',
+           'Season (Jan/Feb) : HFP',
+           'Season (Mar/Apr) : HFP',
+           'Season (May/Jun) : HFP',
+           'Season (Jul/Aug) : HFP',
+           'Season (Sep/Oct) : HFP',
+           'Season (Nov/Dec) : HFP',
+           'Flooding : Jan/Feb season : HFP',
+           'Flooding : Season (Mar/Apr) : HFP',
+           'Flooding : Season (May/Jun) : HFP',
+           'Flooding : Season (Jul/Aug) : HFP',
+           'Flooding : Season (Sep/Oct) : HFP',
+           'Flooding : Season (Nov/Dec) : HFP',
+           'Baseline DDS', 'Ramadan', 'Religion', 'Wealth'),
+  ST5_main_effects
+)
+
+# Build header values and widths from column names
+col_names_orig <- colnames(ST5_main_effects)[-1]  # exclude Term
+outcomes_all   <- unique(sub(" (COEF|PROB|CI|P)$", "", col_names_orig))
+header_values  <- c("", outcomes_all)
+header_widths  <- c(1, sapply(outcomes_all, function(o) sum(startsWith(col_names_orig, o))))
+
+# Clean lower header (remove outcome prefix)
+clean_cols  <- make.unique(sub("^.* (COEF|PROB|CI|P)$", "\\1", col_names_orig))
+clean_labels <- setNames(gsub("\\.[0-9]+$", "", c("Term", clean_cols)), colnames(ST5_main_effects))
+
+ft <- flextable(ST5_main_effects) %>%
+  set_header_labels(values = clean_labels) %>%
+  add_header_row(values = header_values, colwidths = header_widths) %>%
+  align(part = "header", align = "center") %>%
+  vline(j = cumsum(header_widths)[-length(header_widths)], part = "all") %>%
+  theme_booktabs() %>%
+  bold(part = "header") %>%
+  autofit()
+
+# Export
+wb <- openxlsx2::wb_workbook() %>% openxlsx2::wb_add_worksheet('ST5_main_effects')
+wb <- wb_add_flextable(wb, sheet='ST5_main_effects', ft, start_col=1, start_row=1)
+openxlsx2::wb_save(wb, 'Tables/ST5_main_effects.xlsx')
 
 # Tables for figures ####
 
@@ -768,15 +1034,9 @@ write.xlsx(list(R_Rel_Diff=table1, R_Abs_Flood_Levels=table2, R_Abs_Flood_Treat_
 
 #### EXPORT ####
 
-# Rename variables
-MT1_desc_trial <- replace_matches(MT1_desc_trial, nm)
-ST2_anova <- replace_matches(ST2_anova, nm)
-ST3_marginal_effects <- replace_matches(ST3_marginal_effects, nm)
-ST5_main_effects <- replace_matches(ST5_main_effects, nm)
-
-# Export
-tables <- c('MT1_desc_trial', 'ST_desc_trial_rounds', 'ST2_anova', 'ST3_marginal_effects', 'ST5_main_effects')
-for (t in tables){
-  write.xlsx(get(t), paste0("Tables/", t, ".xlsx"), rowNames=TRUE, fileEncoding = "UTF-8")
-}
+# # Export
+# tables <- c('MT1_desc_trial', 'ST_desc_trial_rounds', 'ST2_anova', 'ST3_marginal_effects', 'ST5_main_effects')
+# for (t in tables){
+#   write.xlsx(get(t), paste0("Tables/", t, ".xlsx"), rowNames=TRUE, fileEncoding = "UTF-8")
+# }
 

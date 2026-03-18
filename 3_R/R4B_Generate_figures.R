@@ -2,16 +2,15 @@
 ### Generate figures
 ### ------------------------------------------------------------------------ ### 
 
-# Clear environment
-rm(list=ls())
-
-### IMPORTANT - set file paths to folder locations
-data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
-git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-setwd(git_path)
-
-#### DEPENDENCIES ####
-source('R0_Dependencies.R')
+# # Clear environment
+# rm(list=ls())
+# 
+# ### IMPORTANT - set file paths to folder locations
+# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+# setwd(git_path)
+# 
+# #### DEPENDENCIES ####
+# source('R0_Dependencies.R')
 
 # GG mapper for flood levels, by season and cluster (highlighting Trial arms)
 mapper <- function(basemap, df_spatial, stats_df=NULL, title='') {
@@ -549,7 +548,8 @@ load(paste0('main_data.RData'))
 # SF2: DESC - Temporal distribution of flooding & diets, pooled ####
 
 # Load data
-source_f0 <- read.xlsx(xlsxFile='Tables/ST_desc_trial_rounds.xlsx')
+source_f0 <- read.xlsx('Tables/Visuals_ST_rounds.xlsx')
+
 # Clean data
 source_f0 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
 source_f0 <- melt(source_f0, id.vars=c('Round', 'Treatment'))

@@ -12,7 +12,8 @@ library(openxlsx); library(zoo); library(reshape); library(reshape2);
 library(spdep); library(nlme); library(lme4); library(emmeans); library(tidyr)
 library(dplyr); library(ggplot2); library(cli); library(stringr); library(ggmap);
 library(patchwork); library(gridExtra); library(ggh4x); library(ggtext); 
-library(cowplot)
+library(cowplot); library(sjPlot); library(car); library(glmmTMB)
+
 
 #### FUNCTIONS ####
 
@@ -166,7 +167,7 @@ getLME <- function(lme_model, var=0){
   # Use the summary function to get a summary of the model
   summary_table <- summary(lme_model)
   
-  # Extract relevant information (coefficient estimates, standard errors, p-values, and confidence intervals)
+  # Extract relevelslevant information (coefficient estimates, standard errors, p-values, and confidence intervals)
   lme_res <- round(as.data.frame(summary_table$tTable[, c("Value", "Std.Error", "DF", "t-value", "p-value")]), 4)
   lme_res$Variable <- rownames(lme_res)
   rownames(lme_res) <- NULL
@@ -335,7 +336,8 @@ nm <- list('dd10r_score_m'='DDS', "dd10r_min_m"='MDD',
            'quint2_BL__4'='Wealth: Upper',
            'quint2_BL__5'='Wealth: Wealthiest',
            'g_2h_BL__1'='Religion: Muslim', 'g_2h_BL__2'='Religion: Hindu',
-           'treatment'='Treatment','control' = 'Control')
+           'treatment'='Treatment','control' = 'Control',
+           'Flood_1Lag'='Flooding', 'season_flood'='Season')
 
 # "Dietary diversity scores*",
 #  "Minimum dietary diversity",

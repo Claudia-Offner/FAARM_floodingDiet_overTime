@@ -2,20 +2,20 @@
 ### Model selection
 ### ------------------------------------------------------------------------ ### 
 
-# Clear environment
-rm(list = ls())
-
-### IMPORTANT - set file paths to folder locations
-git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-setwd(git_path)
+# # Clear environment
+# rm(list = ls())
+# 
+# ### IMPORTANT - set file paths to folder locations
+# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+# setwd(git_path)
 
 #### DEPENDENCIES ####
-library(sjPlot); library(car); library(gridExtra); library(glmmTMB)
+
 # Override emmeans internal theme to avoid ggplot2 version conflict
 theme_emm <- function(...) ggplot2::theme_bw(...)
 assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
 
-source('R0_Dependencies.R')
+# source('R0_Dependencies.R')
 
 # Function to 
 sens_check <- function(df, outcome, name, type, exposure) {
@@ -139,7 +139,7 @@ sens_figures <- function(df, outcome, name, type){
   
 }
 
-#### MAIN CODE ####
+#### MAIN CODE (2.16 hours) ####
 
 # Load data
 load(paste0('main_data.RData'))
@@ -150,7 +150,6 @@ level <- flood_cont_levels
 
 
 # 1. Sensitivity Analysis ####
-
 
 # LINEAR MIXED EFFECTS MODELS
 start_time <- Sys.time()
@@ -171,8 +170,7 @@ end_time <- Sys.time()
 
 # Print timings
 total_time <- end_time - start_time
-times <- rbind(times, data.frame(Variable = c, Time = total_time))
-print(paste0('TIME TO RUN ', c, ' MODEL: ', total_time))
+print(paste0('TIME TO RUN: ', total_time))
 
 
 

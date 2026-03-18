@@ -2,15 +2,15 @@
 ### Generate main results
 ### ------------------------------------------------------------------------ ### 
 
-# Clear environment
-rm(list = ls())
-
-### IMPORTANT - set file paths to folder locations
-git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-setwd(git_path)
+# # Clear environment
+# rm(list = ls())
+# 
+# ### IMPORTANT - set file paths to folder locations
+# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+# setwd(git_path)
 
 #### DEPENDENCIES ####
-source('R0_Dependencies.R')
+# source('R0_Dependencies.R')
 
 # Function to export estimates, marginal effects and marginal means
 get_results <- function(model, outcome, dtype, interaction) {
@@ -165,7 +165,7 @@ run_model <- function(outcome, type) {
 
 }
 
-#### MAIN CODE ####
+#### MAIN CODE (<30 hour) ####
 
 # Load data
 load(paste0('main_data.RData'))
@@ -176,13 +176,14 @@ levels <- flood_cat_levels
 
 # Check and set result location
 folder <- paste0(git_path, '/Main Results/')
-check_folder_loc(folder)
 setwd(folder)
+getwd()
 
 # Set model timer
 times <- data.frame(Variable = character(0), Time = numeric(0))
 
 # 1. Extract and export results for continuous outcomes ####
+
 for (c in outcomes_cont){
   
   # Run model
