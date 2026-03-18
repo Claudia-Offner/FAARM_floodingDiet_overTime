@@ -2,20 +2,15 @@
 ### Generate tables
 ### ------------------------------------------------------------------------ ### 
 
-# Clear environment
-rm(list = ls())
-
-library(flexlsx)
-library(openxlsx2)
-library(flextable)
-library(stringr)
-
-### IMPORTANT - set file paths to folder locations
-git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-setwd(git_path)
-
-#### DEPENDENCIES ####
-source('R0_Dependencies.R')
+# # Clear environment
+# rm(list = ls())
+# 
+# ### IMPORTANT - set file paths to folder locations
+# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+# setwd(git_path)
+# 
+# #### DEPENDENCIES ####
+# source('R0_Dependencies.R')
 
 # DESC Function to extract descriptive info for continuous variable (mean, CI, p)
 summary_cont <- function(df, g1, group=1, col) {
