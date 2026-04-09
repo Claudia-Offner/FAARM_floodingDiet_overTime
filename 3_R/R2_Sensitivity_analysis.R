@@ -2,21 +2,13 @@
 ### Model selection
 ### ------------------------------------------------------------------------ ### 
 
-# # Clear environment
-# rm(list = ls())
-# 
-# ### IMPORTANT - set file paths to folder locations
-# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-# setwd(git_path)
-# 
-# # #### DEPENDENCIES ####
-# 
-# source('R0_Dependencies.R')
+#### DEPENDENCIES ####
 
 # Override emmeans internal theme to avoid ggplot2 version conflict
 theme_emm <- function(...) ggplot2::theme_bw(...)
 assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
 
+# Function to fit lme/glmer models
 fit_model <- function(df, outcome, type, exposure) {
   
   df$treatment <- factor(df$treatment, levels = c(0, 1), labels = c("Control", "HFP"))
@@ -49,6 +41,7 @@ fit_model <- function(df, outcome, type, exposure) {
   model
 }
 
+# Function to build plots from rds files
 build_plots <- function(model, outcome, name, type, exposure) {
   
   if (type == 'lme') {
@@ -121,7 +114,8 @@ build_plots <- function(model, outcome, name, type, exposure) {
 load('main_data.RData')
 df$Flood_1Lag <- df$Flood_SThresh
 
-# 1. Sensitivity Analysis ####
+
+# 1. Sensitivity analysis: Run models ####
 
 # Define all outcomes
 outcomes <- list(
@@ -138,26 +132,24 @@ outcomes <- list(
   list(outcome = 'dd10r_nuts',    name = '(K) Nuts and seeds',      type = 'glmer')
 )
 
+models_cont <- lapply(outcomes, function(o)
+  fit_model(df, o$outcome, o$type, exposure = 'cont'))
 
-# # 1. Fit and store all models (continuous exposure for assumptions, categorical exposure for sensitivity plots)
-# models_cont <- lapply(outcomes, function(o)
-#   fit_model(df, o$outcome, o$type, exposure = 'cont'))
-# 
-# models_cat  <- lapply(outcomes, function(o)
-#   fit_model(df, o$outcome, o$type, exposure = 'cat'))
-# 
-# names(models_cont) <- names(models_cat) <- sapply(outcomes, `[[`, 'outcome')
-# 
-# # Save
-# saveRDS(models_cont, 'Sensitivity Results/models_cont.rds')
-# saveRDS(models_cat,  'Sensitivity Results/models_cat.rds')
+models_cat  <- lapply(outcomes, function(o)
+  fit_model(df, o$outcome, o$type, exposure = 'cat'))
 
+names(models_cont) <- names(models_cat) <- sapply(outcomes, `[[`, 'outcome')
+
+# Save
+saveRDS(models_cont, 'Sensitivity Results/models_cont.rds')
+saveRDS(models_cat,  'Sensitivity Results/models_cat.rds')
 
 # Load (skips re-fitting entirely)
 models_cont <- readRDS('Sensitivity Results/models_cont.rds')
 models_cat  <- readRDS('Sensitivity Results/models_cat.rds')
 
-# 2. Build plots for every outcome
+# 2. Sensitivity analysis: Build plots ####
+
 plots <- mapply(
   function(m_cont, m_cat, o) {
     ass  <- build_plots(m_cont, o$outcome, o$name, o$type, exposure = 'cont')$ass_plots
@@ -171,28 +163,26 @@ plots <- mapply(
 )
 names(plots) <- sapply(outcomes, `[[`, 'outcome')
 
-
-# 3. Combine into single figures and save
-
-# Single combined assumption figure
+# Assumption figure
 all_ass_plots <- unlist(lapply(plots, `[[`, 'ass_plots'), recursive = FALSE)
 all_ass_plots <- c(all_ass_plots[1:3], list(plot_spacer(), plot_spacer()), 
                    all_ass_plots[4:length(all_ass_plots)])
 all_ass_plots <- wrap_plots(all_ass_plots, ncol = 5)
 
-ggsave('Figures/SF3_all_assumptions.png', all_ass_plots, width = 15, height = 9, dpi = 300)
-
-
-# Single combined em_plot figure
+# Em_plot figure
 all_em_plots <- lapply(plots, `[[`, 'em_plot')
 all_em_plots <- lapply(all_em_plots, function(p) {
   p + theme(legend.position = "none")
 })
 combined_em   <- wrap_plots(all_em_plots, ncol = 4)
 
-ggsave('Figures/SF4_all_sensitivity.png', combined_em, width = 25, height = 15, dpi=300)
-
 # Save legend
 legend <- get_legend(plots[[1]]$em_plot)
+
+
+#### EXPORT ####
+
+ggsave('Figures/SF3_all_assumptions.png', all_ass_plots, width = 15, height = 9, dpi = 300)
+ggsave('Figures/SF4_all_sensitivity.png', combined_em, width = 25, height = 15, dpi=300)
 ggsave('Figures/SF4_all_sensitivity_legend.png', ggdraw(legend), width = 3, height = 6, dpi = 300)
 

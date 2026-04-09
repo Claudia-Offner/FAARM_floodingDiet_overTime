@@ -30,7 +30,7 @@ ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
 
 start_time <- Sys.time()
 
-scripts <- c(#'R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
+scripts <- c('R1_Data_formating.R', #'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
              'R4A_Generate_tables.R', 'R4B_Generate_figures.R')
 
 for(s in scripts){

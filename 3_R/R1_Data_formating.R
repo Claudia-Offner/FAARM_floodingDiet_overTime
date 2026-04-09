@@ -39,18 +39,10 @@ df <- data %>% dplyr::select(c_code, wcode, year_season, year, season, season_DD
 # Merge cat 4& 5 education
 df$woman_edu_cat__BL[df$woman_edu_cat__BL==5] <- 4
 
-# Check outcome distribution over time
-y <- df %>%
-  group_by(year_season, treatment) %>%
-  summarise(count=n(),
-            diet=sum(!is.na(dd10r_score_m)),
-            flood=sum(!is.na(perc_flooded_c)),
-            DDperc=diet/count*100,
-            FloodPerc=flood/count*100)
-
 # Create a copy of DF with BL values
 df_BL <- df
 df_BL$Baseline[df_BL$year_season %in% c('2015-1', '2015-2', '2015-3', '2015-4')] <- 'Baseline'
+df_BL <- df_BL[df_BL$dd10r_othv != 88, ] # Remove 88 values from other veg
 
 # REMOVE: BL & EL year_season  
 # NOTE: do not include 2019_05 because the cluster averages missing
@@ -98,32 +90,53 @@ flood_cat_levels <- c(0, 1, 2, 3)
 # Check counts
 df %>% count(Flood_SThresh)
 
-# 4. Continuous Exposure: Center & Scale Flooding (SENSITIVITY ANALYSIS) ####
+# 4. Descriptive checks ####
 
-## Scale flood exposure to improve interpret ability of the model
-## https://stats.stackexchange.com/questions/407822/interpretation-of-standardized-z-score-rescaled-linear-model-coefficients
-## https://towardsai.net/p/data-science/how-when-and-why-should-you-normalize-standardize-rescale-your-data-3f083def38ff
+# BASELINE DATA ONLY
+# Get number of women per HFP at baseline
+df_BL %>% 
+  filter(Baseline=='Baseline') %>% 
+  group_by(treatment) %>% 
+  summarise(count = n()) %>%
+  adorn_totals()
 
-## NB: The variable needs to be centered because polynomial interactions
-##     introduce multi-colinearity that need to minimized.
-##     The flood variable is not normal and also needs to be scale so that we
-##     interpret results by 1% increases, instead of 100% increases.
-##     So we center and divide by 0.01 (NOT SD because not Gaussian), so we can
-##     interpret our model as 1% increases.
+# SURVEILLANCE DATA ONLY
+# NB: df2 is the complete case data used in model
+df2 <- df[complete.cases(df), ]
 
-# Center and scale the variable
-mean_value <- mean(df$Flood_1Lag, na.rm = TRUE)
-df$Flood_1Lag_norm  <- (df$Flood_1Lag - mean_value)/0.01 # Check what it means when you standardize
+# # !! Make sure only women included in surveillance are in baseline measure !!
+# df_BL <- df_BL %>% filter(wcode %in% unique(df2$wcode))
 
-# Identify levels for predictor (based on center & scale)
-flood_cont_levels <- c((0 - mean_value)/0.01,
-                       (0.01 - mean_value)/0.01,
-                       (0.05 - mean_value)/0.01,
-                       (0.1 - mean_value)/0.01,
-                       (0.2 - mean_value)/0.01)
+# Number of obs: 20648, groups:  wcode, 2620; c_code, 96; season_id, 24
+nrow(df2)
+n_distinct(df2$wcode)
+n_distinct(df2$c_code)
 
-# Check distribution
-hist(df$Flood_1Lag_norm)
+# Check number of women in each treatment group 
+df2 %>% 
+  distinct(wcode, treatment) %>% 
+  group_by(treatment) %>% 
+  summarise(n = n())
+
+# Check outcome distribution of women, over time
+df2 %>%
+  group_by(year_season, treatment) %>%
+  summarise(count=n()) %>%
+  pivot_wider(names_from = treatment, values_from = count)
+
+# Check number of measures collected for each woman, over surveillance 
+y <- df2 %>%
+  group_by(wcode) %>%
+  summarise(count=n())
+count(y[y$count==0,]) # no surveillance
+count(y[y$count>=8,]) # at least 8 measures
+
+# Check number of flood categories, by cluster
+df2 %>% 
+  dplyr::select(c_code, year_season, Flood_SThresh) %>% 
+  distinct() %>%
+  group_by(Flood_SThresh) %>% 
+  summarise(count = n())
 
 #### EXPORT ####
-save(df, df_BL, cluster_shp, season_means, flood_cat_levels, flood_cont_levels,  file='main_data.RData')
+save(df, df_BL, cluster_shp, season_means, flood_cat_levels,  file='main_data.RData')

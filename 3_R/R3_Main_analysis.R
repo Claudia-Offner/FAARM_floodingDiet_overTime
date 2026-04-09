@@ -2,15 +2,7 @@
 ### Generate main results
 ### ------------------------------------------------------------------------ ### 
 
-# # Clear environment
-# rm(list = ls())
-# 
-# ### IMPORTANT - set file paths to folder locations
-# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-# setwd(git_path)
-#
-# #### DEPENDENCIES ####
-# source('R0_Dependencies.R')
+#### DEPENDENCIES ####
 
 # Function to export estimates, marginal effects and marginal means
 get_results <- function(model, outcome, dtype, interaction) {
@@ -177,9 +169,6 @@ folder <- paste0(git_path, '/Main Results/')
 setwd(folder)
 getwd()
 
-df2 <- df[complete.cases(df), ]
-colSums(is.na(df))
-
 # Set model timer
 times <- data.frame(Variable = character(0), Time = numeric(0))
 
@@ -201,9 +190,16 @@ for (c in outcomes_cont){
 # 2. Extract and export results for binary outcomes ####
 
 for (b in outcomes_bin) {
-  
+
   # Run model
+  start_time <- Sys.time()
   run_model(b, 'bin')
+  end_time <- Sys.time()
+  
+  # Print timings
+  total_time <- end_time - start_time
+  times <- rbind(times, data.frame(Variable = c, Time = total_time))
+  print(paste0('TIME TO RUN ', b, ' MODEL: ', total_time))
 
 }
 

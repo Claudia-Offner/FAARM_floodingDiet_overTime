@@ -2,15 +2,7 @@
 ### Generate tables
 ### ------------------------------------------------------------------------ ### 
 
-# # Clear environment
-# rm(list = ls())
-# 
-# ### IMPORTANT - set file paths to folder locations
-# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-# setwd(git_path)
-# 
-# #### DEPENDENCIES ####
-# source('R0_Dependencies.R')
+#### DEPENDENCIES ####
 
 # DESC Function to extract descriptive info for continuous variable (mean, CI, p)
 summary_cont <- function(df, g1, group=1, col) {
@@ -135,107 +127,108 @@ format_cols <- function(outcome, var, est, l_ci, u_ci, p, num=2) {
   return(master)
 }
 
+# MAIN Function to extract and format predicted values
+get_emm <- function (outcome, folder,val, l_ci, u_ci, p_vl) {
+  
+  # Get relevant data
+  res <- read.xlsx(paste0('Main Results/', outcome, folder, 'emm_2_res.xlsx'))
+  # res <- res[-grep(c('8.54', '18.54'), as.character(res$Flood_1Lag)), ]
+  # row.names(res) <- NULL
+  # Set variable, depending on folder
+  if (folder=='/Flood_1Lag-season_flood-treatment/'){
+    (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$treatment, sep = "-"))
+  } else if (folder=='/Flood_1Lag-season_flood/'){
+    (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, sep = "-"))
+  } else if (folder=='/Flood_1Lag-treatment/'){
+    (var <- paste(round(res$Flood_1Lag, 2), res$treatment, sep = "-"))
+  } else if (folder=='/Flood_1Lag/'){
+    (var <- round(res$Flood_1Lag, 2))
+  }
+  # Format data
+  (mean <- format_cols(outcome, var, res[[val]], res[[l_ci]], res[[u_ci]], round(res[[p_vl]], 2)))
+  (mean <- mean[, -which(names(mean) == paste0(outcome, '_P'))]) # remove p-values
+  
+  # Split data, depending on treatment
+  if (grepl("treatment", folder)){
+    half_rows <- nrow(mean) / 2
+    df_top <- mean[1:half_rows, ]
+    df_bottom <- mean[(half_rows + 1):nrow(mean), ]
+    mean <- cbind(df_top, df_bottom)
+    
+    return(mean)
+    
+  } else {
+    
+    return(mean)
+    
+  }
+  
+}
+
+# MAIN Function to extract and format difference tests
+get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
+  
+  # Get data
+  if (folder=='/Flood_1Lag-season_flood/'){
+    file <- 'contr_emm2b.xlsx'
+  } else {
+    file <- 'contr_emm2a.xlsx'
+  }
+  res <- read.xlsx(paste0('Main Results/', outcome, folder, file))
+  
+  # Remove irrelevant levels/cols
+  if (grepl('treatment', folder)) {
+    col <- res$Flood_1Lag
+  } else {
+    col <- res$contrast
+    col <- sub("Flood_1Lag", "", col)
+    col <- sub("Flood_1Lag", "", col)
+    res <- res[grep("^0", as.character(col)), ]
+    res$contrast <- sub("Flood_1Lag", "", res$contrast)
+    res$contrast <- sub("Flood_1Lag", "", res$contrast)
+    row.names(res) <- NULL
+  }
+  
+  # Set variable, depending on folder
+  if (folder=='/Flood_1Lag-season_flood-treatment/'){
+    (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$contrast, sep = "-"))
+  } else if (folder=='/Flood_1Lag-season_flood/'){
+    (var <- paste(res$season_flood, res$contrast, sep = "-"))
+  } else if (folder=='/Flood_1Lag-treatment/'){
+    (var <- paste(round(res$Flood_1Lag, 2), res$contrast, sep = "-"))
+  } else if (folder=='/Flood_1Lag/'){
+    (var <- res$contrast)
+  }
+  
+  # Format
+  res[, c("estimate", l_ci, u_ci)] <- res[, c("estimate", l_ci, u_ci)] * -1
+  (diff <- format_cols(outcome, var, res[['estimate']], res[[l_ci]], res[[u_ci]], round(res[[p_vl]], 2)))
+  
+  # Line up columns
+  if (!grepl("treatment", folder)){
+    
+    diff <- diff %>% 
+      group_by(grp = (row_number()-4) %/% 3) %>% # add NA's every 3rd row after row 4
+      group_modify(~ add_row(.x, !!paste0(outcome, "_variables") := rep(NA, 1))) %>% 
+      ungroup() %>% 
+      dplyr::select(-grp)
+    diff <- rbind(NA, diff)
+    diff <- diff[-nrow(diff), ] # remove last row
+    
+    return(diff)
+    
+  } else {
+    
+    return(diff)
+    
+  }
+}
+
 # MAIN Function to get absolute difference tables, formatted according to excel structure
 # NB: Tables will be automatically saved to location
 abs_diff_table <- function(outcome, dtype) {
   
-  # MAIN Function to extract and format predicted values
-  get_emm <- function (outcome, folder,val, l_ci, u_ci, p_vl) {
-    
-    # Get relevant data
-    res <- read.xlsx(paste0('Main Results/', outcome, folder, 'emm_2_res.xlsx'))
-    # res <- res[-grep(c('8.54', '18.54'), as.character(res$Flood_1Lag)), ]
-    # row.names(res) <- NULL
-    # Set variable, depending on folder
-    if (folder=='/Flood_1Lag-season_flood-treatment/'){
-      (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$treatment, sep = "-"))
-    } else if (folder=='/Flood_1Lag-season_flood/'){
-      (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, sep = "-"))
-    } else if (folder=='/Flood_1Lag-treatment/'){
-      (var <- paste(round(res$Flood_1Lag, 2), res$treatment, sep = "-"))
-    } else if (folder=='/Flood_1Lag/'){
-      (var <- round(res$Flood_1Lag, 2))
-    }
-    # Format data
-    (mean <- format_cols(outcome, var, res[[val]], res[[l_ci]], res[[u_ci]], round(res[[p_vl]], 2)))
-    (mean <- mean[, -which(names(mean) == paste0(outcome, '_P'))]) # remove p-values
-    
-    # Split data, depending on treatment
-    if (grepl("treatment", folder)){
-      half_rows <- nrow(mean) / 2
-      df_top <- mean[1:half_rows, ]
-      df_bottom <- mean[(half_rows + 1):nrow(mean), ]
-      mean <- cbind(df_top, df_bottom)
-      
-      return(mean)
-      
-    } else {
-      
-      return(mean)
-      
-    }
-    
-  }
-  
-  # MAIN Function to extract and format difference tests
-  get_contr <- function (outcome, folder,l_ci, u_ci, p_vl){
-    
-    # Get data
-    if (folder=='/Flood_1Lag-season_flood/'){
-      file <- 'contr_emm2b.xlsx'
-    } else {
-      file <- 'contr_emm2a.xlsx'
-    }
-    res <- read.xlsx(paste0('Main Results/', outcome, folder, file))
-    
-    # Remove irrelevant levels/cols
-    if (grepl('treatment', folder)) {
-      col <- res$Flood_1Lag
-    } else {
-      col <- res$contrast
-      col <- sub("Flood_1Lag", "", col)
-      col <- sub("Flood_1Lag", "", col)
-      res <- res[grep("^0", as.character(col)), ]
-      res$contrast <- sub("Flood_1Lag", "", res$contrast)
-      res$contrast <- sub("Flood_1Lag", "", res$contrast)
-      row.names(res) <- NULL
-    }
-    
-    # Set variable, depending on folder
-    if (folder=='/Flood_1Lag-season_flood-treatment/'){
-      (var <- paste(round(res$Flood_1Lag, 2), res$season_flood, res$contrast, sep = "-"))
-    } else if (folder=='/Flood_1Lag-season_flood/'){
-      (var <- paste(res$season_flood, res$contrast, sep = "-"))
-    } else if (folder=='/Flood_1Lag-treatment/'){
-      (var <- paste(round(res$Flood_1Lag, 2), res$contrast, sep = "-"))
-    } else if (folder=='/Flood_1Lag/'){
-      (var <- res$contrast)
-    }
-    
-    # Format
-    res[, c("estimate", l_ci, u_ci)] <- res[, c("estimate", l_ci, u_ci)] * -1
-    (diff <- format_cols(outcome, var, res[['estimate']], res[[l_ci]], res[[u_ci]], round(res[[p_vl]], 2)))
-    
-    # Line up columns
-    if (!grepl("treatment", folder)){
-      
-      diff <- diff %>% 
-        group_by(grp = (row_number()-4) %/% 3) %>% # add NA's every 3rd row after row 4
-        group_modify(~ add_row(.x, !!paste0(outcome, "_variables") := rep(NA, 1))) %>% 
-        ungroup() %>% 
-        dplyr::select(-grp)
-      diff <- rbind(NA, diff)
-      diff <- diff[-nrow(diff), ] # remove last row
-      
-      return(diff)
-      
-    } else {
-      
-      return(diff)
-      
-    }
-  }
-  
+
   # Variable names by dtype
   vars <- if (dtype == 'cont') list(val='emmean',  l_ci='lower.CL',  u_ci='upper.CL',  p_vl='p.value') else                  list(val='prob',    l_ci='asymp.LCL', u_ci='asymp.UCL', p_vl='p.value')
   
@@ -418,7 +411,9 @@ abs_val_fig <- function (outcome, dtype, folder, fig=0) {
   
   # Get sig tests
   contr <- data.frame(get_contr(outcome, folder, l_ci, u_ci, 'p.value'))
-  contr$sig <- as.numeric(gsub("[()]", "", contr[, grepl("_P$", names(contr))]))
+  contr$sig <- as.numeric(ifelse(grepl("^<", contr[, grepl("_P$", names(contr))]), 
+                                 gsub("^<", "", contr[, grepl("_P$", names(contr))]), 
+                                 contr[, grepl("_P$", names(contr))]))
   contr$sig <- na.locf(contr$sig, na.rm = FALSE, fromLast = TRUE) # Backfill the column
   contr$sig <- ifelse(contr$sig > 0.05, "p>0.05", 'p<0.05')
   colnames(contr)[1:3] <- c('variables', 'value', 'CI')
@@ -464,32 +459,9 @@ flood_nm <- c('0' = 'No change in flooding',
 # Data cleaning ####
 
 
-# Get number of observations for each threshold, across clusters NOT women 
-# (since this is the same for women in same cluster)
-hist(df$Flood_SThresh)
-df %>% 
-  dplyr::select(c_code, year_season, Flood_SThresh) %>% 
-  distinct() %>%
-  group_by(Flood_SThresh) %>% 
-  summarise(count = n())
-
-# Get observations for women over BL 
-dates <- c('2015-1', '2015-2', '2015-3', '2015-4')
-w_BL <- df_BL %>% filter(year_season %in% dates & !is.na(dd_elig))
-w_BL <- w_BL[w_BL$dd10r_othv != 88, ] # Remove 88 values from other veg
-nrow(w_BL)
-# Get number of women per HFP
-w_BL %>% 
-  group_by(treatment) %>% 
-  summarise(count = n())
-# Get observations for women over surveillance 
+# Get observations for women over BL & surveillance
+w_BL <- df_BL %>% filter(Baseline=='Baseline')
 w_S <- df %>% filter(!is.na(dd_elig))
-nrow(w_S)
-# Combine BL & surveillance frame to extract descriptive stats
-w_desc <- bind_rows(w_BL, w_S, .id = "Source")
-nrow(w_desc) # number of observations
-length(unique(w_desc$wcode)) # number of women
-
 
 # For each BL woman, aggregate multiple BL seasons into a single observation
 # NB: Starches are included for descriptive, but NOT analysis
@@ -498,13 +470,13 @@ for (i in c(outcomes_bin, 'dd10r_starch', outcomes_cont)){
   if (i %in% outcomes_cont) { # Calculate the mean of continuous data
     x <- df_BL %>%
       group_by(wcode) %>%   # Group the data by ID
-      filter(year_season %in% dates) %>%
+      filter(Baseline=='Baseline') %>%
       summarise(mean = mean(get(i), na.rm = TRUE)) %>%
       rename_with(.fn = ~ i, .cols = mean)
   } else { # Calculate the mode of binary data
     x <- df_BL %>%
       group_by(wcode) %>%   # Group the data by ID
-      filter(year_season %in% dates) %>%
+      filter(Baseline=='Baseline') %>%
       summarise(mode = as.integer(names(which.max(table(get(i)))))) %>%
       rename_with(.fn = ~ i, .cols = mode)
   }
@@ -545,7 +517,7 @@ summarise_cat <- function(df, cols) {
       setNames(data.frame(desc$proportion[desc$`get(col)` != 0]), c)
     } else {
       out <- spread(desc, key=`get(col)`, value=proportion)
-      out <- out[, -c(1,2)]
+      out <- out[c(2,1), -c(1,2)]
       colnames(out) <- paste0(c, '__', colnames(out))
       out
     }
@@ -743,7 +715,7 @@ master$P <- NULL
 colnames(master) <- paste0(outcomes_cont, '_', colnames(master)) 
 # Merge relevant cols
 res <- data.frame()
-row_df <- setNames(data.frame(paste0(master[[2]], " (", master[[4]], ")")), outcomes_cont)
+row_df <- setNames(data.frame(paste0(master[[1]], " (", master[[3]], ")")), outcomes_cont)
 res <- rbind(res, row_df)
 
 ### Append each binary outcome to the main frame
@@ -760,7 +732,7 @@ for (b in outcomes_bin) {
   new$P <- NULL
   colnames(new) <- paste0(b, '_', colnames(new)) 
   # Append columns to master df
-  row_df <- setNames(data.frame(paste0(new[[2]], " (", new[[4]], ")")), b)
+  row_df <- setNames(data.frame(paste0(new[[1]], " (", new[[3]], ")")), b)
   res <- cbind(res, row_df)  
 }
 

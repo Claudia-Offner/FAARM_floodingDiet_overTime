@@ -13,7 +13,8 @@ set.seed(123)
 # install.packages(c("openxlsx", "zoo", "reshape", "reshape2", "spdep", "nlme", "lme4",
 #                    "emmeans", "tidyr", "dplyr", "ggplot2", "cli", "stringr", "ggmap",
 #                    "patchwork", "gridExtra", "ggh4x", "ggtext", "cowplot", "sjPlot",
-#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable", 'arm'))
+#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable", 'arm', 
+#                    'janitor))
 
 # Load
 library(openxlsx);  library(openxlsx2); library(zoo);       library(reshape)
@@ -22,7 +23,7 @@ library(emmeans);   library(tidyr);     library(dplyr);     library(ggplot2)
 library(cli);       library(stringr);   library(ggmap);     library(patchwork)
 library(gridExtra); library(ggh4x);     library(ggtext);    library(cowplot)
 library(sjPlot);    library(car);       library(glmmTMB);   library(flexlsx)
-library(flextable); library(arm)
+library(flextable); library(arm); library(janitor)
 
 
 #### FUNCTIONS ####

@@ -2,15 +2,7 @@
 ### Generate figures
 ### ------------------------------------------------------------------------ ### 
 
-# # Clear environment
-# rm(list=ls())
-# 
-# ### IMPORTANT - set file paths to folder locations
-# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-# setwd(git_path)
-# 
-# #### DEPENDENCIES ####
-# source('R0_Dependencies.R')
+#### DEPENDENCIES ####
 
 # GG mapper for flood levels, by season and cluster (highlighting Trial arms)
 mapper <- function(basemap, df_spatial, stats_df=NULL, title='') {
@@ -269,9 +261,9 @@ marginal_means_s <- function(df, alpha, s, x_labs='No'){
       # Prepare data
       f1 <- source_f1 %>%
         dplyr::rename(x=increase, y=value) %>%
-        mutate(yshift=if_else(group == 'Minimum dietary diversity', 0, 0.2), ypos=yshift+y) %>%
-        select(group, yshift, x, y, ypos, sig)
-      f1$ypos[f1$group == 'Dietary diversity scores*'] <- f1$ypos[f1$group == 'Dietary diversity scores*'] - spacing
+        mutate(yshift=if_else(group == 'DDS', 0, 0.2), ypos=yshift+y) %>%
+        dplyr::select(group, yshift, x, y, ypos, sig)
+      f1$ypos[f1$group == 'DDS'] <- f1$ypos[f1$group == 'DDS'] - spacing
       f1 <- transform(f1, x=factor(x, levels=c(0, 1, 2, 3), labels=c('None','1SD','2SD', '>2SD')), y=round(y, 2))
       # Get axes colors
       f1$a <- ifelse(f1$sig == 'p>0.05', link_colour[2], link_colour[1])
@@ -551,9 +543,6 @@ tufte_sort <- function(df, x='year', y='value', group='group', method='tufte', m
 # Load data
 load(paste0('main_data.RData'))
 
-# If you want the Flood SD categorical counts over time, I can make that as a table, 
-
-
 # SF2: DESC - Temporal distribution of flooding & diets, pooled ####
 
 # Load data
@@ -715,7 +704,7 @@ source_f0 <- read.xlsx(xlsxFile='Tables/Visuals.xlsx', sheet='R_Abs_Flood_Levels
 
 # Adapt other veg or visualization purposes
 source_f0$sig[source_f0$group=='Other vegetables'] <- 'p>0.05'
-source_f0$group[source_f0$group=='Dietary diversity scores*'] <- 'Dietary diversity scores'
+# source_f0$group[source_f0$group=='Dietary diversity scores*'] <- 'Dietary diversity scores'
 
 # Get seasonal plots
 f0 <- marginal_means_s(source_f0, '(A)', 'Jan/Feb', x_labs='No')$leg
