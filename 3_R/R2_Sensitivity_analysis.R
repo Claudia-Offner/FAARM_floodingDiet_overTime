@@ -9,162 +9,190 @@
 # git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 # setwd(git_path)
 # 
-# #### DEPENDENCIES ####
+# # #### DEPENDENCIES ####
+# 
+# source('R0_Dependencies.R')
 
 # Override emmeans internal theme to avoid ggplot2 version conflict
 theme_emm <- function(...) ggplot2::theme_bw(...)
 assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
 
-# source('R0_Dependencies.R')
-
-# Function to 
-sens_check <- function(df, outcome, name, type, exposure) {
+fit_model <- function(df, outcome, type, exposure) {
   
-  df$treatment <- factor(df$treatment, levels=c(0, 1), labels=c("Control", "HFP"))
+  df$treatment <- factor(df$treatment, levels = c(0, 1), labels = c("Control", "HFP"))
   
-  if (exposure=='cat'){
-    df$Flood_1Lag <- factor(df$Flood_1Lag, levels=c(0, 1, 2, 3), labels=c("None","1SD","2SD", ">2SD"))
+  if (exposure == 'cat') {
+    df$Flood_1Lag <- factor(df$Flood_1Lag, levels = c(0, 1, 2, 3), 
+                            labels = c("None", "1SD", "2SD", ">2SD"))
   }
   
-  # Set the main formula
   fixed <- ' ~ Flood_1Lag*season_flood*treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL'
   
-  # Run model depending on dtype
-  if(type=='lme'){
-    
+  if (type == 'lme') {
     model <- lme(
-      fixed = as.formula(paste0(outcome, fixed)),
-      random = list(wcode = (~1|season_id), c_code = (~1)), # Random effects
-      weights = varIdent(form = ~ 1 | wdiet_wt),  # Adding weights
-      na.action = na.omit,  # Handle missing data using na.omit
-      data = df
+      fixed    = as.formula(paste0(outcome, fixed)),
+      random   = list(wcode = (~1|season_id), c_code = (~1)),
+      weights  = varIdent(form = ~ 1 | wdiet_wt),
+      na.action = na.omit,
+      data     = df
     )
-    
-    # Check assumptions
-    (ass_plots <- plot_model(model, type = "diag"))
-    
-  } else if (type=='glmer'){
-    
+  } else if (type == 'glmer') {
     model <- glmer(
-      formula=as.formula(paste0(outcome, fixed, '+ (1 + wcode|season_id) + (1 | c_code)')),
+      formula = as.formula(paste0(outcome, fixed, '+ (1 + wcode|season_id) + (1 | c_code)')),
       weights = wdiet_wt,
-      data = df,
-      family = binomial(link="logit"), # extracts binomial regression on logit scale
-      control=glmerControl(optimizer="bobyqa") # Removes non-convergence warnings
+      data    = df,
+      family  = binomial(link = "logit"),
+      control = glmerControl(optimizer = "bobyqa")
     )
-    
-    # Check assumptions
-    (ass_plots <- plot_model(model, type = "diag")[1])
   }
   
-  # Run sensitivity analysis for comparison
-  if (exposure=='cat'){
-    fib.rg = ref_grid(model, trans='response') # for non-linear flood
-  } else{
-    fib.rg = ref_grid(model, at=list(Flood_1Lag=c(0, 1, 2, 3))) # for linear flood
-  }
-  summary(fib.rg, infer = c(TRUE, TRUE)) # get means (whole interaction)
-  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag*season_flood)$emmeans, infer = c(TRUE, TRUE)) # get means (partial interaction)
-  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag*season_flood)$contrasts, infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
-  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag | season_flood), infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
-  # summary(emmeans(fib.rg, pairwise ~ Flood_1Lag | treatment), infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
-  # summary(emmeans(fib.rg, pairwise ~ treatment | Flood_1Lag | season_flood, trans = "response"), infer = c(TRUE, TRUE)) # get contrasts (partial interaction)
-  # (ame1_cont <- summary(contrast(fib.rg, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE)))
-  
-  (em_plot <- emmip(fib.rg, treatment ~ Flood_1Lag | season_flood, style='factor', CIs=TRUE, col = c("black"),
-                    linearg = list(linewidth=0.8), dotarg = list(size = 3), CIarg = list(linetype='solid', linewidth=0.8, alpha = 1, show.legend = FALSE),
-                    xlab = "Increase in flooding",  # Modify x-axis label
-                    tlab = "Trial arm"))
-  # Aesthetics 
-  (em_plot <- em_plot + 
-      aes(shape=treatment, linetype=treatment, col=season_flood) +
-      scale_color_manual(values=custom_colors, name='Season')+
-      scale_shape_manual(values=c(15, 17), name='Trial arm') +
-      scale_linetype_manual(values=c('dashed', 'solid'), name='Trial arm')+
-      labs(title=name, color = "Season", shape = "Trial arm", linetype="Trial arm") + 
-      facet_wrap(~ season_flood, labeller=labeller(season_flood = label_value)) + 
-      theme_bw() +
-      theme(plot.title = element_text(hjust = 0.5, size=20, face='bold'),  # center title
-            legend.title = element_text(size=16, face='bold'), # legend text
-            legend.text = element_text(size=14), # legend text
-            legend.position = "right",       # legend position
-            legend.key.size = unit(1, 'cm'), # legend size
-            axis.title = element_text(size=14, face='bold'),
-            axis.text = element_text(size=12),
-            strip.text = element_text(size=14, face='bold'))
-  )  
-  
-  
-  return(list(ass_plots, em_plot))
+  model
 }
 
-# Function to
-sens_figures <- function(df, outcome, name, type){
+build_plots <- function(model, outcome, name, type, exposure) {
   
-  if(type=='glmer'){
+  if (type == 'lme') {
+    ass_plots <- plot_model(model, type = "diag")[1:3]
+    suffixes  <- c("I) WDDS", "II) WDDS", "III) WDDS")
     
-    # ASSUMPTIONS
-    output <- sens_check(df, outcome, name, type='glmer', exposure='cont')
-    # Get assumption figures
-    assumptions <- output[[1]]
-    ggsave(paste0('Sensitivity Results/Model_Assumptions/', outcome, "_assumptions.png"), 
-           assumptions[[1]], width=10, height=5)
+    ass_plots <- lapply(seq_along(ass_plots), function(i) {
+      ass_plots[[i]] + 
+        labs(title = paste0(name, ".", suffixes[i])) +
+        theme(plot.title    = element_text(hjust = 0.5, size = 14, face = 'bold'),
+              plot.subtitle = element_blank(),
+              strip.text    = element_blank(),
+              strip.background = element_blank())
+    })
     
-    # CATEGORICAL SENSITIVITY
-    output <- sens_check(df, outcome, name, type='glmer', exposure='cat')
-    # Get sensitivity figures
-    sensitivity <- output[[2]]
-    ggsave(paste0('Sensitivity Results/Model_Sensitivity/', outcome, "_sens.png"),
-           sensitivity, width=12, height=8)
+  } else {
+    ass_plots <- plot_model(model, type = "diag")[1]
     
-  } else{
-    
-    # ASSUMPTIONS
-    output <- sens_check(df, outcome, name, type='lme', exposure='cont')
-    # Get assumption figures
-    assumptions <- output[[1]]
-    assumptions <- grid.arrange(assumptions[[1]], assumptions[[2]], assumptions[[3]], ncol=3)
-    ggsave(paste0('Sensitivity Results/Model_Assumptions/', outcome, "_assumptions.png"), 
-           assumptions, width=15, height=5)
-    
-    # CATEGORICAL SENSITIVITY
-    output <- sens_check(df, outcome, name, type='lme', exposure='cat')
-    # Get sensitivity figures
-    sensitivity <- output[[2]]
-    ggsave(paste0('Sensitivity Results/Model_Sensitivity/', outcome, "_sens.png"),
-           sensitivity, width=12, height=8)
-    
-    
+    ass_plots <- lapply(ass_plots, function(p) {
+      p + labs(title = name) +
+        theme(plot.title        = element_text(hjust = 0.5, size = 14, face = 'bold'),
+              strip.text        = element_blank(),
+              strip.background  = element_blank())
+    })
+  }
+
+  # Estimated-marginal-means interaction plot
+  if (exposure == 'cat') {
+    fib.rg <- ref_grid(model, trans = 'response')
+  } else {
+    fib.rg <- ref_grid(model, at = list(Flood_1Lag = c(0, 1, 2, 3)))
   }
   
+  em_plot <- emmip(fib.rg, treatment ~ Flood_1Lag | season_flood,
+                   style = 'factor', CIs = TRUE,
+                   linearg = list(linewidth = 0.8),
+                   dotarg  = list(size = 3),
+                   CIarg   = list(linetype = 'solid', linewidth = 0.8, 
+                                  alpha = 1, show.legend = FALSE),
+                   xlab = "Increase in flooding",
+                   tlab = "Trial arm")
+  
+  em_plot <- em_plot +
+    aes(shape = treatment, linetype = treatment, col = season_flood) +
+    scale_color_manual(values = custom_colors, name = 'Season') +
+    scale_shape_manual(values = c(15, 17), name = 'Trial arm') +
+    scale_linetype_manual(values = c('dashed', 'solid'), name = 'Trial arm') +
+    labs(title = name, color = "Season", shape = "Trial arm", linetype = "Trial arm") +
+    facet_wrap(~ season_flood, labeller = labeller(season_flood = label_value)) +
+    theme_bw() +
+    theme(
+      plot.title   = element_text(hjust = 0.5, size = 20, face = 'bold'),
+      strip.text   = element_text(size = 16, face = 'bold'),
+      legend.title = element_text(size = 16, face = 'bold'),
+      legend.text  = element_text(size = 14),
+      legend.position  = "right",
+      legend.key.size  = unit(1, 'cm'),
+      axis.title   = element_text(size = 14, face = 'bold'),
+      axis.text    = element_text(size = 14),
+      axis.text.x  = element_text(angle = 45, hjust = 1)
+    )
+  
+  list(ass_plots = ass_plots, em_plot = em_plot)
 }
+
 
 #### MAIN CODE (2.16 hours) ####
 
 # Load data
-load(paste0('main_data.RData'))
-
-# Select correct flood exposure
+load('main_data.RData')
 df$Flood_1Lag <- df$Flood_SThresh
-level <- flood_cont_levels
-
 
 # 1. Sensitivity Analysis ####
 
-# LINEAR MIXED EFFECTS MODELS
-sens_figures(df, outcome='dd10r_score_m', name='WDDS', type='lme')
+# Define all outcomes
+outcomes <- list(
+  list(outcome = 'dd10r_score_m', name = '(A',                type = 'lme'),
+  list(outcome = 'dd10r_min_m',   name = '(B) MDD',                 type = 'glmer') ,
+  list(outcome = 'dd10r_dairy',   name = '(C) Dairy',               type = 'glmer'),
+  list(outcome = 'dd10r_flesh',   name = '(D) Flesh foods',         type = 'glmer'),
+  list(outcome = 'dd10r_eggs',    name = '(E) Eggs',                type = 'glmer'),
+  list(outcome = 'dd10r_dglv',    name = '(F) DGLV',                type = 'glmer'),
+  list(outcome = 'dd10r_vita',    name = '(G) Vitamin A-rich Foods', type = 'glmer'),
+  list(outcome = 'dd10r_othv',    name = '(H) Other vegetables',    type = 'glmer'),
+  list(outcome = 'dd10r_othf',    name = '(I) Other fruits',        type = 'glmer'),
+  list(outcome = 'dd10r_legume',  name = '(J) Legumes',             type = 'glmer'),
+  list(outcome = 'dd10r_nuts',    name = '(K) Nuts and seeds',      type = 'glmer')
+)
 
-# LOGISTIC MIXED EFFECTS MODELS
-sens_figures(df, 'dd10r_min_m', "MDD", type='glmer')
-sens_figures(df, 'dd10r_dairy', "Dairy", type='glmer')
-sens_figures(df, 'dd10r_flesh', "Flesh foods", type='glmer')
-sens_figures(df, 'dd10r_eggs', "Eggs", type='glmer')
-sens_figures(df, 'dd10r_dglv', "DGLV", type='glmer')
-sens_figures(df, 'dd10r_vita', "Vitamin A-rich Foods", type='glmer')
-sens_figures(df, 'dd10r_othv', "Other vegetables", type='glmer')
-sens_figures(df, 'dd10r_othf', "Other fruits", type='glmer')
-sens_figures(df, 'dd10r_legume', "Legumes", type='glmer')
-sens_figures(df, 'dd10r_nuts', "Nuts and seeds", type='glmer')
+
+# # 1. Fit and store all models (continuous exposure for assumptions, categorical exposure for sensitivity plots)
+# models_cont <- lapply(outcomes, function(o)
+#   fit_model(df, o$outcome, o$type, exposure = 'cont'))
+# 
+# models_cat  <- lapply(outcomes, function(o)
+#   fit_model(df, o$outcome, o$type, exposure = 'cat'))
+# 
+# names(models_cont) <- names(models_cat) <- sapply(outcomes, `[[`, 'outcome')
+# 
+# # Save
+# saveRDS(models_cont, 'Sensitivity Results/models_cont.rds')
+# saveRDS(models_cat,  'Sensitivity Results/models_cat.rds')
 
 
+# Load (skips re-fitting entirely)
+models_cont <- readRDS('Sensitivity Results/models_cont.rds')
+models_cat  <- readRDS('Sensitivity Results/models_cat.rds')
+
+# 2. Build plots for every outcome
+plots <- mapply(
+  function(m_cont, m_cat, o) {
+    ass  <- build_plots(m_cont, o$outcome, o$name, o$type, exposure = 'cont')$ass_plots
+    em   <- build_plots(m_cat,  o$outcome, o$name, o$type, exposure = 'cat')$em_plot
+    list(ass_plots = ass, em_plot = em)
+  },
+  m_cont = models_cont,
+  m_cat  = models_cat,
+  o      = outcomes,
+  SIMPLIFY = FALSE
+)
+names(plots) <- sapply(outcomes, `[[`, 'outcome')
+
+
+# 3. Combine into single figures and save
+
+# Single combined assumption figure
+all_ass_plots <- unlist(lapply(plots, `[[`, 'ass_plots'), recursive = FALSE)
+all_ass_plots <- c(all_ass_plots[1:3], list(plot_spacer(), plot_spacer()), 
+                   all_ass_plots[4:length(all_ass_plots)])
+all_ass_plots <- wrap_plots(all_ass_plots, ncol = 5)
+
+ggsave('Figures/SF3_all_assumptions.png', all_ass_plots, width = 15, height = 9, dpi = 300)
+
+
+# Single combined em_plot figure
+all_em_plots <- lapply(plots, `[[`, 'em_plot')
+all_em_plots <- lapply(all_em_plots, function(p) {
+  p + theme(legend.position = "none")
+})
+combined_em   <- wrap_plots(all_em_plots, ncol = 4)
+
+ggsave('Figures/SF4_all_sensitivity.png', combined_em, width = 25, height = 15, dpi=300)
+
+# Save legend
+legend <- get_legend(plots[[1]]$em_plot)
+ggsave('Figures/SF4_all_sensitivity_legend.png', ggdraw(legend), width = 3, height = 6, dpi = 300)
 

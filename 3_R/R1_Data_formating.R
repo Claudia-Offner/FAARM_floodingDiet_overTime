@@ -2,14 +2,6 @@
 ### Data cleaning and formatting
 ### ------------------------------------------------------------------------ ### 
 
-# ### IMPORTANT - set file paths to folder locations
-# data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
-# git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
-# setwd(git_path)
-# 
-# #### DEPENDENCIES ####
-# source('R0_Dependencies.R')
-
 #### MAIN CODE ####
 
 # 1. Load data ####
@@ -25,7 +17,7 @@ cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)
 cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, OBJECTID_1, Shape_Area, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
 
 # Select relevant variables
-df <- data %>% select(c_code, wcode, year_season, year, season, season_DD, season_flood,
+df <- data %>% dplyr::select(c_code, wcode, year_season, year, season, season_DD, season_flood,
                       perc_flooded_c, Flood_1Lag, flooded_diff, flooded_anom_w_lag, flooded_anom_lag, flooded_weight_lag,
                       dd_elig, dd10r_starch, dd10r_legume, dd10r_nuts,	dd10r_dairy,	dd10r_flesh,	
                       dd10r_eggs,	dd10r_dglv,	dd10r_vita,	dd10r_othf,	dd10r_othv,	

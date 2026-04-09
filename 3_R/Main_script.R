@@ -21,7 +21,7 @@ setwd(git_path)
 # https://www.appsilon.com/post/r-ggmap, and use the following code:
 # ggmap::register_stadiamaps("[KEY]", write = TRUE)
 
-# NB: Claire, you can use my key, but I will remove when this goes public
+# NB: Indira, you can use my key, but I will remove when this goes public
 ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
 
 
@@ -30,7 +30,7 @@ ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
 
 start_time <- Sys.time()
 
-scripts <- c('R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
+scripts <- c(#'R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
              'R4A_Generate_tables.R', 'R4B_Generate_figures.R')
 
 for(s in scripts){

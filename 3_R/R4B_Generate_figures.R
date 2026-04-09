@@ -560,67 +560,62 @@ load(paste0('main_data.RData'))
 source_f0 <- read.xlsx('Tables/Visuals_ST_rounds.xlsx')
 
 # Clean data
-source_f0 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
-source_f0 <- melt(source_f0, id.vars=c('Round', 'Treatment'))
-source_f0 <- source_f0 %>% filter(!(Round %in% c('Baseline'))) # Remove non probability variables
-f1 <- cbind(source_f0, str_split(source_f0$Round, '-', simplify=TRUE))
+f1 <- source_f0[, grepl('Round|Treatment|PROB|COEF', names(source_f0))]
+f1 <- melt(f1, id.vars=c('Round', 'Treatment')) %>% 
+  filter(!Round %in% 'Baseline') %>%
+  cbind(str_split(.$Round, '-', simplify=TRUE))
 colnames(f1)[5:6] <- c('year', 'month')
-# f1$Round <- factor(f1$Round, levels=c('Baseline', sort(unique(f1$Round))[-25])) # Factor rounds
 
-# Rename rounds
-f1$month[f1$month==1] <- 'Jan/Feb'
-f1$month[f1$month==2] <- 'Mar/Apr'
-f1$month[f1$month==3] <- 'May/Jun'
-f1$month[f1$month==4] <- 'Jul/Aug'
-f1$month[f1$month==5] <- 'Sep/Oct'
-f1$month[f1$month==6] <- 'Nov/Dec'
+# Rename rounds and variables
+f1$month <- c('1'='Jan/Feb','2'='Mar/Apr','3'='May/Jun','4'='Jul/Aug','5'='Sep/Oct','6'='Nov/Dec')[f1$month]
 f1$Round <- paste0(f1$year, ' ', f1$month)
-
-# Rename variables
-unique(f1$variable)
-
-f1$variable <- gsub('Flood_1Lag_PROB', '(A) Percent Flooded', f1$variable)
-f1$variable <- gsub('dd10r_score_m_COEF', '(B) DDS', f1$variable)
-f1$variable <- gsub('dd10r_min_m_PROB', '(C) MDD', f1$variable)
-f1$variable <- gsub('dd10r_starch_PROB', '(D) Starchy staples', f1$variable)
-f1$variable <- gsub('dd10r_flesh_PROB', '(E) Flesh foods', f1$variable)
-f1$variable <- gsub('dd10r_dairy_PROB', '(F) Dairy products', f1$variable)
-f1$variable <- gsub('dd10r_eggs_PROB', '(G) Eggs', f1$variable)
-f1$variable <- gsub('dd10r_dglv_PROB', '(H) DGLV', f1$variable)
-f1$variable <- gsub('dd10r_vita_PROB', '(I) Vit. A-rich foods', f1$variable)
-f1$variable <- gsub('dd10r_othv_PROB', '(J) Other vegetables', f1$variable)
-f1$variable <- gsub('dd10r_othf_PROB', '(K) Other fruits', f1$variable)
-f1$variable <- gsub('dd10r_legume_PROB', '(L) Legumes', f1$variable)
-f1$variable <- gsub('dd10r_nuts_PROB', '(M) Nuts & Seeds', f1$variable)
-f1$variable<- factor(f1$variable, levels=unique(f1$variable))
 f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
-f1$variable <- factor(f1$variable, levels=c('(A) Percent Flooded', '(B) DDS', '(C) MDD', 
-                                            '(D) Starchy staples', '(E) Flesh foods','(F) Dairy products',
-                                            '(G) Eggs', '(H) DGLV', '(I) Vit. A-rich foods', '(J) Other vegetables', 
-                                              '(K) Other fruits', '(L) Legumes', '(M) Nuts & Seeds')) # Factor rounds
 
-# Subset the data frame to keep only columns with names not containing the character(s) to remove
-# Subset the data frame to keep only columns with names not containing the character(s) to remove
-(sf2 <- ggplot(f1, aes(x=Round, y=as.numeric(value), color=as.factor(Treatment), group=as.factor(Treatment))) +
-    geom_line(linewidth=0.9) +
-    labs(x='', y='', color='variable') +
-    scale_x_discrete(breaks=c(unique(f1$Round)[seq(1, length(unique(f1$Round)), by=3)]), 
-                     guide=guide_axis(angle=45)) + # Rotate  axes labels
-    scale_color_manual(values=c('Control'='#3388f7', 'HFP'='#b51731'), name='Trial arm') + 
-    facet_wrap(~ variable, nrow=NULL, ncol=3, scales='free_y') +
-    ggh4x::facetted_pos_scales(y=list(
-      variable == '(A) Percent Flooded' ~ scale_y_continuous(limits=c(0, 10)),
-      variable == '(B) DDS' ~ scale_y_continuous(limits=c(0, 10)),
-      TRUE ~ scale_y_continuous(limits=c(0, 100))
-    )) + theme_bw() +
-    theme(
-      strip.text = element_text(size=16, face='bold'),
-      axis.text.x = element_text(size=14),
-      axis.text.y = element_text(size=14),
-      panel.spacing = unit(1.2, "lines"),
-      legend.position = 'none'
-    ))
+var_map <- c('Flood_1Lag_PROB'='(A) Percent Flooded', 'dd10r_score_m_COEF'='(B) DDS',
+             'dd10r_min_m_PROB'='(C) MDD', 'dd10r_starch_PROB'='(D) Starchy staples',
+             'dd10r_flesh_PROB'='(E) Flesh foods', 'dd10r_dairy_PROB'='(F) Dairy products',
+             'dd10r_eggs_PROB'='(G) Eggs', 'dd10r_dglv_PROB'='(H) DGLV',
+             'dd10r_vita_PROB'='(I) Vit. A-rich foods', 'dd10r_othv_PROB'='(J) Other vegetables',
+             'dd10r_othf_PROB'='(K) Other fruits', 'dd10r_legume_PROB'='(L) Legumes',
+             'dd10r_nuts_PROB'='(M) Nuts & Seeds')
+f1$variable <- var_map[as.character(f1$variable)]
 
+# Add empty placeholder panels and factor
+f1 <- rbind(f1, transform(f1[1:48,], variable='P1', value=NA),
+            transform(f1[1:48,], variable='P2', value=NA))
+f1$variable <- factor(f1$variable, levels=c('(A) Percent Flooded', 'P1', 'P2',
+                                            '(B) DDS','(C) MDD','(D) Starchy staples','(E) Flesh foods','(F) Dairy products',
+                                            '(G) Eggs','(H) DGLV','(I) Vit. A-rich foods','(J) Other vegetables',
+                                            '(K) Other fruits','(L) Legumes','(M) Nuts & Seeds'))
+
+# Plot
+sf2 <- ggplot(f1, aes(x=Round, y=as.numeric(value), color=Treatment, group=Treatment)) +
+  geom_line(linewidth=0.9) +
+  labs(x='', y='', color='variable') +
+  scale_x_discrete(breaks=unique(f1$Round)[seq(1, length(unique(f1$Round)), by=3)],
+                   guide=guide_axis(angle=45)) +
+  scale_color_manual(values=c('Control'='#3388f7', 'HFP'='#b51731'), name='Trial arm') +
+  facet_wrap(~variable, ncol=3, scales='free_y') +
+  ggh4x::facetted_pos_scales(y=list(
+    variable %in% c('(A) Percent Flooded','(B) DDS') ~ scale_y_continuous(limits=c(0,10)),
+    TRUE ~ scale_y_continuous(limits=c(0,100))
+  )) +
+  theme_bw() +
+  theme(strip.text=element_text(size=16, face='bold'), axis.text.x=element_text(size=14),
+        axis.text.y=element_text(size=14), panel.spacing=unit(1.2,'lines'), legend.position='none')
+
+# Remove empty panels
+g <- ggplotGrob(sf2)
+empty_grobs <- c('panel-3-2', 'panel-2-4',
+                 'axis-t-3-2', 'axis-t-2-4',
+                 'axis-b-3-2', 'axis-b-2-4',
+                 'axis-l-1-2', 'axis-l-1-3',  
+                 'axis-r-1-2', 'axis-r-1-3',
+                 'strip-t-2-1', 'strip-t-3-1')
+for (nm in empty_grobs) {
+  g$grobs[[which(g$layout$name == nm)]] <- grid::nullGrob()
+}
+grid::grid.draw(g)
 
 legend <- get_legend(
   sf2 + theme(
@@ -631,8 +626,8 @@ legend <- get_legend(
   )
 )
 
-ggsave('Figures/SF2_time_series.png', sf2, width=10, height=9)
-ggsave('Figures/SF2_legend.png', legend, width=6, height=2)
+ggsave('Figures/SF2_time_series.png', g, width=10, height=9)
+ggsave('Figures/SF2_time_series_legend.png', legend, width=6, height=2)
 
 
 # MF2: DESC - Spatial flood distribution across seasons, by cluster ####

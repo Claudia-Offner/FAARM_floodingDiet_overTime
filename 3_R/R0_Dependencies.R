@@ -10,10 +10,10 @@ set.seed(123)
 #### PACKAGES ####
 
 # Install
-# install.packages(c("openxlsx", "zoo", "reshape", "reshape2", "spdep", "nlme", "lme4", 
-#                    "emmeans", "tidyr", "dplyr", "ggplot2", "cli", "stringr", "ggmap", 
-#                    "patchwork", "gridExtra", "ggh4x", "ggtext", "cowplot", "sjPlot", 
-#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable"))
+# install.packages(c("openxlsx", "zoo", "reshape", "reshape2", "spdep", "nlme", "lme4",
+#                    "emmeans", "tidyr", "dplyr", "ggplot2", "cli", "stringr", "ggmap",
+#                    "patchwork", "gridExtra", "ggh4x", "ggtext", "cowplot", "sjPlot",
+#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable", 'arm'))
 
 # Load
 library(openxlsx);  library(openxlsx2); library(zoo);       library(reshape)
@@ -22,7 +22,7 @@ library(emmeans);   library(tidyr);     library(dplyr);     library(ggplot2)
 library(cli);       library(stringr);   library(ggmap);     library(patchwork)
 library(gridExtra); library(ggh4x);     library(ggtext);    library(cowplot)
 library(sjPlot);    library(car);       library(glmmTMB);   library(flexlsx)
-library(flextable)
+library(flextable); library(arm)
 
 
 #### FUNCTIONS ####
@@ -140,7 +140,7 @@ getGLMM <- function(glmm_model, var=0, rep=0) {
   glmm_res$Variable <- rownames(glmm_res)
   rownames(glmm_res) <- NULL
   glmm_res <- glmm_res %>% # Re-order columns
-    select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
+    dplyr::select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
   
   # Plot
   glmm_res$index <- 1:nrow(glmm_res) # set indeglmm_res
@@ -187,7 +187,7 @@ getLME <- function(lme_model, var=0){
   lme_res$LowerCI <- round(lme_res$Estimate - qt(0.975, summary_table$tTable[, "DF"]) * lme_res$Std.Error, 4)
   lme_res$UpperCI <- round(lme_res$Estimate + qt(0.975, summary_table$tTable[, "DF"]) * lme_res$Std.Error, 4)
   lme_res <- lme_res %>% # Re-order columns
-    select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
+    dplyr::select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
   
   # Plot
   lme_res$index <- 1:nrow(lme_res) # set index

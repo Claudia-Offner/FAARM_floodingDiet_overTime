@@ -38,9 +38,7 @@ get_results <- function(model, outcome, dtype, interaction) {
     
     # Anova test
     (anov <- car::Anova(model, type=3))
-    anov <- round_df(cbind(row.names(anov), anov), 10)
-    row.names(anov) <- NULL
-    
+
     ## A. Average Marginal Effects (slopes)
     (ame1_res <- summary(ame1,  infer = c(TRUE, TRUE)))
     (ame1_cont <- summary(contrast(ame1, "pairwise", by = c("Flood_1Lag", "season_flood")), infer = c(TRUE, TRUE)))
@@ -178,6 +176,9 @@ levels <- flood_cat_levels
 folder <- paste0(git_path, '/Main Results/')
 setwd(folder)
 getwd()
+
+df2 <- df[complete.cases(df), ]
+colSums(is.na(df))
 
 # Set model timer
 times <- data.frame(Variable = character(0), Time = numeric(0))
