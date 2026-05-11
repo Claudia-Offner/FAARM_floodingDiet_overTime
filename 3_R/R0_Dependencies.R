@@ -13,8 +13,9 @@ set.seed(123)
 # install.packages(c("openxlsx", "zoo", "reshape", "reshape2", "spdep", "nlme", "lme4",
 #                    "emmeans", "tidyr", "dplyr", "ggplot2", "cli", "stringr", "ggmap",
 #                    "patchwork", "gridExtra", "ggh4x", "ggtext", "cowplot", "sjPlot",
-#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable", 'arm', 
-#                    'janitor))
+#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable", 'arm',
+#                    'janitor', 'R6'))
+# install.packages(c("xfun", "knitr", "sjPlot"), dependencies = TRUE)
 
 # Load
 library(openxlsx);  library(openxlsx2); library(zoo);       library(reshape)
@@ -329,7 +330,7 @@ custom_colors <- c('Overall'="#2b2a2a",
                    'Nov/Dec'="#7849b8")
 
 # Name dictionary
-nm <- list('dd10r_score_m'='DDS', "dd10r_min_m"='MDD', 
+nm <- list('dd10r_score_m'='WDDS', "dd10r_min_m"='MDD-W', 
            'dd10r_starch'='Starchy staples', "dd10r_flesh"='Flesh foods', 
            "dd10r_dairy"='Dairy', "dd10r_eggs"='Eggs',
            "dd10r_dglv"='DGLV', "dd10r_vita"='Vit. A-rich foods',
@@ -350,5 +351,3 @@ nm <- list('dd10r_score_m'='DDS', "dd10r_min_m"='MDD',
            'treatment'='Treatment','control' = 'Control',
            'Flood_1Lag'='Flooding', 'season_flood'='Season')
 
-# "Dietary diversity scores*",
-#  "Minimum dietary diversity",

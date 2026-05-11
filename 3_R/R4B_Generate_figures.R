@@ -104,7 +104,7 @@ marg_effect_full <- function(df, alpha, d, legend='No', x_axes='No', y_axes='No'
     } 
     
     # Conditional names for x-axes
-    if(d=='DDS') {
+    if(d=='WDDS') {
       x_ax <- 'Change in mean'
       x_lim <- c(-0.35, .35)
       x_breaks <- seq(-0.35, 0.35, 0.1)
@@ -115,9 +115,9 @@ marg_effect_full <- function(df, alpha, d, legend='No', x_axes='No', y_axes='No'
     }
     
     # Conditional names for plot title
-    if(d=='MDD') {
+    if(d=='MDD-W') {
       name <- paste0(alpha, ' Minimum Dietary Diversity')
-    } else if (d=='DDS') {
+    } else if (d=='WDDS') {
       name <- paste0(alpha, ' Dietary Diversity Score')
     } else {
       name <- paste0(alpha, ' Food Group: ', d)
@@ -234,7 +234,7 @@ marginal_means_s <- function(df, alpha, s, x_labs='No'){
     if (binary=='Yes') {
       
       # FOOD GROUP PLOT
-      source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c('DDS', 'MDD', 'Flesh foods', 'Eggs', 'Other vegetables', 'Nuts/seeds')))
+      source_f1 <- source_f0 %>% filter(season == s) %>% filter(!(group %in% c('WDDS', 'MDD-W', 'Flesh foods', 'Eggs', 'Other vegetables', 'Nuts/seeds')))
       source_f1$value <- as.numeric(source_f1$value)
       # Prepare data
       f1 <- tufte_sort(source_f1, x='increase', y='value', group='group', method='tufte', min.space=0.1, max.space=1)
@@ -256,14 +256,14 @@ marginal_means_s <- function(df, alpha, s, x_labs='No'){
         spacing <- 3.9
       }
       # DD PLOT
-      source_f1 <- source_f0 %>% filter(season == s) %>% filter(group %in% c('DDS'))
+      source_f1 <- source_f0 %>% filter(season == s) %>% filter(group %in% c('WDDS'))
       source_f1$value <- as.numeric(source_f1$value)
       # Prepare data
       f1 <- source_f1 %>%
         dplyr::rename(x=increase, y=value) %>%
-        mutate(yshift=if_else(group == 'DDS', 0, 0.2), ypos=yshift+y) %>%
+        mutate(yshift=if_else(group == 'WDDS', 0, 0.2), ypos=yshift+y) %>%
         dplyr::select(group, yshift, x, y, ypos, sig)
-      f1$ypos[f1$group == 'DDS'] <- f1$ypos[f1$group == 'DDS'] - spacing
+      f1$ypos[f1$group == 'WDDS'] <- f1$ypos[f1$group == 'WDDS'] - spacing
       f1 <- transform(f1, x=factor(x, levels=c(0, 1, 2, 3), labels=c('None','1SD','2SD', '>2SD')), y=round(y, 2))
       # Get axes colors
       f1$a <- ifelse(f1$sig == 'p>0.05', link_colour[2], link_colour[1])
@@ -463,7 +463,7 @@ marginal_means_s_t <- function(df, alpha, s, highlight=list(T, T, F, T, T, F), l
   
   # Get season specs for each outcome
   p0 <- abs_diff_s(df=source_f0, s=s, alpha='I.', outcome='Legumes', highlight=F, legend='Yes', binary='No', x_labs='Yes', x_tit=T, y_labs='Yes')
-  p1 <- abs_diff_s(df=source_f0, s=s, alpha='I.', outcome='DDS', highlight=highlight[1], legend='No', binary='No', x_labs='No', x_tit=F, y_labs='Yes')
+  p1 <- abs_diff_s(df=source_f0, s=s, alpha='I.', outcome='WDDS', highlight=highlight[1], legend='No', binary='No', x_labs='No', x_tit=F, y_labs='Yes')
   p2 <- abs_diff_s(df=source_f0, s=s, alpha='II.', outcome='Dairy', highlight=highlight[2], legend='No', binary='Yes', x_labs='No', x_tit=F, y_labs='Yes')
   p3 <- abs_diff_s(df=source_f0, s=s, alpha='III.', outcome='DGLV', highlight=highlight[3], legend='No', binary='Yes', x_labs='No', x_tit=F, y_labs='Yes')
   p4 <- abs_diff_s(df=source_f0, s=s, alpha='IV.', outcome='Vit. A-rich foods',  highlight=highlight[4], legend='No', binary='Yes', x_labs='No', x_tit=F, y_labs='None')
@@ -560,8 +560,8 @@ f1$month <- c('1'='Jan/Feb','2'='Mar/Apr','3'='May/Jun','4'='Jul/Aug','5'='Sep/O
 f1$Round <- paste0(f1$year, ' ', f1$month)
 f1$Treatment <- ifelse(f1$Treatment==0, 'Control', 'HFP')
 
-var_map <- c('Flood_1Lag_PROB'='(A) Percent Flooded', 'dd10r_score_m_COEF'='(B) DDS',
-             'dd10r_min_m_PROB'='(C) MDD', 'dd10r_starch_PROB'='(D) Starchy staples',
+var_map <- c('Flood_1Lag_PROB'='(A) Percent Flooded', 'dd10r_score_m_COEF'='(B) WDDS',
+             'dd10r_min_m_PROB'='(C) MDD-W', 'dd10r_starch_PROB'='(D) Starchy staples',
              'dd10r_flesh_PROB'='(E) Flesh foods', 'dd10r_dairy_PROB'='(F) Dairy products',
              'dd10r_eggs_PROB'='(G) Eggs', 'dd10r_dglv_PROB'='(H) DGLV',
              'dd10r_vita_PROB'='(I) Vit. A-rich foods', 'dd10r_othv_PROB'='(J) Other vegetables',
@@ -573,7 +573,7 @@ f1$variable <- var_map[as.character(f1$variable)]
 f1 <- rbind(f1, transform(f1[1:48,], variable='P1', value=NA),
             transform(f1[1:48,], variable='P2', value=NA))
 f1$variable <- factor(f1$variable, levels=c('(A) Percent Flooded', 'P1', 'P2',
-                                            '(B) DDS','(C) MDD','(D) Starchy staples','(E) Flesh foods','(F) Dairy products',
+                                            '(B) WDDS','(C) MDD-W','(D) Starchy staples','(E) Flesh foods','(F) Dairy products',
                                             '(G) Eggs','(H) DGLV','(I) Vit. A-rich foods','(J) Other vegetables',
                                             '(K) Other fruits','(L) Legumes','(M) Nuts & Seeds'))
 
@@ -586,7 +586,7 @@ sf2 <- ggplot(f1, aes(x=Round, y=as.numeric(value), color=Treatment, group=Treat
   scale_color_manual(values=c('Control'='#3388f7', 'HFP'='#b51731'), name='Trial arm') +
   facet_wrap(~variable, ncol=3, scales='free_y') +
   ggh4x::facetted_pos_scales(y=list(
-    variable %in% c('(A) Percent Flooded','(B) DDS') ~ scale_y_continuous(limits=c(0,10)),
+    variable %in% c('(A) Percent Flooded','(B) WDDS') ~ scale_y_continuous(limits=c(0,10)),
     TRUE ~ scale_y_continuous(limits=c(0,100))
   )) +
   theme_bw() +
@@ -676,9 +676,9 @@ ggsave(paste0('Figures/MF2_Seasonal_Flood.png'), mf2, width=22, height=18, units
 source_f0 <- read.xlsx(xlsxFile='Tables/Visuals.xlsx', sheet='R_Rel_Diff')
 
 # Get full plot for each dietary outcome
-f0 <- marg_effect_full(source_f0, alpha='(A)', d='DDS', legend='Yes', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes)$leg
-f1 <- marg_effect_full(source_f0, alpha='(A)', d='DDS', legend='Yes', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes)$res
-f2 <- marg_effect_full(source_f0, alpha='(B)', d='MDD', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes)$res
+f0 <- marg_effect_full(source_f0, alpha='(A)', d='WDDS', legend='Yes', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes)$leg
+f1 <- marg_effect_full(source_f0, alpha='(A)', d='WDDS', legend='Yes', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes)$res
+f2 <- marg_effect_full(source_f0, alpha='(B)', d='MDD-W', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes)$res
 f3 <- marg_effect_full(source_f0, alpha='(C)', d='Flesh foods', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes)$res
 f4 <- marg_effect_full(source_f0, alpha='(D)', d='Dairy', legend='No', x_axes='Yes', y_axes='No', custom_colors, custom_shapes)$res
 f5 <- marg_effect_full(source_f0, alpha='(E)', d='Eggs', legend='No', x_axes='Yes', y_axes='Yes', custom_colors, custom_shapes)$res
@@ -726,7 +726,7 @@ ggsave(paste0('Figures/MF4_Marginal_means_season.png'), mf4, width=45, height=40
 # MF5: RES - Predicted measures of DD outcomes for different flood levels across seasons and Trial arms ####
 
 source_f0 <- read.xlsx(xlsxFile='Tables/Visuals.xlsx', sheet='R_Abs_Flood_Treat_Levels')
-# source_f0$group[source_f0$group=='DDS'] <- 'Dietary diversity scores'
+# source_f0$group[source_f0$group=='WDDS'] <- 'Dietary diversity scores'
 
 # Get seasonal plots
 f0 <- marginal_means_s_t(source_f0, alpha='(A)', s='Jan/Feb', highlight=list(F,F,F,T,F,T), legend=T, x_tit=T)$leg

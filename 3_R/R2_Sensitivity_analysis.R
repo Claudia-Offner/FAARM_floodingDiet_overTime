@@ -5,8 +5,8 @@
 #### DEPENDENCIES ####
 
 # Override emmeans internal theme to avoid ggplot2 version conflict
-theme_emm <- function(...) ggplot2::theme_bw(...)
-assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
+# theme_emm <- function(...) ggplot2::theme_bw(...)
+# assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
 
 # Function to fit lme/glmer models
 fit_model <- function(df, outcome, type, exposure) {
@@ -46,11 +46,11 @@ build_plots <- function(model, outcome, name, type, exposure) {
   
   if (type == 'lme') {
     ass_plots <- plot_model(model, type = "diag")[1:3]
-    suffixes  <- c("I) WDDS", "II) WDDS", "III) WDDS")
+    suffixes  <- c("(A.I) WDDS", "(A.II) WDDS", "(A.III) WDDS")
     
     ass_plots <- lapply(seq_along(ass_plots), function(i) {
       ass_plots[[i]] + 
-        labs(title = paste0(name, ".", suffixes[i])) +
+        labs(title = suffixes[i]) +
         theme(plot.title    = element_text(hjust = 0.5, size = 14, face = 'bold'),
               plot.subtitle = element_blank(),
               strip.text    = element_blank(),
@@ -119,8 +119,8 @@ df$Flood_1Lag <- df$Flood_SThresh
 
 # Define all outcomes
 outcomes <- list(
-  list(outcome = 'dd10r_score_m', name = '(A',                type = 'lme'),
-  list(outcome = 'dd10r_min_m',   name = '(B) MDD',                 type = 'glmer') ,
+  list(outcome = 'dd10r_score_m', name = '(A) WDDS',                type = 'lme'),
+  list(outcome = 'dd10r_min_m',   name = '(B) MDD-W',                 type = 'glmer') ,
   list(outcome = 'dd10r_dairy',   name = '(C) Dairy',               type = 'glmer'),
   list(outcome = 'dd10r_flesh',   name = '(D) Flesh foods',         type = 'glmer'),
   list(outcome = 'dd10r_eggs',    name = '(E) Eggs',                type = 'glmer'),

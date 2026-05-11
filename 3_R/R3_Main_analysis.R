@@ -157,6 +157,19 @@ run_model <- function(outcome, type) {
 
 #### MAIN CODE (<30 hour) ####
 
+# 
+# library(car)
+# 
+# # After running your emmeans/contrasts to know the coefficient names,
+# # check exact names first:
+# names(fixef(model))
+# 
+# linearHypothesis(model, 
+#                  hypothesis.matrix = c(
+#                    "Flood_1Lag:season_floodNov/Dec:treatment",
+#                    "Flood_1Lag:season_floodNov/Dec"
+#                  ))
+
 # Load data
 load(paste0('main_data.RData'))
 
@@ -178,7 +191,7 @@ for (c in outcomes_cont){
   
   # Run model
   start_time <- Sys.time()
-  run_model(c, 'cont')
+  run_model(outcome=c, type='cont')
   end_time <- Sys.time()
   
   # Print timings

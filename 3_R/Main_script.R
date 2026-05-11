@@ -6,8 +6,8 @@
 #### !!! IMPORTANT !!! (READ ME) ####
 
 # 1. Set file paths to appropriate folder locations
-data_path <- 'C:/Users/claer14/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
-git_path  <- 'C:/Users/claer14/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
+data_path <- 'C:/Users/offne/OneDrive - University of Cambridge/V. Other/Flooding-Diets-HFP/Data/'
+git_path  <- 'C:/Users/offne/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 setwd(git_path)
 
 # 2. Make sure all packages in the R0_Dependencies.R file are installed prior to running
@@ -30,7 +30,7 @@ ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
 
 start_time <- Sys.time()
 
-scripts <- c('R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
+scripts <- c(#'R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
              'R4A_Generate_tables.R', 'R4B_Generate_figures.R')
 
 for(s in scripts){
