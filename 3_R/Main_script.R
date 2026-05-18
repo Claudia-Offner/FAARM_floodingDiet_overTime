@@ -12,9 +12,9 @@ setwd(git_path)
 
 # 2. Make sure all packages in the R0_Dependencies.R file are installed prior to running
 
-# 3. Scripts require less input if you clear the folders first. They should 
-# automatically be cleared when you pull from the repo. However, if you re-run 
-# the main script on your local disk, it helps if files are cleared from 3_R folders.
+# 3. Scripts require the following folders in 3_R: 
+# Main Results, Sensitivity Results, Figures, Tables. These should automatically 
+# be created when you pull from the repo, but if not, create them before running.
 
 # 4. Figure MF2 needs an api key to load the basemap. It will run without a key, 
 # but if you want the basemap used in the manuscript, create your own key at
@@ -22,7 +22,7 @@ setwd(git_path)
 # ggmap::register_stadiamaps("[KEY]", write = TRUE)
 
 # NB: Indira, you can use my key, but I will remove when this goes public
-ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
+# ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
 
 
 #### MAIN CODE (~3.5 hours) ####
@@ -30,7 +30,7 @@ ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
 
 start_time <- Sys.time()
 
-scripts <- c(#'R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
+scripts <- c('R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
              'R4A_Generate_tables.R', 'R4B_Generate_figures.R')
 
 for(s in scripts){

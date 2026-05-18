@@ -586,7 +586,7 @@ sf2 <- ggplot(f1, aes(x=Round, y=as.numeric(value), color=Treatment, group=Treat
   scale_color_manual(values=c('Control'='#3388f7', 'HFP'='#b51731'), name='Trial arm') +
   facet_wrap(~variable, ncol=3, scales='free_y') +
   ggh4x::facetted_pos_scales(y=list(
-    variable %in% c('(A) Percent Flooded','(B) WDDS') ~ scale_y_continuous(limits=c(0,10)),
+    variable %in% c('(A) Percent Flooded','(B) WDDS') ~ scale_y_continuous(limits=c(0,7)),
     TRUE ~ scale_y_continuous(limits=c(0,100))
   )) +
   theme_bw() +
