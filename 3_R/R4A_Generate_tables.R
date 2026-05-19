@@ -563,7 +563,7 @@ MT1_desc_trial <- rbind(
   split_group(MT1_desc_trial, 'Wealth'),
   split_group(MT1_desc_trial, 'Religion'),
   MT1_desc_trial[c('Household members', 'Land owned'), , drop=FALSE],
-  make_label('Women's Dietary Characteristics', MT1_desc_trial),
+  make_label("Women's Dietary Characteristics", MT1_desc_trial),
   make_label('Food Groups', MT1_desc_trial),
   MT1_desc_trial[c('Starchy staples', 'Flesh foods', 'Dairy', 'Eggs',
                    'DGLV', 'Vit. A-rich foods', 'Other vegetables',
@@ -571,7 +571,7 @@ MT1_desc_trial <- rbind(
 )
 
 # Flextable formatting
-label_rows  <- which(rownames(MT1_desc_trial) %in% c('Individual Characteristics', 'Women's Dietary Characteristics'))
+label_rows  <- which(rownames(MT1_desc_trial) %in% c('Individual Characteristics', "Women's Dietary Characteristics"))
 cat_headers <- which(rownames(MT1_desc_trial) %in% c('Age', 'Education', 'Wealth', 'Religion', 'Household members', 'Land owned', 'Food Groups', 'MDD', 'DDS'))
 cat_rows    <- which(grepl('^(None|Partial primary|Complete primary|Partial secondary|Complete secondary|Poorest|Lower|Middle|Upper|Wealthiest|Muslim|Hindu|Starchy staples|Flesh foods|Dairy|Eggs|DGLV|Vit\\. A-rich foods|Other vegetables|Other fruits|Legumes|Nuts/seeds)', rownames(MT1_desc_trial)))
 
