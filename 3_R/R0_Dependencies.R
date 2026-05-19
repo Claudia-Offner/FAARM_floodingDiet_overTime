@@ -9,23 +9,17 @@ set.seed(123)
 
 #### PACKAGES ####
 
-# Install
-# install.packages(c("openxlsx", "zoo", "reshape", "reshape2", "spdep", "nlme", "lme4",
-#                    "emmeans", "tidyr", "dplyr", "ggplot2", "cli", "stringr", "ggmap",
-#                    "patchwork", "gridExtra", "ggh4x", "ggtext", "cowplot", "sjPlot",
-#                    "car", "glmmTMB", "flexlsx", "openxlsx2", "flextable", 'arm',
-#                    'janitor', 'R6'))
-# install.packages(c("xfun", "knitr", "sjPlot"), dependencies = TRUE)
+required_pkgs <- c(
+  'openxlsx', 'openxlsx2', 'zoo', 'reshape', 'reshape2', 'spdep', 'nlme', 'lme4',
+  'emmeans', 'tidyr', 'dplyr', 'ggplot2', 'cli', 'stringr', 'ggmap', 'patchwork',
+  'gridExtra', 'ggh4x', 'ggtext', 'cowplot', 'sjPlot', 'car', 'glmmTMB', 'flexlsx',
+  'flextable', 'arm', 'janitor', 'xfun', 'knitr', 'sjPlot'
+)
 
-# Load
-library(openxlsx);  library(openxlsx2); library(zoo);       library(reshape)
-library(reshape2);  library(spdep);     library(nlme);      library(lme4)
-library(emmeans);   library(tidyr);     library(dplyr);     library(ggplot2)
-library(cli);       library(stringr);   library(ggmap);     library(patchwork)
-library(gridExtra); library(ggh4x);     library(ggtext);    library(cowplot)
-library(sjPlot);    library(car);       library(glmmTMB);   library(flexlsx)
-library(flextable); library(arm); library(janitor)
-
+invisible(lapply(required_pkgs, function(pkg) {
+  if (!requireNamespace(pkg, quietly = TRUE)) install.packages(pkg)
+  library(pkg, character.only = TRUE)
+}))
 
 #### FUNCTIONS ####
 
@@ -82,15 +76,15 @@ replace_matches <- function(df, dict, exact = TRUE) {
 # Function to check folder locations and create if necessary
 check_folder_loc <- function(folder) {
   if (!dir.exists(folder)) {
-    message("Folder does not exist. Creating location.")
+    message('Folder does not exist. Creating location.')
     dir.create(folder, recursive = TRUE)
     return(invisible(TRUE))
   } else {
     answer <- readline(
-      "Folder already exists. Overwrite files in this folder? (y/n): "
+      'Folder already exists. Overwrite files in this folder? (y/n): '
     )
-    if (tolower(answer) != "y") {
-      message("Export cancelled by user.")
+    if (tolower(answer) != 'y') {
+      message('Export cancelled by user.')
       return(invisible(FALSE))
     }
   }
@@ -136,9 +130,9 @@ getGLMM <- function(glmm_model, var=0, rep=0) {
   glmm_res <- as.data.frame(summary(glmm_model)$coef)
   
   # Calcualte CIs
-  colnames(glmm_res) <- c("Estimate", "Std.Error", "z-value", "p-value") # Rename columns
-  glmm_res$LowerCI <- round(glmm_res[["Estimate"]] - 1.96 * glmm_res[["Std.Error"]], 4)
-  glmm_res$UpperCI <- round(glmm_res[["Estimate"]] + 1.96 * glmm_res[["Std.Error"]], 4)
+  colnames(glmm_res) <- c('Estimate', 'Std.Error', 'z-value', 'p-value') # Rename columns
+  glmm_res$LowerCI <- round(glmm_res[['Estimate']] - 1.96 * glmm_res[['Std.Error']], 4)
+  glmm_res$UpperCI <- round(glmm_res[['Estimate']] + 1.96 * glmm_res[['Std.Error']], 4)
   glmm_res$Variable <- rownames(glmm_res)
   rownames(glmm_res) <- NULL
   glmm_res <- glmm_res %>% # Re-order columns
@@ -146,7 +140,7 @@ getGLMM <- function(glmm_model, var=0, rep=0) {
   
   # Plot
   glmm_res$index <- 1:nrow(glmm_res) # set indeglmm_res
-  names(glmm_res) <- c("Variables","Estimate","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  names(glmm_res) <- c('Variables','Estimate','SD','Lower_CI','Upper_CI', 'P_Value','Index')
   
   # Set significance col (for plotting)
   glmm_res$P_Value <- as.numeric(glmm_res$P_Value)
@@ -180,20 +174,20 @@ getLME <- function(lme_model, var=0){
   summary_table <- summary(lme_model)
   
   # Extract relevelslevant information (coefficient estimates, standard errors, p-values, and confidence intervals)
-  lme_res <- round(as.data.frame(summary_table$tTable[, c("Value", "Std.Error", "DF", "t-value", "p-value")]), 4)
+  lme_res <- round(as.data.frame(summary_table$tTable[, c('Value', 'Std.Error', 'DF', 't-value', 'p-value')]), 4)
   lme_res$Variable <- rownames(lme_res)
   rownames(lme_res) <- NULL
-  colnames(lme_res) <- c("Estimate", "Std.Error", "df", "t-Value", "p-value", "Variable") # Rename columns
+  colnames(lme_res) <- c('Estimate', 'Std.Error', 'df', 't-Value', 'p-value', 'Variable') # Rename columns
   
   # Calculate confidence intervals
-  lme_res$LowerCI <- round(lme_res$Estimate - qt(0.975, summary_table$tTable[, "DF"]) * lme_res$Std.Error, 4)
-  lme_res$UpperCI <- round(lme_res$Estimate + qt(0.975, summary_table$tTable[, "DF"]) * lme_res$Std.Error, 4)
+  lme_res$LowerCI <- round(lme_res$Estimate - qt(0.975, summary_table$tTable[, 'DF']) * lme_res$Std.Error, 4)
+  lme_res$UpperCI <- round(lme_res$Estimate + qt(0.975, summary_table$tTable[, 'DF']) * lme_res$Std.Error, 4)
   lme_res <- lme_res %>% # Re-order columns
     dplyr::select(Variable, Estimate, Std.Error, LowerCI, UpperCI, `p-value`)
   
   # Plot
   lme_res$index <- 1:nrow(lme_res) # set index
-  names(lme_res) <- c("Variables","Estimate","SD","Lower_CI","Upper_CI", 'P_Value',"Index")
+  names(lme_res) <- c('Variables','Estimate','SD','Lower_CI','Upper_CI', 'P_Value','Index')
   
   # Set significance col (for plotting)
   lme_res$P_Value <- as.numeric(lme_res$P_Value)
@@ -220,26 +214,26 @@ formatRES <- function(df) {
     lci <- c('asymp.LCL', 'lower.CL')
     uci <- c('asymp.UCL', 'upper.CL')
     if (c %in% est) {
-      colnames(df)[colnames(df) %in% est] <- "Estimate"
+      colnames(df)[colnames(df) %in% est] <- 'Estimate'
     } 
     if (c %in% lci) {
-      colnames(df)[colnames(df) %in% lci] <- "Lower_CI"
+      colnames(df)[colnames(df) %in% lci] <- 'Lower_CI'
     } 
     if (c %in% uci) {
-      colnames(df)[colnames(df) %in% uci] <- "Upper_CI"
+      colnames(df)[colnames(df) %in% uci] <- 'Upper_CI'
     } 
     if (all('p.value' == c)) {
-      colnames(df)[colnames(df) %in% 'p.value'] <- "P_Value"
+      colnames(df)[colnames(df) %in% 'p.value'] <- 'P_Value'
     } 
     if (all('SE' == c)) {
-      colnames(df)[colnames(df) %in% 'SE'] <- "SD"
+      colnames(df)[colnames(df) %in% 'SE'] <- 'SD'
     } 
   }
   
   # Plot
   df$Index <- 1:nrow(df) # set index
-  df$Variables <- apply(df[, 1:3], 1, paste, collapse = ":") # set variables
-  df <- df[, c("Variables", "Estimate", "SD", "Lower_CI", "Upper_CI", "P_Value", "Index")]
+  df$Variables <- apply(df[, 1:3], 1, paste, collapse = ':') # set variables
+  df <- df[, c('Variables', 'Estimate', 'SD', 'Lower_CI', 'Upper_CI', 'P_Value', 'Index')]
   
   # Set significance col (for plotting)
   df$P_Value <- as.numeric(df$P_Value)
@@ -262,7 +256,7 @@ plotResults <- function(res1, x=0, name=0) {
     result_name <- deparse(substitute(res1))
   }
   
-  cols <- c("0_None" = "#dadada","1_Weak" = "#ff9530","2_Strong" = "#029921")
+  cols <- c('0_None' = '#dadada','1_Weak' = '#ff9530','2_Strong' = '#029921')
   
   # Plot Results
   ggplot(data=res, aes(y=Index, x=Estimate, xmin=Lower_CI, xmax=Upper_CI)) +
@@ -270,7 +264,7 @@ plotResults <- function(res1, x=0, name=0) {
     geom_text(aes(label = Estimate, colour = Importance),
               size = 3.5, nudge_x = 1.5, nudge_y = 0, check_overlap = FALSE) +
     scale_colour_manual(values = cols) +
-    theme(legend.position = "bottom") +
+    theme(legend.position = 'bottom') +
     geom_errorbarh(height=.3) +
     scale_y_continuous(breaks=1:nrow(res), labels=res$Variables) +
     labs(title=paste('Effect Size by Variable - ', result_name), x='Effect Size', y = 'Variable') +
@@ -306,36 +300,36 @@ var <- c('(Intercept) Jan/Feb season',
          'Flood Extent : Nov/Dec season : Treatment')
 
 # Set outcomes
-outcomes_cont <- "dd10r_score_m"
-outcomes_bin <- c("dd10r_min_m", "dd10r_flesh", "dd10r_dairy", "dd10r_eggs",
-                  "dd10r_dglv", "dd10r_vita", "dd10r_othv", "dd10r_othf",
-                  "dd10r_legume", "dd10r_nuts")
+outcomes_cont <- 'dd10r_score_m'
+outcomes_bin <- c('dd10r_min_m', 'dd10r_flesh', 'dd10r_dairy', 'dd10r_eggs',
+                  'dd10r_dglv', 'dd10r_vita', 'dd10r_othv', 'dd10r_othf',
+                  'dd10r_legume', 'dd10r_nuts')
 
 # Set ggplot theme
 theme_set(theme_classic())
 
 # Set seasons
-seasons <- c("Jan/Feb", "Mar/Apr", "May/Jun", "Jul/Aug", "Sep/Oct", "Nov/Dec")
+seasons <- c('Jan/Feb', 'Mar/Apr', 'May/Jun', 'Jul/Aug', 'Sep/Oct', 'Nov/Dec')
 
 # Set aesthetics 
-custom_colors_sig <- c("p>0.05"="grey", "p<0.05"="black")
-custom_lines <- c("p>0.05"="dashed", "p<0.05"="solid")
-custom_shapes <- c("Overall"=16, "Control"=15 , "HFP"=17)
-custom_colors <- c('Overall'="#2b2a2a",
-                   'Jan/Feb'="#ce1126", 
-                   'Mar/Apr'="#f2609e", 
-                   'May/Jun'="#e66300",
-                   'Jul/Aug'="#80b517",
-                   'Sep/Oct'="#057dcd",
-                   'Nov/Dec'="#7849b8")
+custom_colors_sig <- c('p>0.05'='grey', 'p<0.05'='black')
+custom_lines <- c('p>0.05'='dashed', 'p<0.05'='solid')
+custom_shapes <- c('Overall'=16, 'Control'=15 , 'HFP'=17)
+custom_colors <- c('Overall'='#2b2a2a',
+                   'Jan/Feb'='#ce1126', 
+                   'Mar/Apr'='#f2609e', 
+                   'May/Jun'='#e66300',
+                   'Jul/Aug'='#80b517',
+                   'Sep/Oct'='#057dcd',
+                   'Nov/Dec'='#7849b8')
 
 # Name dictionary
-nm <- list('dd10r_score_m'='WDDS', "dd10r_min_m"='MDD-W', 
-           'dd10r_starch'='Starchy staples', "dd10r_flesh"='Flesh foods', 
-           "dd10r_dairy"='Dairy', "dd10r_eggs"='Eggs',
-           "dd10r_dglv"='DGLV', "dd10r_vita"='Vit. A-rich foods',
-           "dd10r_othv"='Other vegetables', "dd10r_othf"='Other fruits',
-           "dd10r_legume"='Legumes', "dd10r_nuts"='Nuts/seeds',
+nm <- list('dd10r_score_m'='WDDS', 'dd10r_min_m'='MDD-W', 
+           'dd10r_starch'='Starchy staples', 'dd10r_flesh'='Flesh foods', 
+           'dd10r_dairy'='Dairy', 'dd10r_eggs'='Eggs',
+           'dd10r_dglv'='DGLV', 'dd10r_vita'='Vit. A-rich foods',
+           'dd10r_othv'='Other vegetables', 'dd10r_othf'='Other fruits',
+           'dd10r_legume'='Legumes', 'dd10r_nuts'='Nuts/seeds',
            'age_3_BL'='Age', 'wi_land_BL'='Land owned', 'hh1hh_mem_EL'='Household members',
            'woman_edu_cat__BL__0'='Education: None', 
            'woman_edu_cat__BL__1'='Education: Partial primary',

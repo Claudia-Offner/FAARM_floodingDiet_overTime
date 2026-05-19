@@ -6,16 +6,16 @@
 
 # Override emmeans internal theme to avoid ggplot2 version conflict
 # theme_emm <- function(...) ggplot2::theme_bw(...)
-# assignInNamespace("theme_emm", theme_emm, ns = "emmeans")
+# assignInNamespace('theme_emm', theme_emm, ns = 'emmeans')
 
 # Function to fit lme/glmer models
 fit_model <- function(df, outcome, type, exposure) {
   
-  df$treatment <- factor(df$treatment, levels = c(0, 1), labels = c("Control", "HFP"))
+  df$treatment <- factor(df$treatment, levels = c(0, 1), labels = c('Control', 'HFP'))
   
   if (exposure == 'cat') {
     df$Flood_1Lag <- factor(df$Flood_1Lag, levels = c(0, 1, 2, 3), 
-                            labels = c("None", "1SD", "2SD", ">2SD"))
+                            labels = c('None', '1SD', '2SD', '>2SD'))
   }
   
   fixed <- ' ~ Flood_1Lag*season_flood*treatment + dd10r_score_m_BL + ramadan + g_2h_BL + quint2_BL'
@@ -33,8 +33,8 @@ fit_model <- function(df, outcome, type, exposure) {
       formula = as.formula(paste0(outcome, fixed, '+ (1 + wcode|season_id) + (1 | c_code)')),
       weights = wdiet_wt,
       data    = df,
-      family  = binomial(link = "logit"),
-      control = glmerControl(optimizer = "bobyqa")
+      family  = binomial(link = 'logit'),
+      control = glmerControl(optimizer = 'bobyqa')
     )
   }
   
@@ -45,8 +45,8 @@ fit_model <- function(df, outcome, type, exposure) {
 build_plots <- function(model, outcome, name, type, exposure) {
   
   if (type == 'lme') {
-    ass_plots <- plot_model(model, type = "diag")[1:3]
-    suffixes  <- c("(A.I) WDDS", "(A.II) WDDS", "(A.III) WDDS")
+    ass_plots <- plot_model(model, type = 'diag')[1:3]
+    suffixes  <- c('(A.I) WDDS', '(A.II) WDDS', '(A.III) WDDS')
     
     ass_plots <- lapply(seq_along(ass_plots), function(i) {
       ass_plots[[i]] + 
@@ -58,7 +58,7 @@ build_plots <- function(model, outcome, name, type, exposure) {
     })
     
   } else {
-    ass_plots <- plot_model(model, type = "diag")[1]
+    ass_plots <- plot_model(model, type = 'diag')[1]
     
     ass_plots <- lapply(ass_plots, function(p) {
       p + labs(title = name) +
@@ -81,15 +81,15 @@ build_plots <- function(model, outcome, name, type, exposure) {
                    dotarg  = list(size = 3),
                    CIarg   = list(linetype = 'solid', linewidth = 0.8, 
                                   alpha = 1, show.legend = FALSE),
-                   xlab = "Increase in flooding",
-                   tlab = "Trial arm")
+                   xlab = 'Increase in flooding',
+                   tlab = 'Trial arm')
   
   em_plot <- em_plot +
     aes(shape = treatment, linetype = treatment, col = season_flood) +
     scale_color_manual(values = custom_colors, name = 'Season') +
     scale_shape_manual(values = c(15, 17), name = 'Trial arm') +
     scale_linetype_manual(values = c('dashed', 'solid'), name = 'Trial arm') +
-    labs(title = name, color = "Season", shape = "Trial arm", linetype = "Trial arm") +
+    labs(title = name, color = 'Season', shape = 'Trial arm', linetype = 'Trial arm') +
     facet_wrap(~ season_flood, labeller = labeller(season_flood = label_value)) +
     theme_bw() +
     theme(
@@ -97,7 +97,7 @@ build_plots <- function(model, outcome, name, type, exposure) {
       strip.text   = element_text(size = 16, face = 'bold'),
       legend.title = element_text(size = 16, face = 'bold'),
       legend.text  = element_text(size = 14),
-      legend.position  = "right",
+      legend.position  = 'right',
       legend.key.size  = unit(1, 'cm'),
       axis.title   = element_text(size = 14, face = 'bold'),
       axis.text    = element_text(size = 14),
@@ -172,7 +172,7 @@ all_ass_plots <- wrap_plots(all_ass_plots, ncol = 5)
 # Em_plot figure
 all_em_plots <- lapply(plots, `[[`, 'em_plot')
 all_em_plots <- lapply(all_em_plots, function(p) {
-  p + theme(legend.position = "none")
+  p + theme(legend.position = 'none')
 })
 combined_em   <- wrap_plots(all_em_plots, ncol = 4)
 

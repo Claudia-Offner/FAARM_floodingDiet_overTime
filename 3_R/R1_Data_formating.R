@@ -10,10 +10,10 @@
 data <- read.csv(file=paste0(data_path, '3_FloodMetrics.csv'), fileEncoding='UTF-8-BOM')
 
 # Load shape data (as spatial vector df)
-cluster_shp <- st_read(dsn=paste0(data_path, "96_Cluster_final.shp"))
-cluster_shp <- st_transform(cluster_shp, crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0") # set projection
+cluster_shp <- st_read(dsn=paste0(data_path, '96_Cluster_final.shp'))
+cluster_shp <- st_transform(cluster_shp, crs='+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0') # set projection
 cluster_shp$centroid <- st_centroid(cluster_shp$geometry) # Get centroids
-cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c("long","lat"))
+cluster_shp[c('lon', 'lat')] <- do.call(rbind, st_geometry(cluster_shp$centroid)) %>% as_tibble() %>% setNames(c('long','lat'))
 cluster_shp <- cluster_shp %>% dplyr::select( -c(OBJECTID, OBJECTID_1, Shape_Area, Shape_Leng, Shape_Le_1, AREA_M, centroid)) %>% dplyr::rename(c_code = cluster_co)
 
 # Select relevant variables
@@ -46,8 +46,8 @@ df_BL <- df_BL[df_BL$dd10r_othv != 88, ] # Remove 88 values from other veg
 
 # REMOVE: BL & EL year_season  
 # NOTE: do not include 2019_05 because the cluster averages missing
-ys_elim <-  c("2015-1", "2015-2", "2015-3", "2015-4", 
-              "2019-5", "2019-6", "2020-1", "2020-2", "2020-3")
+ys_elim <-  c('2015-1', '2015-2', '2015-3', '2015-4', 
+              '2019-5', '2019-6', '2020-1', '2020-2', '2020-3')
 for (i in ys_elim) {
   df<-df[!(df$year_season==i),]
 }
@@ -56,9 +56,9 @@ for (i in ys_elim) {
 df$season_id <- as.numeric(factor(df$year_season))
 
 # Re-factor Season codes so Mar/Apr is used as the reference level (dry season)
-df$season_flood[df$season_flood == "Sept/Oct"] <- "Sep/Oct"
-df$season_DD[df$season_DD == "Sept/Oct"] <- "Sep/Oct"
-df$season_flood <- factor(df$season_flood, levels=c("Jan/Feb", "Mar/Apr","May/Jun", "Jul/Aug", "Sep/Oct", "Nov/Dec"))
+df$season_flood[df$season_flood == 'Sept/Oct'] <- 'Sep/Oct'
+df$season_DD[df$season_DD == 'Sept/Oct'] <- 'Sep/Oct'
+df$season_flood <- factor(df$season_flood, levels=c('Jan/Feb', 'Mar/Apr','May/Jun', 'Jul/Aug', 'Sep/Oct', 'Nov/Dec'))
 
 # Reset index
 rownames(df) <- NULL
@@ -76,7 +76,7 @@ rownames(df) <- NULL
 (year_means <- df %>% group_by(year) %>% summarize(flood_means = mean(Flood_1Lag, na.rm = TRUE)))
 
 # Merge seasonal averages back into the original dataframe
-df <- df %>% left_join(season_means, by = "season_flood")
+df <- df %>% left_join(season_means, by = 'season_flood')
 
 # Add a new variable indicating above, below, or at the seasonal average
 df <- df %>%

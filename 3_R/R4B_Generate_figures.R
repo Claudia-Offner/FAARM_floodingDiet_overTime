@@ -201,8 +201,8 @@ marg_effect_full <- function(df, alpha, d, legend='No', x_axes='No', y_axes='No'
        theme(
          legend.title=element_text(size=18, face='bold'),
          legend.text =element_text(size=16),
-         legend.key.size=unit(1, "cm"),
-         legend.spacing.y=unit(0.1, "cm")
+         legend.key.size=unit(1, 'cm'),
+         legend.spacing.y=unit(0.1, 'cm')
        )
     leg <- get_legend(f0)
   } else{
@@ -309,13 +309,13 @@ marginal_means_s <- function(df, alpha, s, x_labs='No'){
     }
     
     if (legend=='No'){
-      gg <- gg + theme(legend.position="none")
+      gg <- gg + theme(legend.position='none')
     } else {
       gg <- gg + theme(
         legend.title=element_text(size=20, face='bold'),
         legend.text =element_text(size=18),
-        legend.key.size=unit(1.2, "cm"),
-        legend.spacing.y=unit(0.1, "cm")
+        legend.key.size=unit(1.2, 'cm'),
+        legend.spacing.y=unit(0.1, 'cm')
       )
     }
     
@@ -421,8 +421,8 @@ marginal_means_s_t <- function(df, alpha, s, highlight=list(T, T, F, T, T, F), l
                         axis.ticks.x=element_blank(),
                         legend.title=element_text(size=20, face='bold'),
                         legend.text=element_text(size=18),
-                        legend.key.size=unit(1.2, "cm"),
-                        legend.spacing.y=unit(0.1, "cm"),
+                        legend.key.size=unit(1.2, 'cm'),
+                        legend.spacing.y=unit(0.1, 'cm'),
                         plot.title=element_text(size=16, hjust=0.5, family='Helvetica', face='bold'),
                         legend.position='bottom')
       if(legend=='No'){
@@ -444,17 +444,17 @@ marginal_means_s_t <- function(df, alpha, s, highlight=list(T, T, F, T, T, F), l
                          axis.ticks.x=element_blank(),
                          legend.title=element_text(size=20, face='bold'),
                          legend.text=element_text(size=18),
-                         legend.key.size=unit(1.2, "cm"),
-                         legend.spacing.y=unit(0.1, "cm"),
+                         legend.key.size=unit(1.2, 'cm'),
+                         legend.spacing.y=unit(0.1, 'cm'),
                          plot.title=element_text(size=16, hjust=0.5, family='Helvetica', face='bold'),
                          legend.position='none')
     }
     
     # Highlight border if requested
     if (highlight == T) {
-      gg2 <- gg2 + theme(panel.border=element_rect(colour="red",linewidth=3.5, fill=NA))
+      gg2 <- gg2 + theme(panel.border=element_rect(colour='red',linewidth=3.5, fill=NA))
     } else {
-      gg2 <- gg2 + theme(panel.border=element_rect(colour="black",linewidth=0.8, fill=NA))
+      gg2 <- gg2 + theme(panel.border=element_rect(colour='black',linewidth=0.8, fill=NA))
     }
     
     return(gg2)
@@ -471,7 +471,7 @@ marginal_means_s_t <- function(df, alpha, s, highlight=list(T, T, F, T, T, F), l
   p6 <- abs_diff_s(df=source_f0, s=s, alpha='VI.', outcome='Legumes', highlight=highlight[6], legend='No', binary='Yes', x_labs='Yes', x_tit=x_tit, y_labs='None')
   
   output <- wrap_plots(list(p1, p2, p3, p4, p5, p6), ncol=2) & theme(plot.margin=margin(5,5,5,5))
-  title <- ggplot() + ggtitle(paste0(alpha, ' ', s)) + theme_void() + theme(plot.title=element_text(size=24, face="bold",hjust=0.5))
+  title <- ggplot() + ggtitle(paste0(alpha, ' ', s)) + theme_void() + theme(plot.title=element_text(size=24, face='bold',hjust=0.5))
   legend <- get_legend(p0)
   
   res <- wrap_plots(list(title, output), ncol=1, heights=c(0.15, 20))
@@ -608,10 +608,10 @@ grid::grid.draw(g)
 
 legend <- get_legend(
   sf2 + theme(
-    legend.position="bottom",
+    legend.position='bottom',
     legend.title = element_text(size=16, face='bold'),
     legend.text = element_text(size=14),
-    legend.key.size = unit(1.2,"cm")
+    legend.key.size = unit(1.2,'cm')
   )
 )
 
@@ -659,7 +659,7 @@ basemap <- tryCatch(
   get_map(c(left=bbox$xmin, bottom=bbox$ymin, right=bbox$xmax, top=bbox$ymax),
           source='stadia', maptype='stamen_terrain'),
   error = function(e) {
-    message("API key not available, using blank map instead.")
+    message('API key not available, using blank map instead.')
     NULL
   }
 )

@@ -10,16 +10,14 @@ data_path <- 'C:/Users/offne/OneDrive - University of Cambridge/V. Other/Floodin
 git_path  <- 'C:/Users/offne/Documents/GitHub/FAARM_floodingDiet_overTime/3_R'
 setwd(git_path)
 
-# 2. Make sure all packages in the R0_Dependencies.R file are installed prior to running
-
-# 3. Scripts require the following folders in 3_R: 
+# 2. Scripts require the following folders in 3_R: 
 # Main Results, Sensitivity Results, Figures, Tables. These should automatically 
 # be created when you pull from the repo, but if not, create them before running.
 
-# 4. Figure MF2 needs an api key to load the basemap. It will run without a key, 
+# 3. Figure MF2 needs an api key to load the basemap. It will run without a key, 
 # but if you want the basemap used in the manuscript, create your own key at
 # https://www.appsilon.com/post/r-ggmap, and use the following code:
-# ggmap::register_stadiamaps("[KEY]", write = TRUE)
+# ggmap::register_stadiamaps('KEY', write = TRUE)
 
 # NB: Indira, you can use my key, but I will remove when this goes public
 # ggmap::register_stadiamaps(key='f2f7765b-7259-42c9-a46d-fc1a61dc4375')
@@ -30,7 +28,7 @@ setwd(git_path)
 
 start_time <- Sys.time()
 
-scripts <- c('R1_Data_formating.R', 'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
+scripts <- c('R1_Data_formating.R', #'R2_Sensitivity_analysis.R', 'R3_Main_analysis.R', 
              'R4A_Generate_tables.R', 'R4B_Generate_figures.R')
 
 for(s in scripts){
